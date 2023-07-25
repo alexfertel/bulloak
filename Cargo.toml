@@ -1,0 +1,17 @@
+[package]
+authors = ["Alexander Antonio Gonzalez Fertel"]
+version = "0.1.0"
+name = "bulloak"
+license = "MIT OR Apache-2.0"
+edition = "2021"
+readme = "README.md"
+repository = "https://github.com/alexfertel/bulloak"
+homepage = "https://github.com/alexfertel/bulloak"
+description = """
+A simple, fast, and easy to use Solidity test generator based on
+.tree files.
+"""
+exclude = ["/.github/*"]
+
+[dependencies]
+clap = { version = "4.3.19", features = ["derive"] }
