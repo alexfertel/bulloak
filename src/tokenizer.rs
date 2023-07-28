@@ -6,7 +6,7 @@ use crate::{
 };
 
 #[derive(PartialEq, Eq)]
-struct Token {
+pub struct Token {
     kind: TokenKind,
     span: Span,
     lexeme: String,
@@ -28,10 +28,7 @@ enum TokenKind {
     It,
 }
 
-#[derive(Debug, PartialEq, Eq)]
-pub struct TokenStream {
-    tokens: Vec<Token>,
-}
+type Tokens = Vec<Token>;
 
 pub struct Tokenizer {
     pos: Cell<Position>,
@@ -45,7 +42,7 @@ impl Tokenizer {
     }
 
     /// Tokenize the regular expression into an abstract syntax tree.
-    pub fn tokenize(&mut self, text: &str) -> Result<TokenStream> {
+    pub fn tokenize(&mut self, text: &str) -> Result<Tokens> {
         TokenizerI::new(self, text).tokenize()
     }
 
@@ -172,7 +169,7 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
     }
 
     /// Tokenize the text.
-    pub fn tokenize(&self) -> Result<TokenStream> {
+    pub fn tokenize(&self) -> Result<Tokens> {
         let mut tokens = Vec::new();
         self.tokenizer().reset();
 
@@ -210,7 +207,7 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
             }
         }
 
-        Ok(TokenStream { tokens })
+        Ok(tokens)
     }
 
     /// Parse a horizontal line.
@@ -262,8 +259,8 @@ fn is_valid_identifier_char(c: char) -> bool {
 #[cfg(test)]
 mod tests {
     use crate::{
-        lexer::{Token, TokenKind},
         span::{Position, Span},
+        tokenizer::{Token, TokenKind},
         Result,
     };
 
@@ -273,7 +270,7 @@ mod tests {
     fn test_only_filename() -> Result<()> {
         let file_contents = String::from("foo");
 
-        let tokens = Tokenizer::new().tokenize(&file_contents)?.tokens;
+        let tokens = Tokenizer::new().tokenize(&file_contents)?;
 
         assert_eq!(
             tokens,
@@ -291,7 +288,7 @@ mod tests {
     fn test_only_filename_and_newline() -> Result<()> {
         let file_contents = String::from("foo\n");
 
-        let tokens = Tokenizer::new().tokenize(&file_contents)?.tokens;
+        let tokens = Tokenizer::new().tokenize(&file_contents)?;
 
         assert_eq!(
             tokens,
@@ -310,7 +307,7 @@ mod tests {
         let file_contents =
             String::from("file.sol\n└── when something bad happens\n   └── it should revert");
 
-        let tokens = Tokenizer::new().tokenize(&file_contents)?.tokens;
+        let tokens = Tokenizer::new().tokenize(&file_contents)?;
 
         assert_eq!(
             tokens,
