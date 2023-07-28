@@ -2,6 +2,8 @@ use std::fs;
 
 use crate::tokenizer::Tokenizer;
 
+mod ast;
+mod parser;
 mod span;
 mod tokenizer;
 
@@ -14,6 +16,9 @@ pub fn run(file_name: &str) -> Result<()> {
 
     let tokens = Tokenizer::new().tokenize(&tree)?;
     println!("Tokens: {:#?}", tokens);
+
+    let ast = parser::Parser::new().parse(&tokens)?;
+    println!("AST: {:#?}", ast);
 
     Ok(())
 }

@@ -7,9 +7,9 @@ use crate::{
 
 #[derive(PartialEq, Eq)]
 pub struct Token {
-    kind: TokenKind,
-    span: Span,
-    lexeme: String,
+    pub kind: TokenKind,
+    pub span: Span,
+    pub lexeme: String,
 }
 
 impl fmt::Debug for Token {
@@ -19,13 +19,12 @@ impl fmt::Debug for Token {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-enum TokenKind {
-    Vertical,
-    Tee,
-    Corner,
-    Word,
-    When,
-    It,
+pub enum TokenKind {
+    TEE,
+    CORNER,
+    STRING,
+    WHEN,
+    IT,
 }
 
 type Tokens = Vec<Token>;
@@ -179,20 +178,15 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
             }
 
             match self.char() {
-                ' ' | '\t' | '\r' | '\n' | '─' => {}
+                ' ' | '\t' | '\r' | '\n' | '─' | '│' => {}
                 '/' => self.scan_comments(),
-                '│' => tokens.push(Token {
-                    kind: TokenKind::Vertical,
-                    span: self.span(),
-                    lexeme: "│".to_string(),
-                }),
                 '├' => tokens.push(Token {
-                    kind: TokenKind::Tee,
+                    kind: TokenKind::TEE,
                     span: self.span(),
                     lexeme: "├".to_string(),
                 }),
                 '└' => tokens.push(Token {
-                    kind: TokenKind::Corner,
+                    kind: TokenKind::CORNER,
                     span: self.span(),
                     lexeme: "└".to_string(),
                 }),
@@ -231,9 +225,9 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
             if self.peek().is_none() || self.peek().is_some_and(|c| c.is_whitespace()) {
                 lexeme.push(self.char());
                 let kind = match lexeme.as_str() {
-                    "when" => TokenKind::When,
-                    "it" => TokenKind::It,
-                    _ => TokenKind::Word,
+                    "when" => TokenKind::WHEN,
+                    "it" => TokenKind::IT,
+                    _ => TokenKind::STRING,
                 };
                 return Ok(Token {
                     kind,
@@ -275,7 +269,7 @@ mod tests {
         assert_eq!(
             tokens,
             vec![Token {
-                kind: TokenKind::Word,
+                kind: TokenKind::STRING,
                 span: Span::with_length(Position::new(0, 1, 1), 2),
                 lexeme: "foo".to_string(),
             }]
@@ -293,7 +287,7 @@ mod tests {
         assert_eq!(
             tokens,
             vec![Token {
-                kind: TokenKind::Word,
+                kind: TokenKind::STRING,
                 span: Span::with_length(Position::new(0, 1, 1), 2),
                 lexeme: "foo".to_string(),
             }]
@@ -313,52 +307,52 @@ mod tests {
             tokens,
             vec![
                 Token {
-                    kind: TokenKind::Word,
+                    kind: TokenKind::STRING,
                     span: Span::with_length(Position::new(0, 1, 1), 7),
                     lexeme: "file.sol".to_string(),
                 },
                 Token {
-                    kind: TokenKind::Corner,
+                    kind: TokenKind::CORNER,
                     span: Span::with_length(Position::new(9, 2, 1), 0),
                     lexeme: "└".to_string(),
                 },
                 Token {
-                    kind: TokenKind::When,
+                    kind: TokenKind::WHEN,
                     span: Span::with_length(Position::new(19, 2, 5), 3),
                     lexeme: "when".to_string(),
                 },
                 Token {
-                    kind: TokenKind::Word,
+                    kind: TokenKind::STRING,
                     span: Span::with_length(Position::new(24, 2, 10), 8),
                     lexeme: "something".to_string(),
                 },
                 Token {
-                    kind: TokenKind::Word,
+                    kind: TokenKind::STRING,
                     span: Span::with_length(Position::new(34, 2, 20), 2),
                     lexeme: "bad".to_string(),
                 },
                 Token {
-                    kind: TokenKind::Word,
+                    kind: TokenKind::STRING,
                     span: Span::with_length(Position::new(38, 2, 24), 6),
                     lexeme: "happens".to_string(),
                 },
                 Token {
-                    kind: TokenKind::Corner,
+                    kind: TokenKind::CORNER,
                     span: Span::with_length(Position::new(49, 3, 4), 0),
                     lexeme: "└".to_string(),
                 },
                 Token {
-                    kind: TokenKind::It,
+                    kind: TokenKind::IT,
                     span: Span::with_length(Position::new(59, 3, 8), 1),
                     lexeme: "it".to_string(),
                 },
                 Token {
-                    kind: TokenKind::Word,
+                    kind: TokenKind::STRING,
                     span: Span::with_length(Position::new(62, 3, 11), 5),
                     lexeme: "should".to_string(),
                 },
                 Token {
-                    kind: TokenKind::Word,
+                    kind: TokenKind::STRING,
                     span: Span::with_length(Position::new(69, 3, 18), 5),
                     lexeme: "revert".to_string(),
                 },
