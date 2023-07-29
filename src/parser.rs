@@ -2,7 +2,7 @@ use std::{borrow::Borrow, cell::Cell};
 
 use crate::{
     ast::{Action, Ast, Condition, Root},
-    span::{Position, Span},
+    span::Span,
     tokenizer::{Token, TokenKind},
     Result,
 };
@@ -86,111 +86,95 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
             None => return Err("Unexpected end of file".into()),
         };
 
+        println!("Parsing {:?}", current_token);
         match current_token.kind {
-            TokenKind::STRING => self.parse_root(),
-            TokenKind::TEE => self.parse_corner(current_token),
-            TokenKind::CORNER => self.parse_corner(current_token),
+            TokenKind::STRING if self.parser().current.get() == 0 => self.parse_root(current_token),
+            TokenKind::TEE | TokenKind::CORNER => {
+                let next_token = match self.consume() {
+                    Some(next) => next,
+                    None => {
+                        return Err(format!(
+                            "Unexpected EOF while parsing, found {:?}.",
+                            current_token
+                        )
+                        .into())
+                    }
+                };
+
+                match next_token.kind {
+                    TokenKind::IT => {
+                        let title = self.parse_string(next_token);
+                        self.consume();
+                        let previous = self.previous().unwrap();
+                        Ok(Ast::Action(Action {
+                            title,
+                            span: Span::new(current_token.span.start, previous.span.end),
+                        }))
+                    }
+                    TokenKind::WHEN => {
+                        let title = self.parse_string(next_token);
+                        self.consume();
+
+                        let mut asts = vec![];
+                        while let Some(_) = self.peek() {
+                            // Following a WHEN string, we expect a TEE or a CORNER.
+                            let ast = self._parse()?;
+                            asts.push(ast);
+                        }
+
+                        let previous = self.previous().unwrap();
+                        Ok(Ast::Condition(Condition {
+                            title,
+                            asts,
+                            span: Span::new(current_token.span.start, previous.span.end),
+                        }))
+                    }
+                    _ => Err(format!(
+                        "Unexpected token {:?} found while expecting a WHEN or an IT",
+                        next_token
+                    )
+                    .into()),
+                }
+            }
+            TokenKind::STRING => Err(format!("Unexpected STRING token {:?}", current_token).into()),
             _ => Err(format!("Unexpected token {:?}", current_token).into()),
         }
     }
 
-    fn parse_root(&self) -> Result<Ast> {
-        let current_token = self.current().unwrap();
+    fn parse_root(&self, current_token: &Token) -> Result<Ast> {
+        self.consume();
         // A string at the start of the file is the root ast node.
-        if current_token.span.start.offset == 0 {
-            let mut asts = vec![];
-
-            while let Some(_) = self.consume() {
-                // After the root string, we expect a TEE or a CORNER.
-                let ast = self._parse()?;
-                asts.push(ast);
-            }
-
-            let last_span = if asts.len() > 0 {
-                asts[asts.len() - 1].span()
-            } else {
-                &current_token.span
-            };
-
-            return Ok(Ast::Root(Root {
-                span: Span::new(current_token.span.start, last_span.end),
-                asts,
-                file_name: current_token.lexeme.clone(),
-            }));
-        } else {
-            // This is a bad state because the only case where we should try to parse a string
-            // by itself is at the start of the file. Every other case should be handled as a
-            // rhs of a TEE or CORNER.
-            return Err(format!(
-                "Unexpected STRING token while parsing, found {:?}",
-                current_token
-            )
-            .into());
-        }
-    }
-
-    fn parse_tee(&self, current_token: &Token) -> Result<Ast> {
-        unimplemented!()
-    }
-
-    fn parse_corner(&self, current_token: &Token) -> Result<Ast> {
-        let next_token = match self.peek() {
-            Some(next) => next,
-            None => {
-                return Err(
-                    format!("Unexpected EOF while parsing, found {:?}.", current_token).into(),
-                )
-            }
-        };
-
-        match next_token.kind {
-            TokenKind::IT => self.parse_it(current_token),
-            TokenKind::WHEN => self.parse_when(current_token),
-            _ => Err(format!(
-                "Unexpected token {:?} found while expecting a WHEN or an IT",
-                next_token
-            )
-            .into()),
-        }
-    }
-
-    fn parse_it(&self, start_token: &Token) -> Result<Ast> {
-        let title = self.parse_string();
-        let previous = self.previous().unwrap();
-        Ok(Ast::Action(Action {
-            span: Span::new(start_token.span.start, previous.span.end),
-            title,
-        }))
-    }
-
-    fn parse_when(&self, start_token: &Token) -> Result<Ast> {
-        let title = self.parse_string();
-
         let mut asts = vec![];
         while let Some(_) = self.current() {
-            // Following a WHEN string, we expect a TEE or a CORNER.
+            // After the root string, we expect a TEE or a CORNER.
             let ast = self._parse()?;
             asts.push(ast);
             self.consume();
         }
 
-        let previous = self.previous().unwrap();
-        Ok(Ast::Condition(Condition {
-            span: Span::new(start_token.span.start, previous.span.end),
-            title,
+        let last_span = if asts.len() > 0 {
+            asts[asts.len() - 1].span()
+        } else {
+            &current_token.span
+        };
+
+        Ok(Ast::Root(Root {
+            span: Span::new(current_token.span.start, last_span.end),
             asts,
+            file_name: current_token.lexeme.clone(),
         }))
     }
 
-    fn parse_string(&self) -> String {
-        // Titles always start with one of IT or WHEN.
-        let mut string = String::from(self.consume().unwrap().lexeme.clone());
+    fn parse_string(&self, start_token: &Token) -> String {
+        // Strings always start with one of IT or WHEN.
+        let mut string = String::from(&start_token.lexeme);
 
         // Consume all words.
-        while let Some(token) = self.consume() {
+        while let Some(token) = self.peek() {
             match token.kind {
                 TokenKind::STRING | TokenKind::IT | TokenKind::WHEN => {
                     string = string + " " + &token.lexeme;
+                    self.consume();
                 }
                 _ => break,
             }
@@ -202,10 +186,16 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
 
 #[cfg(test)]
 mod tests {
-    use crate::tokenizer::Tokenizer;
     use pretty_assertions::assert_eq;
 
-    use super::*;
+    use crate::ast::{Action, Ast, Condition, Root};
+    use crate::parser::Parser;
+    use crate::tokenizer::Tokenizer;
+    use crate::{
+        span::{Position, Span},
+        tokenizer::{Token, TokenKind},
+        Result,
+    };
 
     #[test]
     fn test_only_filename() -> Result<()> {
@@ -260,6 +250,67 @@ mod tests {
                     })],
                 })],
                 file_name: String::from("file.sol"),
+            })
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_two_children() -> Result<()> {
+        // TODO: Setup tokens by hand instead of relying on the tokenizer.
+        let file_contents = String::from(
+            r#"two_children.t.sol
+├── when stuff called
+│  └── it should revert
+└── when not stuff called
+   └── it should revert"#,
+        );
+
+        // Token("two_children.t.sol", Span(Position(o: 0, l: 1, c: 1), Position(o: 17, l: 1, c: 18))),
+        // Token("├", Span(Position(o: 19, l: 2, c: 1), Position(o: 19, l: 2, c: 1))),
+        // Token("when", Span(Position(o: 29, l: 2, c: 5), Position(o: 32, l: 2, c: 8))),
+        // Token("stuff", Span(Position(o: 34, l: 2, c: 10), Position(o: 38, l: 2, c: 14))),
+        // Token("called", Span(Position(o: 40, l: 2, c: 16), Position(o: 45, l: 2, c: 21))),
+        // Token("└", Span(Position(o: 52, l: 3, c: 4), Position(o: 52, l: 3, c: 4))),
+        // Token("it", Span(Position(o: 62, l: 3, c: 8), Position(o: 63, l: 3, c: 9))),
+        // Token("should", Span(Position(o: 65, l: 3, c: 11), Position(o: 70, l: 3, c: 16))),
+        // Token("revert", Span(Position(o: 72, l: 3, c: 18), Position(o: 77, l: 3, c: 23))),
+        // Token("└", Span(Position(o: 79, l: 4, c: 1), Position(o: 79, l: 4, c: 1))),
+        // Token("when", Span(Position(o: 89, l: 4, c: 5), Position(o: 92, l: 4, c: 8))),
+        // Token("not", Span(Position(o: 94, l: 4, c: 10), Position(o: 96, l: 4, c: 12))),
+        // Token("stuff", Span(Position(o: 98, l: 4, c: 14), Position(o: 102, l: 4, c: 18))),
+        // Token("called", Span(Position(o: 104, l: 4, c: 20), Position(o: 109, l: 4, c: 25))),
+        // Token("└", Span(Position(o: 114, l: 5, c: 4), Position(o: 114, l: 5, c: 4))),
+        // Token("it", Span(Position(o: 124, l: 5, c: 8), Position(o: 125, l: 5, c: 9))),
+        // Token("should", Span(Position(o: 127, l: 5, c: 11), Position(o: 132, l: 5, c: 16))),
+        // Token("revert", Span(Position(o: 134, l: 5, c: 18), Position(o: 139, l: 5, c: 23))),
+        let tokens = Tokenizer::new().tokenize(&file_contents)?;
+        let ast = Parser::new().parse(&tokens)?;
+
+        assert_eq!(
+            ast,
+            Ast::Root(Root {
+                file_name: String::from("two_children.t.sol"),
+                span: Span::new(Position::new(0, 1, 1), Position::new(139, 5, 23)),
+                asts: vec![
+                    Ast::Condition(Condition {
+                        title: String::from("when stuff called"),
+                        span: Span::new(Position::new(19, 2, 1), Position::new(77, 3, 23)),
+                        asts: vec![Ast::Action(Action {
+                            title: String::from("it should revert"),
+                            span: Span::new(Position::new(52, 3, 4), Position::new(77, 3, 23)),
+                        })],
+                    }),
+                    Ast::Condition(Condition {
+                        title: String::from("when not stuff called"),
+                        span: Span::new(Position::new(79, 4, 1), Position::new(139, 5, 23)),
+                        asts: vec![Ast::Action(Action {
+                            title: String::from("it should revert"),
+                            span: Span::new(Position::new(114, 5, 4), Position::new(139, 5, 23)),
+                        })],
+                    }),
+                ],
             })
         );
 

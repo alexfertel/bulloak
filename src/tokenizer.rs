@@ -261,7 +261,7 @@ mod tests {
         Result,
     };
 
-    use super::Tokenizer;
+    use crate::tokenizer::Tokenizer;
 
     #[test]
     fn test_only_filename() -> Result<()> {
