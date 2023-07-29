@@ -49,22 +49,11 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
         self.tokens().get(self.parser().current.get())
     }
 
-    fn last(&self) -> Option<&Token> {
-        self.tokens().get(self.tokens().len() - 1)
-    }
-
     fn previous(&self) -> Option<&Token> {
         if self.parser().current.get() == 0 {
             return None;
         }
         self.tokens().get(self.parser().current.get() - 1)
-    }
-
-    fn peek(&self) -> Option<&Token> {
-        if self.parser().current.get() + 1 >= self.tokens().len() {
-            return None;
-        }
-        self.tokens().get(self.parser().current.get() + 1)
     }
 
     fn consume(&self) -> Option<&Token> {
