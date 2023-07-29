@@ -86,7 +86,6 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
             None => return Err("Unexpected end of file".into()),
         };
 
-        println!("Parsing {:?}", current_token);
         match current_token.kind {
             TokenKind::STRING if self.parser().current.get() == 0 => self.parse_root(current_token),
             TokenKind::TEE | TokenKind::CORNER => {
@@ -104,7 +103,6 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
                 match next_token.kind {
                     TokenKind::IT => {
                         let title = self.parse_string(next_token);
-                        self.consume();
                         let previous = self.previous().unwrap();
                         Ok(Ast::Action(Action {
                             title,
@@ -113,11 +111,14 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
                     }
                     TokenKind::WHEN => {
                         let title = self.parse_string(next_token);
-                        self.consume();
 
                         let mut asts = vec![];
-                        while let Some(_) = self.peek() {
-                            // Following a WHEN string, we expect a TEE or a CORNER.
+                        while self
+                            .current()
+                            // Only parse tokens that are indented more than the current token.
+                            // The column is our way to determine which tree level are we in.
+                            .is_some_and(|t| t.span.start.column > current_token.span.start.column)
+                        {
                             let ast = self._parse()?;
                             asts.push(ast);
                         }
@@ -145,11 +146,9 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
         self.consume();
         // A string at the start of the file is the root ast node.
         let mut asts = vec![];
-        while let Some(_) = self.current() {
-            // After the root string, we expect a TEE or a CORNER.
+        while self.current().is_some() {
             let ast = self._parse()?;
             asts.push(ast);
-            self.consume();
         }
 
         let last_span = if asts.len() > 0 {
@@ -170,13 +169,15 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
         let mut string = String::from(&start_token.lexeme);
 
         // Consume all words.
-        while let Some(token) = self.peek() {
-            match token.kind {
-                TokenKind::STRING | TokenKind::IT | TokenKind::WHEN => {
-                    string = string + " " + &token.lexeme;
-                    self.consume();
-                }
-                _ => break,
+        loop {
+            match self.consume() {
+                Some(token) => match token.kind {
+                    TokenKind::STRING | TokenKind::IT | TokenKind::WHEN => {
+                        string = string + " " + &token.lexeme;
+                    }
+                    _ => break,
+                },
+                None => break,
             }
         }
 
