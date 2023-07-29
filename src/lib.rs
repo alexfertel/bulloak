@@ -1,7 +1,5 @@
 use std::fs;
 
-use crate::tokenizer::Tokenizer;
-
 mod ast;
 mod parser;
 mod span;
@@ -14,7 +12,7 @@ pub fn run(file_name: &str) -> Result<()> {
 
     println!("Tree: {}", tree);
 
-    let tokens = Tokenizer::new().tokenize(&tree)?;
+    let tokens = tokenizer::Tokenizer::new().tokenize(&tree)?;
     println!("Tokens: {:#?}", tokens);
 
     let ast = parser::Parser::new().parse(&tokens)?;
