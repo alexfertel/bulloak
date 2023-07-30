@@ -1,9 +1,68 @@
-use std::{borrow::Borrow, cell::Cell, fmt};
+use std::{borrow::Borrow, cell::Cell, fmt, result};
 
-use crate::{
-    span::{Position, Span},
-    Result,
-};
+use crate::span::{Position, Span};
+
+type Result<T> = result::Result<T, Error>;
+
+/// An error that occurred while tokenizing a .tree string into a sequence of
+/// tokens.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct Error {
+    /// The kind of error.
+    kind: ErrorKind,
+    /// The original text that the tokenizer generated the error from. Every
+    /// span in an error is a valid range into this string.
+    text: String,
+    /// The span of this error.
+    span: Span,
+}
+
+impl Error {
+    /// Return the type of this error.
+    pub fn kind(&self) -> &ErrorKind {
+        &self.kind
+    }
+
+    /// The original text string in which this error occurred.
+    ///
+    /// Every span reported by this error is reported in terms of this string.
+    pub fn text(&self) -> &str {
+        &self.text
+    }
+
+    /// Return the span at which this error occurred.
+    pub fn span(&self) -> &Span {
+        &self.span
+    }
+}
+
+/// The type of an error that occurred while tokenizing a tree.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum ErrorKind {
+    /// Found an invalid character.
+    InvalidCharacter(char),
+    /// This enum may grow additional variants, so this makes sure clients
+    /// don't count on exhaustive matching. (Otherwise, adding a new variant
+    /// could break existing code.)
+    #[doc(hidden)]
+    __Nonexhaustive,
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        crate::error::Formatter::from(self).fmt(f)
+    }
+}
+
+impl fmt::Display for ErrorKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use self::ErrorKind::*;
+        match *self {
+            InvalidCharacter(c) => write!(f, "invalid character: {:?}", c),
+            _ => unreachable!(),
+        }
+    }
+}
 
 #[derive(PartialEq, Eq)]
 pub struct Token {
@@ -40,7 +99,7 @@ impl Tokenizer {
         }
     }
 
-    /// Tokenize the regular expression into an abstract syntax tree.
+    /// Tokenize the tree.
     pub fn tokenize(&mut self, text: &str) -> Result<Tokens> {
         TokenizerI::new(self, text).tokenize()
     }
@@ -64,6 +123,15 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
     /// Return a reference to the tokenizer state.
     fn tokenizer(&self) -> &Tokenizer {
         self.tokenizer.borrow()
+    }
+
+    /// Create a new error with the given span and error type.
+    fn error(&self, span: Span, kind: ErrorKind) -> Error {
+        Error {
+            kind,
+            text: self.text.to_string(),
+            span,
+        }
     }
 
     /// Return a reference to the text being parsed.
@@ -90,7 +158,7 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
 
     /// Return the current offset of the tokenizer.
     ///
-    /// The offset starts at `0` from the beginning of the .tree file.
+    /// The offset starts at `0` from the beginning of the tree.
     fn offset(&self) -> usize {
         self.tokenizer().pos.get().offset
     }
@@ -240,7 +308,12 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
                     lexeme.push(self.char());
                     self.scan();
                 } else {
-                    return Err(format!("Invalid character in identifier: {}", self.char()).into());
+                    return Err(self
+                        .error(
+                            self.span().with_start(span_start),
+                            ErrorKind::InvalidCharacter(self.char()),
+                        )
+                        .into());
                 }
             }
         }
@@ -255,10 +328,10 @@ fn is_valid_text_char(_c: char) -> bool {
 mod tests {
     use pretty_assertions::assert_eq;
 
+    use crate::error::Result;
     use crate::{
         span::{Position, Span},
         tokenizer::{Token, TokenKind},
-        Result,
     };
 
     use crate::tokenizer::Tokenizer;

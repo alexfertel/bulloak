@@ -1,21 +1,28 @@
-use std::fs;
+use std::{fs, io::Result};
 
 mod ast;
+mod error;
 mod parser;
 mod span;
 mod tokenizer;
-
-type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
+mod visitor;
 
 pub fn run(file_name: &str) -> Result<()> {
-    let tree = fs::read_to_string(file_name)?;
+    let text = fs::read_to_string(file_name)?;
 
-    println!("Tree: {}", tree);
+    if let Err(err) = scaffold(&text) {
+        eprintln!("{}", err);
+        std::process::exit(1);
+    }
 
-    let tokens = tokenizer::Tokenizer::new().tokenize(&tree)?;
+    Ok(())
+}
+
+fn scaffold(text: &str) -> error::Result<()> {
+    let tokens = tokenizer::Tokenizer::new().tokenize(&text)?;
     println!("Tokens: {:#?}", tokens);
 
-    let ast = parser::Parser::new().parse(&tokens)?;
+    let ast = parser::Parser::new().parse(&text, &tokens)?;
     println!("AST: {:#?}", ast);
 
     Ok(())

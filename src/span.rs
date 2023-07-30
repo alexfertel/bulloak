@@ -3,7 +3,7 @@ use std::{cmp::Ordering, fmt};
 /// Span represents the position information of a single token.
 ///
 /// All span positions are absolute char offsets that can be used on the
-/// original .tree file that was parsed.
+/// original tree that was parsed.
 #[derive(Clone, Copy, Eq, PartialEq)]
 pub struct Span {
     /// The start char offset.
@@ -37,7 +37,7 @@ impl PartialOrd for Span {
 #[derive(Clone, Copy, Eq, PartialEq)]
 pub struct Position {
     /// The absolute offset of this position, starting at `0` from the
-    /// beginning of the .tree file.
+    /// beginning of the tree.
     pub offset: usize,
     /// The line number, starting at `1`.
     pub line: usize,
@@ -103,7 +103,7 @@ impl Span {
     }
 
     /// Returns true if and only if this span is empty. That is, it points to
-    /// a single position in the concrete syntax of a .tree file.
+    /// a single position in the concrete syntax of a tree.
     pub fn is_empty(&self) -> bool {
         self.start.offset == self.end.offset
     }
@@ -113,7 +113,7 @@ impl Position {
     /// Create a new position with the given information.
     ///
     /// `offset` is the absolute offset of the position, starting at `0` from
-    /// the beginning of the .tree file.
+    /// the beginning of the tree.
     ///
     /// `line` is the line number, starting at `1`.
     ///
