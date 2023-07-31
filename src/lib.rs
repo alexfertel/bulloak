@@ -3,6 +3,7 @@ use std::{fs, io::Result};
 mod ast;
 mod error;
 mod parser;
+mod semantics;
 mod span;
 mod tokenizer;
 mod visitor;
@@ -24,6 +25,15 @@ fn scaffold(text: &str) -> error::Result<()> {
 
     let ast = parser::Parser::new().parse(&text, &tokens)?;
     println!("AST: {:#?}", ast);
+
+    match ast {
+        ast::Ast::Root(root) => {
+            let mut analyzer = semantics::SemanticAnalyzer::new(&text);
+            let errors = analyzer.analyze(&root)?;
+            println!("errors: {:#?}", errors);
+        }
+        _ => unreachable!(),
+    }
 
     Ok(())
 }

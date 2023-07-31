@@ -3,6 +3,7 @@ use std::fmt;
 use std::result;
 
 use crate::parser;
+use crate::semantics;
 use crate::span;
 use crate::tokenizer;
 
@@ -12,12 +13,15 @@ pub type Result<T> = result::Result<T, Error>;
 /// This error type encompasses any error that can be returned by this crate.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Error {
-    /// An error that occurred while translating concrete syntax into abstract
-    /// syntax (AST).
-    Parse(parser::Error),
     /// An error that occurred while translating abstract syntax into a high
-    /// level intermediate representation (tokenizer).
+    /// level intermediate representation.
     Tokenize(tokenizer::Error),
+    /// An error that occurred while translating concrete syntax into abstract
+    /// syntax.
+    Parse(parser::Error),
+    /// An error that occurred while doing semantic analysis on the abstract
+    /// syntax tree.
+    Semantic(semantics::Error),
     /// Hints that destructuring should not be exhaustive.
     ///
     /// This enum may grow additional variants, so this makes sure clients
@@ -39,11 +43,18 @@ impl From<tokenizer::Error> for Error {
     }
 }
 
+impl From<semantics::Error> for Error {
+    fn from(err: semantics::Error) -> Error {
+        Error::Semantic(err)
+    }
+}
+
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
             Error::Parse(ref x) => x.fmt(f),
             Error::Tokenize(ref x) => x.fmt(f),
+            Error::Semantic(ref x) => x.fmt(f),
             _ => unreachable!(),
         }
     }
@@ -75,6 +86,16 @@ impl<'e> From<&'e parser::Error> for Formatter<'e, parser::ErrorKind> {
 
 impl<'e> From<&'e tokenizer::Error> for Formatter<'e, tokenizer::ErrorKind> {
     fn from(err: &'e tokenizer::Error) -> Self {
+        Formatter {
+            text: err.text(),
+            err: err.kind(),
+            span: err.span(),
+        }
+    }
+}
+
+impl<'e> From<&'e semantics::Error> for Formatter<'e, semantics::ErrorKind> {
+    fn from(err: &'e semantics::Error) -> Self {
         Formatter {
             text: err.text(),
             err: err.kind(),
