@@ -1,6 +1,10 @@
 use std::{fmt, result};
 
-use crate::{ast::Ast, span::Span, visitor::Visitor};
+use crate::{
+    ast::{self, Ast},
+    span::Span,
+    visitor::Visitor,
+};
 
 type Result<T> = result::Result<T, Error>;
 
@@ -94,17 +98,17 @@ impl SemanticAnalyzer<'_> {
         }
     }
 
-    pub fn analyze(&mut self, root: &crate::ast::Root) -> Result<&Vec<Error>> {
+    pub fn analyze(&mut self, root: &ast::Root) -> Result<&Vec<Error>> {
         let _ = self.visit_root(root);
         Ok(&self.errors)
     }
 }
 
-impl<'t> Visitor for SemanticAnalyzer<'t> {
+impl Visitor for SemanticAnalyzer<'_> {
     type Output = ();
     type Error = ();
 
-    fn visit_root(&mut self, root: &crate::ast::Root) -> result::Result<Self::Output, Self::Error> {
+    fn visit_root(&mut self, root: &ast::Root) -> result::Result<Self::Output, Self::Error> {
         if !is_valid_sol_filename(&root.file_name) {
             self.errors
                 .push(self.error(root.span, ErrorKind::InvalidFileName));
@@ -134,16 +138,13 @@ impl<'t> Visitor for SemanticAnalyzer<'t> {
 
     fn visit_condition(
         &mut self,
-        _condition: &crate::ast::Condition,
+        _condition: &ast::Condition,
     ) -> result::Result<Self::Output, Self::Error> {
         // We don't implement any semantic rules here for now.
         Ok(())
     }
 
-    fn visit_action(
-        &mut self,
-        _action: &crate::ast::Action,
-    ) -> result::Result<Self::Output, Self::Error> {
+    fn visit_action(&mut self, _action: &ast::Action) -> result::Result<Self::Output, Self::Error> {
         // We don't implement any semantic rules here for now.
         Ok(())
     }
