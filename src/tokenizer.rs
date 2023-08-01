@@ -303,8 +303,9 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
                     lexeme,
                 });
             } else {
-                // FIXME: In a future release, we should detect invalid characters here.
-                if is_valid_text_char(self.char()) {
+                // FIXME: In a future release, we should allow any character to appear
+                // inside an IT block, since that will be emitted as a comment.
+                if is_valid_identifier_char(self.char()) {
                     lexeme.push(self.char());
                     self.scan();
                 } else {
@@ -320,8 +321,8 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
     }
 }
 
-fn is_valid_text_char(_c: char) -> bool {
-    true
+fn is_valid_identifier_char(c: char) -> bool {
+    c.is_alphanumeric() || c == '_'
 }
 
 #[cfg(test)]
