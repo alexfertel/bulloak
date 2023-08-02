@@ -39,6 +39,10 @@ impl Error {
 /// The type of an error that occurred while tokenizing a tree.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ErrorKind {
+    /// Found an invalid identifier character.
+    InvalidIdentifierCharacter(char),
+    /// Found an invalid filename character.
+    InvalidFileNameCharacter(char),
     /// Found an invalid character.
     InvalidCharacter(char),
     /// This enum may grow additional variants, so this makes sure clients
@@ -113,11 +117,29 @@ impl Tokenizer {
 struct TokenizerI<'s, T> {
     text: &'s str,
     tokenizer: T,
+    /// When true, the tokenizer is in `identifier` mode.
+    ///
+    /// In `identifier` mode, the tokenizer will error if it encounters a
+    /// a character that is not a valid identifier character.
+    /// This is to prevent malformed names when emitting identifiers.
+    identifier_mode: Cell<bool>,
+    /// When true, the tokenizer is in `filename` mode.
+    ///
+    /// In `filename` mode, the tokenizer will error if it encounters a
+    /// a character that is not a valid filename character.
+    /// This is to prevent malformed names when creating the output file.
+    filename_mode: Cell<bool>,
 }
 
 impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
     fn new(tokenizer: T, text: &'s str) -> Self {
-        Self { text, tokenizer }
+        Self {
+            text,
+            tokenizer,
+            identifier_mode: Cell::new(false),
+            // Starts as `true` because the first token must always be a filename.
+            filename_mode: Cell::new(true),
+        }
     }
 
     /// Return a reference to the tokenizer state.
@@ -206,6 +228,46 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
             .next()
     }
 
+    /// Enters identifier mode.
+    fn enter_identifier_mode(&self) {
+        self.identifier_mode.set(true);
+    }
+
+    /// Exits identifier mode.
+    fn exit_identifier_mode(&self) {
+        self.identifier_mode.set(false);
+    }
+
+    /// Returns true if the tokenizer is in identifier mode.
+    fn is_identifier_mode(&self) -> bool {
+        self.identifier_mode.get()
+    }
+
+    /// Enters filename mode.
+    fn enter_filename_mode(&self) {
+        self.filename_mode.set(true);
+    }
+
+    /// Exits filename mode.
+    fn exit_filename_mode(&self) {
+        self.filename_mode.set(false);
+    }
+
+    /// Returns true if the tokenizer is in filename mode.
+    fn is_filename_mode(&self) -> bool {
+        self.filename_mode.get()
+    }
+
+    /// Returns the tokenizer to its default mode.
+    fn exit_mode(&self) {
+        if self.is_filename_mode() {
+            self.exit_filename_mode();
+        }
+        if self.is_identifier_mode() {
+            self.exit_identifier_mode();
+        }
+    }
+
     /// Advance the tokenizer by one character.
     ///
     /// If the input has been exhausted, then this returns `None`.
@@ -246,8 +308,30 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
             }
 
             match self.char() {
-                ' ' | '\t' | '\r' | '\n' | '─' | '│' => {}
-                '/' => self.scan_comments(),
+                ' ' => {}
+                '\n' | '\t' | '\r' => {
+                    self.exit_mode();
+                }
+                '─' | '│' => {
+                    if self.is_identifier_mode() {
+                        self.error(
+                            self.span(),
+                            ErrorKind::InvalidIdentifierCharacter(self.char()),
+                        );
+                    }
+                    if self.is_filename_mode() {
+                        self.error(
+                            self.span(),
+                            ErrorKind::InvalidIdentifierCharacter(self.char()),
+                        );
+                    }
+                }
+                '/' => {
+                    if let Some('/') = self.peek() {
+                        self.exit_mode();
+                        self.scan_comments();
+                    }
+                }
                 '├' => tokens.push(Token {
                     kind: TokenKind::TEE,
                     span: self.span(),
@@ -260,6 +344,10 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
                 }),
                 _ => {
                     let token = self.scan_word()?;
+                    match token.kind {
+                        TokenKind::WHEN => self.enter_identifier_mode(),
+                        _ => {}
+                    }
                     tokens.push(token);
                 }
             }
@@ -303,11 +391,28 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
                     lexeme,
                 });
             } else {
-                lexeme.push(self.char());
-                self.scan();
+                if self.is_identifier_mode() && is_valid_identifier_char(self.char()) {
+                    lexeme.push(self.char());
+                    self.scan();
+                } else {
+                    return Err(self
+                        .error(
+                            self.span().with_start(span_start),
+                            ErrorKind::InvalidCharacter(self.char()),
+                        )
+                        .into());
+                }
             }
         }
     }
+}
+
+fn is_valid_identifier_char(c: char) -> bool {
+    c.is_alphanumeric() || c == '_'
+}
+
+fn is_valid_filename_char(c: char) -> bool {
+    is_valid_identifier_char(c) || c == '.'
 }
 
 #[cfg(test)]
