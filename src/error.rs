@@ -140,17 +140,17 @@ fn repeat_str(s: &str, n: usize) -> String {
 #[cfg(test)]
 mod test {
     use super::{repeat_str, Formatter};
+    use crate::parser;
     use crate::span::{Position, Span};
-    use crate::tokenizer;
     use pretty_assertions::assert_eq;
 
     #[test]
     fn test_notate() {
         let text = "hello\nworld\n";
-        let span = Span::splat(Position::new(0, 2, 1)).with_end(Position::new(0, 2, 5));
+        let span = Span::splat(Position::new(0, 2, 1)).with_end(Position::new(4, 2, 5));
         let formatter = Formatter {
             text,
-            err: &tokenizer::ErrorKind::InvalidCharacter('w'),
+            err: &parser::ErrorKind::UnexpectedToken("world".to_string()),
             span: &span,
         };
         let notated = format!("{}", formatter);

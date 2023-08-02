@@ -43,8 +43,6 @@ pub enum ErrorKind {
     InvalidIdentifierCharacter(char),
     /// Found an invalid filename character.
     InvalidFileNameCharacter(char),
-    /// Found an invalid character.
-    InvalidCharacter(char),
     /// This enum may grow additional variants, so this makes sure clients
     /// don't count on exhaustive matching. (Otherwise, adding a new variant
     /// could break existing code.)
@@ -62,7 +60,8 @@ impl fmt::Display for ErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use self::ErrorKind::*;
         match *self {
-            InvalidCharacter(c) => write!(f, "invalid character: {:?}", c),
+            InvalidFileNameCharacter(c) => write!(f, "invalid filename: {:?}", c),
+            InvalidIdentifierCharacter(c) => write!(f, "invalid identifier: {:?}", c),
             _ => unreachable!(),
         }
     }
@@ -322,12 +321,6 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
                 '\n' | '\t' | '\r' => {
                     self.exit_mode();
                 }
-                '/' => {
-                    if let Some('/') = self.peek() {
-                        self.exit_mode();
-                        self.scan_comments();
-                    }
-                }
                 '├' => tokens.push(Token {
                     kind: TokenKind::TEE,
                     span: self.span(),
@@ -338,6 +331,10 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
                     span: self.span(),
                     lexeme: "└".to_string(),
                 }),
+                '/' if self.peek().is_some_and(|c| c == '/') => {
+                    self.exit_mode();
+                    self.scan_comments();
+                }
                 _ => {
                     let token = self.scan_word()?;
                     match token.kind {
@@ -374,7 +371,21 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
         let span_start = self.pos();
 
         loop {
-            if self.peek().is_none() || self.peek().is_some_and(|c| c.is_whitespace()) {
+            if self.is_identifier_mode() && !is_valid_identifier_char(self.char()) {
+                return Err(self
+                    .error(
+                        self.span(),
+                        ErrorKind::InvalidIdentifierCharacter(self.char()),
+                    )
+                    .into());
+            } else if self.is_filename_mode() && !is_valid_filename_char(self.char()) {
+                return Err(self
+                    .error(
+                        self.span(),
+                        ErrorKind::InvalidFileNameCharacter(self.char()),
+                    )
+                    .into());
+            } else if self.peek().is_none() || self.peek().is_some_and(|c| c.is_whitespace()) {
                 lexeme.push(self.char());
                 let kind = match lexeme.as_str() {
                     "when" => TokenKind::WHEN,
@@ -387,20 +398,8 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
                     lexeme,
                 });
             } else {
-                if self.is_identifier_mode() && is_valid_identifier_char(self.char())
-                    || self.is_filename_mode() && is_valid_filename_char(self.char())
-                    || !self.is_identifier_mode() && !self.is_filename_mode()
-                {
-                    lexeme.push(self.char());
-                    self.scan();
-                } else {
-                    return Err(self
-                        .error(
-                            self.span().with_start(span_start),
-                            ErrorKind::InvalidCharacter(self.char()),
-                        )
-                        .into());
-                }
+                lexeme.push(self.char());
+                self.scan();
             }
         }
     }
@@ -425,8 +424,26 @@ mod tests {
     use crate::error::Result;
     use crate::{
         span::{Position, Span},
-        tokenizer::{Token, TokenKind, Tokenizer},
+        tokenizer::{self, Token, TokenKind, Tokenizer},
     };
+
+    #[derive(Clone, Debug)]
+    struct TestError {
+        span: Span,
+        kind: tokenizer::ErrorKind,
+    }
+
+    impl PartialEq<tokenizer::Error> for TestError {
+        fn eq(&self, other: &tokenizer::Error) -> bool {
+            self.span == other.span && self.kind == other.kind
+        }
+    }
+
+    impl PartialEq<TestError> for tokenizer::Error {
+        fn eq(&self, other: &TestError) -> bool {
+            self.span == other.span && self.kind == other.kind
+        }
+    }
 
     fn p(offset: usize, line: usize, column: usize) -> Position {
         Position::new(offset, line, column)
@@ -466,6 +483,85 @@ mod tests {
         );
 
         Ok(())
+    }
+
+    #[test]
+    fn test_invalid_characters() {
+        assert_eq!(
+            Tokenizer::new().tokenize("/foobar").unwrap_err(),
+            TestError {
+                span: s(p(0, 1, 1), p(0, 1, 1)),
+                kind: tokenizer::ErrorKind::InvalidFileNameCharacter('/'),
+            }
+        );
+        assert_eq!(
+            Tokenizer::new().tokenize("foo/bar").unwrap_err(),
+            TestError {
+                span: s(p(3, 1, 4), p(3, 1, 4)),
+                kind: tokenizer::ErrorKind::InvalidFileNameCharacter('/'),
+            }
+        );
+        assert_eq!(
+            Tokenizer::new().tokenize("foobar/").unwrap_err(),
+            TestError {
+                span: s(p(6, 1, 7), p(6, 1, 7)),
+                kind: tokenizer::ErrorKind::InvalidFileNameCharacter('/'),
+            }
+        );
+        assert_eq!(
+            Tokenizer::new()
+                .tokenize("foo\n└── when |weird identifier")
+                .unwrap_err(),
+            TestError {
+                span: s(p(19, 2, 10), p(19, 2, 10)),
+                kind: tokenizer::ErrorKind::InvalidIdentifierCharacter('|'),
+            }
+        );
+        assert_eq!(
+            Tokenizer::new()
+                .tokenize("foo\n└── when w|eird identifier")
+                .unwrap_err(),
+            TestError {
+                span: s(p(20, 2, 11), p(20, 2, 11)),
+                kind: tokenizer::ErrorKind::InvalidIdentifierCharacter('|'),
+            }
+        );
+        assert_eq!(
+            Tokenizer::new()
+                .tokenize("foo\n└── when weird| identifier")
+                .unwrap_err(),
+            TestError {
+                span: s(p(24, 2, 15), p(24, 2, 15)),
+                kind: tokenizer::ErrorKind::InvalidIdentifierCharacter('|'),
+            }
+        );
+        assert_eq!(
+            Tokenizer::new()
+                .tokenize("foo\n└── when .weird identifier")
+                .unwrap_err(),
+            TestError {
+                span: s(p(19, 2, 10), p(19, 2, 10)),
+                kind: tokenizer::ErrorKind::InvalidIdentifierCharacter('.'),
+            }
+        );
+        assert_eq!(
+            Tokenizer::new()
+                .tokenize("foo\n└── when w,eird identifier")
+                .unwrap_err(),
+            TestError {
+                span: s(p(20, 2, 11), p(20, 2, 11)),
+                kind: tokenizer::ErrorKind::InvalidIdentifierCharacter(','),
+            }
+        );
+        assert_eq!(
+            Tokenizer::new()
+                .tokenize("foo\n└── when weird' identifier")
+                .unwrap_err(),
+            TestError {
+                span: s(p(24, 2, 15), p(24, 2, 15)),
+                kind: tokenizer::ErrorKind::InvalidIdentifierCharacter('\''),
+            }
+        );
     }
 
     #[test]
