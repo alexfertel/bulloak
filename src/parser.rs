@@ -39,6 +39,8 @@ impl Error {
     }
 }
 
+type Lexeme = String;
+
 /// The type of an error that occurred while building an AST.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ErrorKind {
@@ -47,13 +49,13 @@ pub enum ErrorKind {
     /// An example of how this might be an internal bug is if the
     /// parser ends up in a state where the current grammar production
     /// being applied doesn't expect this token to occur.
-    UnexpectedToken,
+    UnexpectedToken(Lexeme),
     /// Did not expect this WHEN keyword.
     UnexpectedWhen,
     /// Did not expect this IT keyword.
     UnexpectedIt,
     /// Did not expect a STRING.
-    UnexpectedString,
+    UnexpectedString(Lexeme),
     /// Did not expect an end of file.
     UnexpectedEof,
     /// This enum may grow additional variants, so this makes sure clients
@@ -73,10 +75,10 @@ impl fmt::Display for ErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use self::ErrorKind::*;
         match *self {
-            UnexpectedToken => write!(f, "unexpected token"),
+            UnexpectedToken(ref lexeme) => write!(f, "unexpected token: {}", lexeme),
             UnexpectedWhen => write!(f, "unexpected WHEN keyword"),
             UnexpectedIt => write!(f, "unexpected IT keyword"),
-            UnexpectedString => write!(f, "unexpected STRING"),
+            UnexpectedString(ref lexeme) => write!(f, "unexpected STRING: {}", lexeme),
             UnexpectedEof => write!(f, "unexpected end of file"),
             _ => unreachable!(),
         }
@@ -208,12 +210,18 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
                         }))
                     }
                     _ => Err(self
-                        .error(current_token.span, ErrorKind::UnexpectedToken)
+                        .error(
+                            current_token.span,
+                            ErrorKind::UnexpectedToken(next_token.lexeme.clone()),
+                        )
                         .into()),
                 }
             }
             TokenKind::STRING => Err(self
-                .error(current_token.span, ErrorKind::UnexpectedString)
+                .error(
+                    current_token.span,
+                    ErrorKind::UnexpectedString(current_token.lexeme.clone()),
+                )
                 .into()),
             TokenKind::WHEN => Err(self
                 .error(current_token.span, ErrorKind::UnexpectedWhen)

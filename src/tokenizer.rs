@@ -77,7 +77,11 @@ pub struct Token {
 
 impl fmt::Debug for Token {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Token({:?}, {:?})", self.lexeme, self.span)
+        write!(
+            f,
+            "Token({:?}, {:?}, {:?})",
+            self.kind, self.lexeme, self.span
+        )
     }
 }
 
@@ -94,29 +98,6 @@ type Tokens = Vec<Token>;
 
 pub struct Tokenizer {
     pos: Cell<Position>,
-}
-
-impl Tokenizer {
-    pub fn new() -> Self {
-        Self {
-            pos: Cell::new(Position::new(0, 1, 1)),
-        }
-    }
-
-    /// Tokenize the tree.
-    pub fn tokenize(&mut self, text: &str) -> Result<Tokens> {
-        TokenizerI::new(self, text).tokenize()
-    }
-
-    /// Reset the tokenizer's state.
-    fn reset(&self) {
-        self.pos.set(Position::new(0, 1, 1));
-    }
-}
-
-struct TokenizerI<'s, T> {
-    text: &'s str,
-    tokenizer: T,
     /// When true, the tokenizer is in `identifier` mode.
     ///
     /// In `identifier` mode, the tokenizer will error if it encounters a
@@ -131,15 +112,37 @@ struct TokenizerI<'s, T> {
     filename_mode: Cell<bool>,
 }
 
-impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
-    fn new(tokenizer: T, text: &'s str) -> Self {
+impl Tokenizer {
+    pub fn new() -> Self {
         Self {
-            text,
-            tokenizer,
+            pos: Cell::new(Position::new(0, 1, 1)),
             identifier_mode: Cell::new(false),
             // Starts as `true` because the first token must always be a filename.
             filename_mode: Cell::new(true),
         }
+    }
+
+    /// Tokenize the tree.
+    pub fn tokenize(&mut self, text: &str) -> Result<Tokens> {
+        TokenizerI::new(self, text).tokenize()
+    }
+
+    /// Reset the tokenizer's state.
+    fn reset(&self) {
+        self.pos.set(Position::new(0, 1, 1));
+        self.identifier_mode.set(false);
+        self.filename_mode.set(true);
+    }
+}
+
+struct TokenizerI<'s, T> {
+    text: &'s str,
+    tokenizer: T,
+}
+
+impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
+    fn new(tokenizer: T, text: &'s str) -> Self {
+        Self { text, tokenizer }
     }
 
     /// Return a reference to the tokenizer state.
@@ -230,32 +233,27 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
 
     /// Enters identifier mode.
     fn enter_identifier_mode(&self) {
-        self.identifier_mode.set(true);
+        self.tokenizer().identifier_mode.set(true);
     }
 
     /// Exits identifier mode.
     fn exit_identifier_mode(&self) {
-        self.identifier_mode.set(false);
+        self.tokenizer().identifier_mode.set(false);
     }
 
     /// Returns true if the tokenizer is in identifier mode.
     fn is_identifier_mode(&self) -> bool {
-        self.identifier_mode.get()
-    }
-
-    /// Enters filename mode.
-    fn enter_filename_mode(&self) {
-        self.filename_mode.set(true);
+        self.tokenizer().identifier_mode.get()
     }
 
     /// Exits filename mode.
     fn exit_filename_mode(&self) {
-        self.filename_mode.set(false);
+        self.tokenizer().filename_mode.set(false);
     }
 
     /// Returns true if the tokenizer is in filename mode.
     fn is_filename_mode(&self) -> bool {
-        self.filename_mode.get()
+        self.tokenizer().filename_mode.get()
     }
 
     /// Returns the tokenizer to its default mode.
@@ -308,23 +306,21 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
             }
 
             match self.char() {
-                ' ' => {}
+                '─' | '│' if self.is_identifier_mode() => {
+                    self.error(
+                        self.span(),
+                        ErrorKind::InvalidIdentifierCharacter(self.char()),
+                    );
+                }
+                '─' | '│' if self.is_filename_mode() => {
+                    self.error(
+                        self.span(),
+                        ErrorKind::InvalidFileNameCharacter(self.char()),
+                    );
+                }
+                ' ' | '─' | '│' => {}
                 '\n' | '\t' | '\r' => {
                     self.exit_mode();
-                }
-                '─' | '│' => {
-                    if self.is_identifier_mode() {
-                        self.error(
-                            self.span(),
-                            ErrorKind::InvalidIdentifierCharacter(self.char()),
-                        );
-                    }
-                    if self.is_filename_mode() {
-                        self.error(
-                            self.span(),
-                            ErrorKind::InvalidIdentifierCharacter(self.char()),
-                        );
-                    }
                 }
                 '/' => {
                     if let Some('/') = self.peek() {
@@ -391,7 +387,10 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
                     lexeme,
                 });
             } else {
-                if self.is_identifier_mode() && is_valid_identifier_char(self.char()) {
+                if self.is_identifier_mode() && is_valid_identifier_char(self.char())
+                    || self.is_filename_mode() && is_valid_filename_char(self.char())
+                    || !self.is_identifier_mode() && !self.is_filename_mode()
+                {
                     lexeme.push(self.char());
                     self.scan();
                 } else {
@@ -407,10 +406,14 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
     }
 }
 
+/// Checks whether a character might appear in an identifier.
+///
+/// Valid identifiers are those which can be used as a variable name.
 fn is_valid_identifier_char(c: char) -> bool {
     c.is_alphanumeric() || c == '_'
 }
 
+/// Checks whether a character might appear in a filename.
 fn is_valid_filename_char(c: char) -> bool {
     is_valid_identifier_char(c) || c == '.'
 }
@@ -527,602 +530,273 @@ mod tests {
       ├── when the asset is not a contract
       │  └── it should revert
       └── when the asset is a contract
-          ├── when the asset misses the ERC-20 return value
+          ├── when the asset misses the ERC_20 return value
           │  ├── it should create the child
-          │  ├── it should perform the ERC-20 transfers
+          │  ├── it should perform the ERC_20 transfers
           │  └── it should emit a {MultipleChildren} event
-          └── when the asset does not miss the ERC-20 return value
+          └── when the asset does not miss the ERC_20 return value
               ├── it should create the child
               └── it should emit a {MultipleChildren} event"#,
         );
 
         let tokens = Tokenizer::new().tokenize(&file_contents)?;
+        let expected = vec![
+            t(
+                TokenKind::STRING,
+                "multiple_children.t.sol",
+                s(p(0, 1, 1), p(22, 1, 23)),
+            ),
+            t(TokenKind::TEE, "├", s(p(24, 2, 1), p(24, 2, 1))),
+            t(TokenKind::WHEN, "when", s(p(34, 2, 5), p(37, 2, 8))),
+            t(TokenKind::STRING, "stuff", s(p(39, 2, 10), p(43, 2, 14))),
+            t(TokenKind::STRING, "called", s(p(45, 2, 16), p(50, 2, 21))),
+            t(TokenKind::CORNER, "└", s(p(57, 3, 4), p(57, 3, 4))),
+            t(TokenKind::IT, "it", s(p(67, 3, 8), p(68, 3, 9))),
+            t(TokenKind::STRING, "should", s(p(70, 3, 11), p(75, 3, 16))),
+            t(TokenKind::STRING, "revert", s(p(77, 3, 18), p(82, 3, 23))),
+            t(TokenKind::CORNER, "└", s(p(84, 4, 1), p(84, 4, 1))),
+            t(TokenKind::WHEN, "when", s(p(94, 4, 5), p(97, 4, 8))),
+            t(TokenKind::STRING, "not", s(p(99, 4, 10), p(101, 4, 12))),
+            t(TokenKind::STRING, "stuff", s(p(103, 4, 14), p(107, 4, 18))),
+            t(TokenKind::STRING, "called", s(p(109, 4, 20), p(114, 4, 25))),
+            t(TokenKind::TEE, "├", s(p(119, 5, 4), p(119, 5, 4))),
+            t(TokenKind::WHEN, "when", s(p(129, 5, 8), p(132, 5, 11))),
+            t(TokenKind::STRING, "the", s(p(134, 5, 13), p(136, 5, 15))),
+            t(
+                TokenKind::STRING,
+                "deposit",
+                s(p(138, 5, 17), p(144, 5, 23)),
+            ),
+            t(TokenKind::STRING, "amount", s(p(146, 5, 25), p(151, 5, 30))),
+            t(TokenKind::STRING, "is", s(p(153, 5, 32), p(154, 5, 33))),
+            t(TokenKind::STRING, "zero", s(p(156, 5, 35), p(159, 5, 38))),
+            t(TokenKind::CORNER, "└", s(p(169, 6, 7), p(169, 6, 7))),
+            t(TokenKind::IT, "it", s(p(179, 6, 11), p(180, 6, 12))),
+            t(TokenKind::STRING, "should", s(p(182, 6, 14), p(187, 6, 19))),
+            t(TokenKind::STRING, "revert", s(p(189, 6, 21), p(194, 6, 26))),
+            t(TokenKind::CORNER, "└", s(p(199, 7, 4), p(199, 7, 4))),
+            t(TokenKind::WHEN, "when", s(p(209, 7, 8), p(212, 7, 11))),
+            t(TokenKind::STRING, "the", s(p(214, 7, 13), p(216, 7, 15))),
+            t(
+                TokenKind::STRING,
+                "deposit",
+                s(p(218, 7, 17), p(224, 7, 23)),
+            ),
+            t(TokenKind::STRING, "amount", s(p(226, 7, 25), p(231, 7, 30))),
+            t(TokenKind::STRING, "is", s(p(233, 7, 32), p(234, 7, 33))),
+            t(TokenKind::STRING, "not", s(p(236, 7, 35), p(238, 7, 37))),
+            t(TokenKind::STRING, "zero", s(p(240, 7, 39), p(243, 7, 42))),
+            t(TokenKind::TEE, "├", s(p(251, 8, 7), p(251, 8, 7))),
+            t(TokenKind::WHEN, "when", s(p(261, 8, 11), p(264, 8, 14))),
+            t(TokenKind::STRING, "the", s(p(266, 8, 16), p(268, 8, 18))),
+            t(TokenKind::STRING, "number", s(p(270, 8, 20), p(275, 8, 25))),
+            t(TokenKind::STRING, "count", s(p(277, 8, 27), p(281, 8, 31))),
+            t(TokenKind::STRING, "is", s(p(283, 8, 33), p(284, 8, 34))),
+            t(TokenKind::STRING, "zero", s(p(286, 8, 36), p(289, 8, 39))),
+            t(TokenKind::CORNER, "└", s(p(302, 9, 10), p(302, 9, 10))),
+            t(TokenKind::IT, "it", s(p(312, 9, 14), p(313, 9, 15))),
+            t(TokenKind::STRING, "should", s(p(315, 9, 17), p(320, 9, 22))),
+            t(TokenKind::STRING, "revert", s(p(322, 9, 24), p(327, 9, 29))),
+            t(TokenKind::TEE, "├", s(p(335, 10, 7), p(335, 10, 7))),
+            t(TokenKind::WHEN, "when", s(p(345, 10, 11), p(348, 10, 14))),
+            t(TokenKind::STRING, "the", s(p(350, 10, 16), p(352, 10, 18))),
+            t(
+                TokenKind::STRING,
+                "asset",
+                s(p(354, 10, 20), p(358, 10, 24)),
+            ),
+            t(TokenKind::STRING, "is", s(p(360, 10, 26), p(361, 10, 27))),
+            t(TokenKind::STRING, "not", s(p(363, 10, 29), p(365, 10, 31))),
+            t(TokenKind::STRING, "a", s(p(367, 10, 33), p(367, 10, 33))),
+            t(
+                TokenKind::STRING,
+                "contract",
+                s(p(369, 10, 35), p(376, 10, 42)),
+            ),
+            t(TokenKind::CORNER, "└", s(p(389, 11, 10), p(389, 11, 10))),
+            t(TokenKind::IT, "it", s(p(399, 11, 14), p(400, 11, 15))),
+            t(
+                TokenKind::STRING,
+                "should",
+                s(p(402, 11, 17), p(407, 11, 22)),
+            ),
+            t(
+                TokenKind::STRING,
+                "revert",
+                s(p(409, 11, 24), p(414, 11, 29)),
+            ),
+            t(TokenKind::CORNER, "└", s(p(422, 12, 7), p(422, 12, 7))),
+            t(TokenKind::WHEN, "when", s(p(432, 12, 11), p(435, 12, 14))),
+            t(TokenKind::STRING, "the", s(p(437, 12, 16), p(439, 12, 18))),
+            t(
+                TokenKind::STRING,
+                "asset",
+                s(p(441, 12, 20), p(445, 12, 24)),
+            ),
+            t(TokenKind::STRING, "is", s(p(447, 12, 26), p(448, 12, 27))),
+            t(TokenKind::STRING, "a", s(p(450, 12, 29), p(450, 12, 29))),
+            t(
+                TokenKind::STRING,
+                "contract",
+                s(p(452, 12, 31), p(459, 12, 38)),
+            ),
+            t(TokenKind::TEE, "├", s(p(471, 13, 11), p(471, 13, 11))),
+            t(TokenKind::WHEN, "when", s(p(481, 13, 15), p(484, 13, 18))),
+            t(TokenKind::STRING, "the", s(p(486, 13, 20), p(488, 13, 22))),
+            t(
+                TokenKind::STRING,
+                "asset",
+                s(p(490, 13, 24), p(494, 13, 28)),
+            ),
+            t(
+                TokenKind::STRING,
+                "misses",
+                s(p(496, 13, 30), p(501, 13, 35)),
+            ),
+            t(TokenKind::STRING, "the", s(p(503, 13, 37), p(505, 13, 39))),
+            t(
+                TokenKind::STRING,
+                "ERC_20",
+                s(p(507, 13, 41), p(512, 13, 46)),
+            ),
+            t(
+                TokenKind::STRING,
+                "return",
+                s(p(514, 13, 48), p(519, 13, 53)),
+            ),
+            t(
+                TokenKind::STRING,
+                "value",
+                s(p(521, 13, 55), p(525, 13, 59)),
+            ),
+            t(TokenKind::TEE, "├", s(p(542, 14, 14), p(542, 14, 14))),
+            t(TokenKind::IT, "it", s(p(552, 14, 18), p(553, 14, 19))),
+            t(
+                TokenKind::STRING,
+                "should",
+                s(p(555, 14, 21), p(560, 14, 26)),
+            ),
+            t(
+                TokenKind::STRING,
+                "create",
+                s(p(562, 14, 28), p(567, 14, 33)),
+            ),
+            t(TokenKind::STRING, "the", s(p(569, 14, 35), p(571, 14, 37))),
+            t(
+                TokenKind::STRING,
+                "child",
+                s(p(573, 14, 39), p(577, 14, 43)),
+            ),
+            t(TokenKind::TEE, "├", s(p(594, 15, 14), p(594, 15, 14))),
+            t(TokenKind::IT, "it", s(p(604, 15, 18), p(605, 15, 19))),
+            t(
+                TokenKind::STRING,
+                "should",
+                s(p(607, 15, 21), p(612, 15, 26)),
+            ),
+            t(
+                TokenKind::STRING,
+                "perform",
+                s(p(614, 15, 28), p(620, 15, 34)),
+            ),
+            t(TokenKind::STRING, "the", s(p(622, 15, 36), p(624, 15, 38))),
+            t(
+                TokenKind::STRING,
+                "ERC_20",
+                s(p(626, 15, 40), p(631, 15, 45)),
+            ),
+            t(
+                TokenKind::STRING,
+                "transfers",
+                s(p(633, 15, 47), p(641, 15, 55)),
+            ),
+            t(TokenKind::CORNER, "└", s(p(658, 16, 14), p(658, 16, 14))),
+            t(TokenKind::IT, "it", s(p(668, 16, 18), p(669, 16, 19))),
+            t(
+                TokenKind::STRING,
+                "should",
+                s(p(671, 16, 21), p(676, 16, 26)),
+            ),
+            t(TokenKind::STRING, "emit", s(p(678, 16, 28), p(681, 16, 31))),
+            t(TokenKind::STRING, "a", s(p(683, 16, 33), p(683, 16, 33))),
+            t(
+                TokenKind::STRING,
+                "{MultipleChildren}",
+                s(p(685, 16, 35), p(702, 16, 52)),
+            ),
+            t(
+                TokenKind::STRING,
+                "event",
+                s(p(704, 16, 54), p(708, 16, 58)),
+            ),
+            t(TokenKind::CORNER, "└", s(p(720, 17, 11), p(720, 17, 11))),
+            t(TokenKind::WHEN, "when", s(p(730, 17, 15), p(733, 17, 18))),
+            t(TokenKind::STRING, "the", s(p(735, 17, 20), p(737, 17, 22))),
+            t(
+                TokenKind::STRING,
+                "asset",
+                s(p(739, 17, 24), p(743, 17, 28)),
+            ),
+            t(TokenKind::STRING, "does", s(p(745, 17, 30), p(748, 17, 33))),
+            t(TokenKind::STRING, "not", s(p(750, 17, 35), p(752, 17, 37))),
+            t(TokenKind::STRING, "miss", s(p(754, 17, 39), p(757, 17, 42))),
+            t(TokenKind::STRING, "the", s(p(759, 17, 44), p(761, 17, 46))),
+            t(
+                TokenKind::STRING,
+                "ERC_20",
+                s(p(763, 17, 48), p(768, 17, 53)),
+            ),
+            t(
+                TokenKind::STRING,
+                "return",
+                s(p(770, 17, 55), p(775, 17, 60)),
+            ),
+            t(
+                TokenKind::STRING,
+                "value",
+                s(p(777, 17, 62), p(781, 17, 66)),
+            ),
+            t(TokenKind::TEE, "├", s(p(797, 18, 15), p(797, 18, 15))),
+            t(TokenKind::IT, "it", s(p(807, 18, 19), p(808, 18, 20))),
+            t(
+                TokenKind::STRING,
+                "should",
+                s(p(810, 18, 22), p(815, 18, 27)),
+            ),
+            t(
+                TokenKind::STRING,
+                "create",
+                s(p(817, 18, 29), p(822, 18, 34)),
+            ),
+            t(TokenKind::STRING, "the", s(p(824, 18, 36), p(826, 18, 38))),
+            t(
+                TokenKind::STRING,
+                "child",
+                s(p(828, 18, 40), p(832, 18, 44)),
+            ),
+            t(TokenKind::CORNER, "└", s(p(848, 19, 15), p(848, 19, 15))),
+            t(TokenKind::IT, "it", s(p(858, 19, 19), p(859, 19, 20))),
+            t(
+                TokenKind::STRING,
+                "should",
+                s(p(861, 19, 22), p(866, 19, 27)),
+            ),
+            t(TokenKind::STRING, "emit", s(p(868, 19, 29), p(871, 19, 32))),
+            t(TokenKind::STRING, "a", s(p(873, 19, 34), p(873, 19, 34))),
+            t(
+                TokenKind::STRING,
+                "{MultipleChildren}",
+                s(p(875, 19, 36), p(892, 19, 53)),
+            ),
+            t(
+                TokenKind::STRING,
+                "event",
+                s(p(894, 19, 55), p(898, 19, 59)),
+            ),
+        ];
 
-        assert_eq!(
-            tokens,
-            vec![
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(0, 1, 1), Position::new(22, 1, 23)),
-                    lexeme: "multiple_children.t.sol".to_string()
-                },
-                Token {
-                    kind: TokenKind::TEE,
-                    span: Span::new(Position::new(24, 2, 1), Position::new(24, 2, 1)),
-                    lexeme: "├".to_string()
-                },
-                Token {
-                    kind: TokenKind::WHEN,
-                    span: Span::new(Position::new(34, 2, 5), Position::new(37, 2, 8)),
-                    lexeme: "when".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(39, 2, 10), Position::new(43, 2, 14)),
-                    lexeme: "stuff".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(45, 2, 16), Position::new(50, 2, 21)),
-                    lexeme: "called".to_string()
-                },
-                Token {
-                    kind: TokenKind::CORNER,
-                    span: Span::new(Position::new(57, 3, 4), Position::new(57, 3, 4)),
-                    lexeme: "└".to_string()
-                },
-                Token {
-                    kind: TokenKind::IT,
-                    span: Span::new(Position::new(67, 3, 8), Position::new(68, 3, 9)),
-                    lexeme: "it".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(70, 3, 11), Position::new(75, 3, 16)),
-                    lexeme: "should".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(77, 3, 18), Position::new(82, 3, 23)),
-                    lexeme: "revert".to_string()
-                },
-                Token {
-                    kind: TokenKind::CORNER,
-                    span: Span::new(Position::new(84, 4, 1), Position::new(84, 4, 1)),
-                    lexeme: "└".to_string()
-                },
-                Token {
-                    kind: TokenKind::WHEN,
-                    span: Span::new(Position::new(94, 4, 5), Position::new(97, 4, 8)),
-                    lexeme: "when".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(99, 4, 10), Position::new(101, 4, 12)),
-                    lexeme: "not".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(103, 4, 14), Position::new(107, 4, 18)),
-                    lexeme: "stuff".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(109, 4, 20), Position::new(114, 4, 25)),
-                    lexeme: "called".to_string()
-                },
-                Token {
-                    kind: TokenKind::TEE,
-                    span: Span::new(Position::new(119, 5, 4), Position::new(119, 5, 4)),
-                    lexeme: "├".to_string()
-                },
-                Token {
-                    kind: TokenKind::WHEN,
-                    span: Span::new(Position::new(129, 5, 8), Position::new(132, 5, 11)),
-                    lexeme: "when".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(134, 5, 13), Position::new(136, 5, 15)),
-                    lexeme: "the".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(138, 5, 17), Position::new(144, 5, 23)),
-                    lexeme: "deposit".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(146, 5, 25), Position::new(151, 5, 30)),
-                    lexeme: "amount".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(153, 5, 32), Position::new(154, 5, 33)),
-                    lexeme: "is".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(156, 5, 35), Position::new(159, 5, 38)),
-                    lexeme: "zero".to_string()
-                },
-                Token {
-                    kind: TokenKind::CORNER,
-                    span: Span::new(Position::new(169, 6, 7), Position::new(169, 6, 7)),
-                    lexeme: "└".to_string()
-                },
-                Token {
-                    kind: TokenKind::IT,
-                    span: Span::new(Position::new(179, 6, 11), Position::new(180, 6, 12)),
-                    lexeme: "it".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(182, 6, 14), Position::new(187, 6, 19)),
-                    lexeme: "should".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(189, 6, 21), Position::new(194, 6, 26)),
-                    lexeme: "revert".to_string()
-                },
-                Token {
-                    kind: TokenKind::CORNER,
-                    span: Span::new(Position::new(199, 7, 4), Position::new(199, 7, 4)),
-                    lexeme: "└".to_string()
-                },
-                Token {
-                    kind: TokenKind::WHEN,
-                    span: Span::new(Position::new(209, 7, 8), Position::new(212, 7, 11)),
-                    lexeme: "when".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(214, 7, 13), Position::new(216, 7, 15)),
-                    lexeme: "the".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(218, 7, 17), Position::new(224, 7, 23)),
-                    lexeme: "deposit".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(226, 7, 25), Position::new(231, 7, 30)),
-                    lexeme: "amount".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(233, 7, 32), Position::new(234, 7, 33)),
-                    lexeme: "is".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(236, 7, 35), Position::new(238, 7, 37)),
-                    lexeme: "not".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(240, 7, 39), Position::new(243, 7, 42)),
-                    lexeme: "zero".to_string()
-                },
-                Token {
-                    kind: TokenKind::TEE,
-                    span: Span::new(Position::new(251, 8, 7), Position::new(251, 8, 7)),
-                    lexeme: "├".to_string()
-                },
-                Token {
-                    kind: TokenKind::WHEN,
-                    span: Span::new(Position::new(261, 8, 11), Position::new(264, 8, 14)),
-                    lexeme: "when".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(266, 8, 16), Position::new(268, 8, 18)),
-                    lexeme: "the".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(270, 8, 20), Position::new(275, 8, 25)),
-                    lexeme: "number".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(277, 8, 27), Position::new(281, 8, 31)),
-                    lexeme: "count".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(283, 8, 33), Position::new(284, 8, 34)),
-                    lexeme: "is".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(286, 8, 36), Position::new(289, 8, 39)),
-                    lexeme: "zero".to_string()
-                },
-                Token {
-                    kind: TokenKind::CORNER,
-                    span: Span::new(Position::new(302, 9, 10), Position::new(302, 9, 10)),
-                    lexeme: "└".to_string()
-                },
-                Token {
-                    kind: TokenKind::IT,
-                    span: Span::new(Position::new(312, 9, 14), Position::new(313, 9, 15)),
-                    lexeme: "it".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(315, 9, 17), Position::new(320, 9, 22)),
-                    lexeme: "should".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(322, 9, 24), Position::new(327, 9, 29)),
-                    lexeme: "revert".to_string()
-                },
-                Token {
-                    kind: TokenKind::TEE,
-                    span: Span::new(Position::new(335, 10, 7), Position::new(335, 10, 7)),
-                    lexeme: "├".to_string()
-                },
-                Token {
-                    kind: TokenKind::WHEN,
-                    span: Span::new(Position::new(345, 10, 11), Position::new(348, 10, 14)),
-                    lexeme: "when".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(350, 10, 16), Position::new(352, 10, 18)),
-                    lexeme: "the".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(354, 10, 20), Position::new(358, 10, 24)),
-                    lexeme: "asset".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(360, 10, 26), Position::new(361, 10, 27)),
-                    lexeme: "is".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(363, 10, 29), Position::new(365, 10, 31)),
-                    lexeme: "not".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(367, 10, 33), Position::new(367, 10, 33)),
-                    lexeme: "a".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(369, 10, 35), Position::new(376, 10, 42)),
-                    lexeme: "contract".to_string()
-                },
-                Token {
-                    kind: TokenKind::CORNER,
-                    span: Span::new(Position::new(389, 11, 10), Position::new(389, 11, 10)),
-                    lexeme: "└".to_string()
-                },
-                Token {
-                    kind: TokenKind::IT,
-                    span: Span::new(Position::new(399, 11, 14), Position::new(400, 11, 15)),
-                    lexeme: "it".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(402, 11, 17), Position::new(407, 11, 22)),
-                    lexeme: "should".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(409, 11, 24), Position::new(414, 11, 29)),
-                    lexeme: "revert".to_string()
-                },
-                Token {
-                    kind: TokenKind::CORNER,
-                    span: Span::new(Position::new(422, 12, 7), Position::new(422, 12, 7)),
-                    lexeme: "└".to_string()
-                },
-                Token {
-                    kind: TokenKind::WHEN,
-                    span: Span::new(Position::new(432, 12, 11), Position::new(435, 12, 14)),
-                    lexeme: "when".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(437, 12, 16), Position::new(439, 12, 18)),
-                    lexeme: "the".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(441, 12, 20), Position::new(445, 12, 24)),
-                    lexeme: "asset".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(447, 12, 26), Position::new(448, 12, 27)),
-                    lexeme: "is".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(450, 12, 29), Position::new(450, 12, 29)),
-                    lexeme: "a".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(452, 12, 31), Position::new(459, 12, 38)),
-                    lexeme: "contract".to_string()
-                },
-                Token {
-                    kind: TokenKind::TEE,
-                    span: Span::new(Position::new(471, 13, 11), Position::new(471, 13, 11)),
-                    lexeme: "├".to_string()
-                },
-                Token {
-                    kind: TokenKind::WHEN,
-                    span: Span::new(Position::new(481, 13, 15), Position::new(484, 13, 18)),
-                    lexeme: "when".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(486, 13, 20), Position::new(488, 13, 22)),
-                    lexeme: "the".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(490, 13, 24), Position::new(494, 13, 28)),
-                    lexeme: "asset".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(496, 13, 30), Position::new(501, 13, 35)),
-                    lexeme: "misses".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(503, 13, 37), Position::new(505, 13, 39)),
-                    lexeme: "the".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(507, 13, 41), Position::new(512, 13, 46)),
-                    lexeme: "ERC-20".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(514, 13, 48), Position::new(519, 13, 53)),
-                    lexeme: "return".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(521, 13, 55), Position::new(525, 13, 59)),
-                    lexeme: "value".to_string()
-                },
-                Token {
-                    kind: TokenKind::TEE,
-                    span: Span::new(Position::new(542, 14, 14), Position::new(542, 14, 14)),
-                    lexeme: "├".to_string()
-                },
-                Token {
-                    kind: TokenKind::IT,
-                    span: Span::new(Position::new(552, 14, 18), Position::new(553, 14, 19)),
-                    lexeme: "it".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(555, 14, 21), Position::new(560, 14, 26)),
-                    lexeme: "should".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(562, 14, 28), Position::new(567, 14, 33)),
-                    lexeme: "create".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(569, 14, 35), Position::new(571, 14, 37)),
-                    lexeme: "the".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(573, 14, 39), Position::new(577, 14, 43)),
-                    lexeme: "child".to_string()
-                },
-                Token {
-                    kind: TokenKind::TEE,
-                    span: Span::new(Position::new(594, 15, 14), Position::new(594, 15, 14)),
-                    lexeme: "├".to_string()
-                },
-                Token {
-                    kind: TokenKind::IT,
-                    span: Span::new(Position::new(604, 15, 18), Position::new(605, 15, 19)),
-                    lexeme: "it".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(607, 15, 21), Position::new(612, 15, 26)),
-                    lexeme: "should".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(614, 15, 28), Position::new(620, 15, 34)),
-                    lexeme: "perform".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(622, 15, 36), Position::new(624, 15, 38)),
-                    lexeme: "the".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(626, 15, 40), Position::new(631, 15, 45)),
-                    lexeme: "ERC-20".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(633, 15, 47), Position::new(641, 15, 55)),
-                    lexeme: "transfers".to_string()
-                },
-                Token {
-                    kind: TokenKind::CORNER,
-                    span: Span::new(Position::new(658, 16, 14), Position::new(658, 16, 14)),
-                    lexeme: "└".to_string()
-                },
-                Token {
-                    kind: TokenKind::IT,
-                    span: Span::new(Position::new(668, 16, 18), Position::new(669, 16, 19)),
-                    lexeme: "it".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(671, 16, 21), Position::new(676, 16, 26)),
-                    lexeme: "should".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(678, 16, 28), Position::new(681, 16, 31)),
-                    lexeme: "emit".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(683, 16, 33), Position::new(683, 16, 33)),
-                    lexeme: "a".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(685, 16, 35), Position::new(702, 16, 52)),
-                    lexeme: "{MultipleChildren}".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(704, 16, 54), Position::new(708, 16, 58)),
-                    lexeme: "event".to_string()
-                },
-                Token {
-                    kind: TokenKind::CORNER,
-                    span: Span::new(Position::new(720, 17, 11), Position::new(720, 17, 11)),
-                    lexeme: "└".to_string()
-                },
-                Token {
-                    kind: TokenKind::WHEN,
-                    span: Span::new(Position::new(730, 17, 15), Position::new(733, 17, 18)),
-                    lexeme: "when".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(735, 17, 20), Position::new(737, 17, 22)),
-                    lexeme: "the".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(739, 17, 24), Position::new(743, 17, 28)),
-                    lexeme: "asset".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(745, 17, 30), Position::new(748, 17, 33)),
-                    lexeme: "does".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(750, 17, 35), Position::new(752, 17, 37)),
-                    lexeme: "not".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(754, 17, 39), Position::new(757, 17, 42)),
-                    lexeme: "miss".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(759, 17, 44), Position::new(761, 17, 46)),
-                    lexeme: "the".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(763, 17, 48), Position::new(768, 17, 53)),
-                    lexeme: "ERC-20".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(770, 17, 55), Position::new(775, 17, 60)),
-                    lexeme: "return".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(777, 17, 62), Position::new(781, 17, 66)),
-                    lexeme: "value".to_string()
-                },
-                Token {
-                    kind: TokenKind::TEE,
-                    span: Span::new(Position::new(797, 18, 15), Position::new(797, 18, 15)),
-                    lexeme: "├".to_string()
-                },
-                Token {
-                    kind: TokenKind::IT,
-                    span: Span::new(Position::new(807, 18, 19), Position::new(808, 18, 20)),
-                    lexeme: "it".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(810, 18, 22), Position::new(815, 18, 27)),
-                    lexeme: "should".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(817, 18, 29), Position::new(822, 18, 34)),
-                    lexeme: "create".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(824, 18, 36), Position::new(826, 18, 38)),
-                    lexeme: "the".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(828, 18, 40), Position::new(832, 18, 44)),
-                    lexeme: "child".to_string()
-                },
-                Token {
-                    kind: TokenKind::CORNER,
-                    span: Span::new(Position::new(848, 19, 15), Position::new(848, 19, 15)),
-                    lexeme: "└".to_string()
-                },
-                Token {
-                    kind: TokenKind::IT,
-                    span: Span::new(Position::new(858, 19, 19), Position::new(859, 19, 20)),
-                    lexeme: "it".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(861, 19, 22), Position::new(866, 19, 27)),
-                    lexeme: "should".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(868, 19, 29), Position::new(871, 19, 32)),
-                    lexeme: "emit".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(873, 19, 34), Position::new(873, 19, 34)),
-                    lexeme: "a".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(875, 19, 36), Position::new(892, 19, 53)),
-                    lexeme: "{MultipleChildren}".to_string()
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::new(Position::new(894, 19, 55), Position::new(898, 19, 59)),
-                    lexeme: "event".to_string()
-                },
-            ]
-        );
+        assert_eq!(tokens.len(), expected.len());
+        assert_eq!(tokens, expected);
 
         Ok(())
     }
