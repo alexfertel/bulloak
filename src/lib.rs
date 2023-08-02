@@ -1,6 +1,7 @@
 use std::{fs, io::Result};
 
 mod ast;
+mod emitter;
 mod error;
 mod parser;
 mod semantics;

@@ -73,18 +73,6 @@ impl Span {
         Span { start, end }
     }
 
-    /// Create a new span given a position and a length.
-    pub fn with_length(start: Position, length: usize) -> Span {
-        Span {
-            start,
-            end: Position {
-                offset: start.offset + length,
-                line: start.line,
-                column: start.column + length,
-            },
-        }
-    }
-
     /// Create a new span using the given position as the start and end.
     pub fn splat(pos: Position) -> Span {
         Span::new(pos, pos)
@@ -100,12 +88,6 @@ impl Span {
     /// given.
     pub fn with_end(self, pos: Position) -> Span {
         Span { end: pos, ..self }
-    }
-
-    /// Returns true if and only if this span is empty. That is, it points to
-    /// a single position in the concrete syntax of a tree.
-    pub fn is_empty(&self) -> bool {
-        self.start.offset == self.end.offset
     }
 }
 

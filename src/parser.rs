@@ -308,16 +308,6 @@ mod tests {
         let file_contents =
             String::from("file.sol\n└── when something bad happens\n   └── it should revert");
 
-        // Token("file.sol", Span(Position(o: 0, l: 1, c: 1), Position(o: 7, l: 1, c: 8))),
-        // Token("└", Span(Position(o: 9, l: 2, c: 1), Position(o: 9, l: 2, c: 1))),
-        // Token("when", Span(Position(o: 19, l: 2, c: 5), Position(o: 22, l: 2, c: 8))),
-        // Token("something", Span(Position(o: 24, l: 2, c: 10), Position(o: 32, l: 2, c: 18))),
-        // Token("bad", Span(Position(o: 34, l: 2, c: 20), Position(o: 36, l: 2, c: 22))),
-        // Token("happens", Span(Position(o: 38, l: 2, c: 24), Position(o: 44, l: 2, c: 30))),
-        // Token("└", Span(Position(o: 50, l: 3, c: 5), Position(o: 50, l: 3, c: 5))),
-        // Token("it", Span(Position(o: 60, l: 3, c: 9), Position(o: 61, l: 3, c: 10))),
-        // Token("should", Span(Position(o: 63, l: 3, c: 12), Position(o: 68, l: 3, c: 17))),
-        // Token("revert", Span(Position(o: 70, l: 3, c: 19), Position(o: 75, l: 3, c: 24))),
         let tokens = Tokenizer::new().tokenize(&file_contents)?;
         let ast = Parser::new().parse(&file_contents, &tokens)?;
 
@@ -351,24 +341,6 @@ mod tests {
    └── it should revert"#,
         );
 
-        // Token("two_children.t.sol", Span(Position(o: 0, l: 1, c: 1), Position(o: 17, l: 1, c: 18))),
-        // Token("├", Span(Position(o: 19, l: 2, c: 1), Position(o: 19, l: 2, c: 1))),
-        // Token("when", Span(Position(o: 29, l: 2, c: 5), Position(o: 32, l: 2, c: 8))),
-        // Token("stuff", Span(Position(o: 34, l: 2, c: 10), Position(o: 38, l: 2, c: 14))),
-        // Token("called", Span(Position(o: 40, l: 2, c: 16), Position(o: 45, l: 2, c: 21))),
-        // Token("└", Span(Position(o: 52, l: 3, c: 4), Position(o: 52, l: 3, c: 4))),
-        // Token("it", Span(Position(o: 62, l: 3, c: 8), Position(o: 63, l: 3, c: 9))),
-        // Token("should", Span(Position(o: 65, l: 3, c: 11), Position(o: 70, l: 3, c: 16))),
-        // Token("revert", Span(Position(o: 72, l: 3, c: 18), Position(o: 77, l: 3, c: 23))),
-        // Token("└", Span(Position(o: 79, l: 4, c: 1), Position(o: 79, l: 4, c: 1))),
-        // Token("when", Span(Position(o: 89, l: 4, c: 5), Position(o: 92, l: 4, c: 8))),
-        // Token("not", Span(Position(o: 94, l: 4, c: 10), Position(o: 96, l: 4, c: 12))),
-        // Token("stuff", Span(Position(o: 98, l: 4, c: 14), Position(o: 102, l: 4, c: 18))),
-        // Token("called", Span(Position(o: 104, l: 4, c: 20), Position(o: 109, l: 4, c: 25))),
-        // Token("└", Span(Position(o: 114, l: 5, c: 4), Position(o: 114, l: 5, c: 4))),
-        // Token("it", Span(Position(o: 124, l: 5, c: 8), Position(o: 125, l: 5, c: 9))),
-        // Token("should", Span(Position(o: 127, l: 5, c: 11), Position(o: 132, l: 5, c: 16))),
-        // Token("revert", Span(Position(o: 134, l: 5, c: 18), Position(o: 139, l: 5, c: 23))),
         let tokens = Tokenizer::new().tokenize(&file_contents)?;
         let ast = Parser::new().parse(&file_contents, &tokens)?;
 

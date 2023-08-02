@@ -303,26 +303,11 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
                     lexeme,
                 });
             } else {
-                // FIXME: In a future release, we should allow any character to appear
-                // inside an IT block, since that will be emitted as a comment.
-                if is_valid_identifier_char(self.char()) {
-                    lexeme.push(self.char());
-                    self.scan();
-                } else {
-                    return Err(self
-                        .error(
-                            self.span().with_start(span_start),
-                            ErrorKind::InvalidCharacter(self.char()),
-                        )
-                        .into());
-                }
+                lexeme.push(self.char());
+                self.scan();
             }
         }
     }
-}
-
-fn is_valid_identifier_char(c: char) -> bool {
-    c.is_alphanumeric() || c == '_'
 }
 
 #[cfg(test)]
@@ -332,24 +317,44 @@ mod tests {
     use crate::error::Result;
     use crate::{
         span::{Position, Span},
-        tokenizer::{Token, TokenKind},
+        tokenizer::{Token, TokenKind, Tokenizer},
     };
 
-    use crate::tokenizer::Tokenizer;
+    fn p(offset: usize, line: usize, column: usize) -> Position {
+        Position::new(offset, line, column)
+    }
+
+    fn s(start: Position, end: Position) -> Span {
+        Span::new(start, end)
+    }
+
+    fn t(kind: TokenKind, lexeme: &str, span: Span) -> Token {
+        Token {
+            kind,
+            lexeme: lexeme.to_string(),
+            span,
+        }
+    }
 
     #[test]
     fn test_only_filename() -> Result<()> {
-        let file_contents = String::from("foo");
+        let simple_name = String::from("foo");
+        let starts_whitespace = String::from(" foo");
+        let ends_whitespace = String::from("foo ");
 
-        let tokens = Tokenizer::new().tokenize(&file_contents)?;
+        let mut tokenizer = Tokenizer::new();
 
         assert_eq!(
-            tokens,
-            vec![Token {
-                kind: TokenKind::STRING,
-                span: Span::with_length(Position::new(0, 1, 1), 2),
-                lexeme: "foo".to_string(),
-            }]
+            tokenizer.tokenize(&simple_name)?,
+            vec![t(TokenKind::STRING, "foo", s(p(0, 1, 1), p(2, 1, 3)))]
+        );
+        assert_eq!(
+            tokenizer.tokenize(&starts_whitespace)?,
+            vec![t(TokenKind::STRING, "foo", s(p(1, 1, 2), p(3, 1, 4)))]
+        );
+        assert_eq!(
+            tokenizer.tokenize(&ends_whitespace)?,
+            vec![t(TokenKind::STRING, "foo", s(p(0, 1, 1), p(2, 1, 3)))]
         );
 
         Ok(())
@@ -357,18 +362,19 @@ mod tests {
 
     #[test]
     fn test_only_filename_and_newline() -> Result<()> {
-        let file_contents = String::from("foo\n");
+        let simple_name = String::from("foo\n");
+        let starts_whitespace = String::from(" foo\n");
+        let ends_whitespace = String::from("foo \n");
 
-        let tokens = Tokenizer::new().tokenize(&file_contents)?;
+        let expected = vec![t(TokenKind::STRING, "foo", s(p(0, 1, 1), p(2, 1, 3)))];
+        let mut tokenizer = Tokenizer::new();
 
+        assert_eq!(tokenizer.tokenize(&simple_name)?, expected);
         assert_eq!(
-            tokens,
-            vec![Token {
-                kind: TokenKind::STRING,
-                span: Span::with_length(Position::new(0, 1, 1), 2),
-                lexeme: "foo".to_string(),
-            }]
+            tokenizer.tokenize(&starts_whitespace)?,
+            vec![t(TokenKind::STRING, "foo", s(p(1, 1, 2), p(3, 1, 4)))]
         );
+        assert_eq!(tokenizer.tokenize(&ends_whitespace)?, expected);
 
         Ok(())
     }
@@ -378,61 +384,23 @@ mod tests {
         let file_contents =
             String::from("file.sol\n└── when something bad happens\n   └── it should revert");
 
-        let tokens = Tokenizer::new().tokenize(&file_contents)?;
-
         assert_eq!(
-            tokens,
+            Tokenizer::new().tokenize(&file_contents)?,
             vec![
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::with_length(Position::new(0, 1, 1), 7),
-                    lexeme: "file.sol".to_string(),
-                },
-                Token {
-                    kind: TokenKind::CORNER,
-                    span: Span::with_length(Position::new(9, 2, 1), 0),
-                    lexeme: "└".to_string(),
-                },
-                Token {
-                    kind: TokenKind::WHEN,
-                    span: Span::with_length(Position::new(19, 2, 5), 3),
-                    lexeme: "when".to_string(),
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::with_length(Position::new(24, 2, 10), 8),
-                    lexeme: "something".to_string(),
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::with_length(Position::new(34, 2, 20), 2),
-                    lexeme: "bad".to_string(),
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::with_length(Position::new(38, 2, 24), 6),
-                    lexeme: "happens".to_string(),
-                },
-                Token {
-                    kind: TokenKind::CORNER,
-                    span: Span::with_length(Position::new(49, 3, 4), 0),
-                    lexeme: "└".to_string(),
-                },
-                Token {
-                    kind: TokenKind::IT,
-                    span: Span::with_length(Position::new(59, 3, 8), 1),
-                    lexeme: "it".to_string(),
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::with_length(Position::new(62, 3, 11), 5),
-                    lexeme: "should".to_string(),
-                },
-                Token {
-                    kind: TokenKind::STRING,
-                    span: Span::with_length(Position::new(69, 3, 18), 5),
-                    lexeme: "revert".to_string(),
-                },
+                t(TokenKind::STRING, "file.sol", s(p(0, 1, 1), p(7, 1, 8))),
+                t(TokenKind::CORNER, "└", s(p(9, 2, 1), p(9, 2, 1))),
+                t(TokenKind::WHEN, "when", s(p(19, 2, 5), p(22, 2, 8))),
+                t(
+                    TokenKind::STRING,
+                    "something",
+                    s(p(24, 2, 10), p(32, 2, 18))
+                ),
+                t(TokenKind::STRING, "bad", s(p(34, 2, 20), p(36, 2, 22))),
+                t(TokenKind::STRING, "happens", s(p(38, 2, 24), p(44, 2, 30))),
+                t(TokenKind::CORNER, "└", s(p(49, 3, 4), p(49, 3, 4))),
+                t(TokenKind::IT, "it", s(p(59, 3, 8), p(60, 3, 9))),
+                t(TokenKind::STRING, "should", s(p(62, 3, 11), p(67, 3, 16))),
+                t(TokenKind::STRING, "revert", s(p(69, 3, 18), p(74, 3, 23))),
             ]
         );
 
