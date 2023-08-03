@@ -100,8 +100,8 @@ pub enum TokenKind {
     /// A token representing a string.
     ///
     /// For example, in the text `foo bar`, both `foo` and `bar` are
-    /// `STRING` tokens.
-    STRING,
+    /// `WORD` tokens.
+    WORD,
     /// A token representing a `when` keyword.
     WHEN,
     /// A token representing an `it` keyword.
@@ -146,7 +146,10 @@ impl Tokenizer {
         }
     }
 
-    /// Tokenize the tree.
+    /// Tokenize the input .tree text.
+    ///
+    /// `tokenize` is the main entry point of the Tokenizer.
+    /// It takes a string of .tree text and returns a vector of tokens.
     pub fn tokenize(&mut self, text: &str) -> Result<Vec<Token>> {
         TokenizerI::new(self, text).tokenize()
     }
@@ -381,7 +384,7 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
     ///
     /// A word is defined as a sequence of characters that are not whitespace.
     /// If the word is a keyword, then the appropriate token is returned.
-    /// Otherwise, a STRING token is returned.
+    /// Otherwise, a WORD token is returned.
     fn scan_word(&self) -> Result<Token> {
         let mut lexeme = String::new();
         let span_start = self.pos();
@@ -400,7 +403,7 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
                 let kind = match lexeme.as_str() {
                     "when" => TokenKind::WHEN,
                     "it" => TokenKind::IT,
-                    _ => TokenKind::STRING,
+                    _ => TokenKind::WORD,
                 };
                 return Ok(Token {
                     kind,
@@ -481,15 +484,15 @@ mod tests {
 
         assert_eq!(
             tokenizer.tokenize(&simple_name)?,
-            vec![t(TokenKind::STRING, "foo", s(p(0, 1, 1), p(2, 1, 3)))]
+            vec![t(TokenKind::WORD, "foo", s(p(0, 1, 1), p(2, 1, 3)))]
         );
         assert_eq!(
             tokenizer.tokenize(&starts_whitespace)?,
-            vec![t(TokenKind::STRING, "foo", s(p(1, 1, 2), p(3, 1, 4)))]
+            vec![t(TokenKind::WORD, "foo", s(p(1, 1, 2), p(3, 1, 4)))]
         );
         assert_eq!(
             tokenizer.tokenize(&ends_whitespace)?,
-            vec![t(TokenKind::STRING, "foo", s(p(0, 1, 1), p(2, 1, 3)))]
+            vec![t(TokenKind::WORD, "foo", s(p(0, 1, 1), p(2, 1, 3)))]
         );
 
         Ok(())
@@ -504,20 +507,16 @@ mod tests {
         assert_eq!(
             Tokenizer::new().tokenize(&file_contents)?,
             vec![
-                t(TokenKind::STRING, "file.sol", s(p(0, 1, 1), p(7, 1, 8))),
+                t(TokenKind::WORD, "file.sol", s(p(0, 1, 1), p(7, 1, 8))),
                 t(TokenKind::CORNER, "└", s(p(9, 2, 1), p(9, 2, 1))),
                 t(TokenKind::WHEN, "when", s(p(19, 2, 5), p(22, 2, 8))),
-                t(
-                    TokenKind::STRING,
-                    "something",
-                    s(p(24, 2, 10), p(32, 2, 18))
-                ),
-                t(TokenKind::STRING, "bad", s(p(34, 2, 20), p(36, 2, 22))),
-                t(TokenKind::STRING, "happens", s(p(38, 2, 24), p(44, 2, 30))),
+                t(TokenKind::WORD, "something", s(p(24, 2, 10), p(32, 2, 18))),
+                t(TokenKind::WORD, "bad", s(p(34, 2, 20), p(36, 2, 22))),
+                t(TokenKind::WORD, "happens", s(p(38, 2, 24), p(44, 2, 30))),
                 t(TokenKind::CORNER, "└", s(p(67, 3, 4), p(67, 3, 4))),
                 t(TokenKind::IT, "it", s(p(77, 3, 8), p(78, 3, 9))),
-                t(TokenKind::STRING, "should", s(p(80, 3, 11), p(85, 3, 16))),
-                t(TokenKind::STRING, "revert", s(p(87, 3, 18), p(92, 3, 23))),
+                t(TokenKind::WORD, "should", s(p(80, 3, 11), p(85, 3, 16))),
+                t(TokenKind::WORD, "revert", s(p(87, 3, 18), p(92, 3, 23))),
             ]
         );
 
@@ -528,20 +527,16 @@ mod tests {
         assert_eq!(
             Tokenizer::new().tokenize(&file_contents)?,
             vec![
-                t(TokenKind::STRING, "file.sol", s(p(0, 1, 1), p(7, 1, 8))),
+                t(TokenKind::WORD, "file.sol", s(p(0, 1, 1), p(7, 1, 8))),
                 t(TokenKind::CORNER, "└", s(p(9, 2, 1), p(9, 2, 1))),
                 t(TokenKind::WHEN, "when", s(p(19, 2, 5), p(22, 2, 8))),
-                t(
-                    TokenKind::STRING,
-                    "something",
-                    s(p(24, 2, 10), p(32, 2, 18))
-                ),
-                t(TokenKind::STRING, "bad", s(p(34, 2, 20), p(36, 2, 22))),
-                t(TokenKind::STRING, "happens", s(p(38, 2, 24), p(44, 2, 30))),
+                t(TokenKind::WORD, "something", s(p(24, 2, 10), p(32, 2, 18))),
+                t(TokenKind::WORD, "bad", s(p(34, 2, 20), p(36, 2, 22))),
+                t(TokenKind::WORD, "happens", s(p(38, 2, 24), p(44, 2, 30))),
                 t(TokenKind::CORNER, "└", s(p(68, 4, 4), p(68, 4, 4))),
                 t(TokenKind::IT, "it", s(p(78, 4, 8), p(79, 4, 9))),
-                t(TokenKind::STRING, "should", s(p(81, 4, 11), p(86, 4, 16))),
-                t(TokenKind::STRING, "revert", s(p(88, 4, 18), p(93, 4, 23))),
+                t(TokenKind::WORD, "should", s(p(81, 4, 11), p(86, 4, 16))),
+                t(TokenKind::WORD, "revert", s(p(88, 4, 18), p(93, 4, 23))),
             ]
         );
 
@@ -633,13 +628,13 @@ mod tests {
         let starts_whitespace = String::from(" foo\n");
         let ends_whitespace = String::from("foo \n");
 
-        let expected = vec![t(TokenKind::STRING, "foo", s(p(0, 1, 1), p(2, 1, 3)))];
+        let expected = vec![t(TokenKind::WORD, "foo", s(p(0, 1, 1), p(2, 1, 3)))];
         let mut tokenizer = Tokenizer::new();
 
         assert_eq!(tokenizer.tokenize(&simple_name)?, expected);
         assert_eq!(
             tokenizer.tokenize(&starts_whitespace)?,
-            vec![t(TokenKind::STRING, "foo", s(p(1, 1, 2), p(3, 1, 4)))]
+            vec![t(TokenKind::WORD, "foo", s(p(1, 1, 2), p(3, 1, 4)))]
         );
         assert_eq!(tokenizer.tokenize(&ends_whitespace)?, expected);
 
@@ -654,20 +649,16 @@ mod tests {
         assert_eq!(
             Tokenizer::new().tokenize(&file_contents)?,
             vec![
-                t(TokenKind::STRING, "file.sol", s(p(0, 1, 1), p(7, 1, 8))),
+                t(TokenKind::WORD, "file.sol", s(p(0, 1, 1), p(7, 1, 8))),
                 t(TokenKind::CORNER, "└", s(p(9, 2, 1), p(9, 2, 1))),
                 t(TokenKind::WHEN, "when", s(p(19, 2, 5), p(22, 2, 8))),
-                t(
-                    TokenKind::STRING,
-                    "something",
-                    s(p(24, 2, 10), p(32, 2, 18))
-                ),
-                t(TokenKind::STRING, "bad", s(p(34, 2, 20), p(36, 2, 22))),
-                t(TokenKind::STRING, "happens", s(p(38, 2, 24), p(44, 2, 30))),
+                t(TokenKind::WORD, "something", s(p(24, 2, 10), p(32, 2, 18))),
+                t(TokenKind::WORD, "bad", s(p(34, 2, 20), p(36, 2, 22))),
+                t(TokenKind::WORD, "happens", s(p(38, 2, 24), p(44, 2, 30))),
                 t(TokenKind::CORNER, "└", s(p(49, 3, 4), p(49, 3, 4))),
                 t(TokenKind::IT, "it", s(p(59, 3, 8), p(60, 3, 9))),
-                t(TokenKind::STRING, "should", s(p(62, 3, 11), p(67, 3, 16))),
-                t(TokenKind::STRING, "revert", s(p(69, 3, 18), p(74, 3, 23))),
+                t(TokenKind::WORD, "should", s(p(62, 3, 11), p(67, 3, 16))),
+                t(TokenKind::WORD, "revert", s(p(69, 3, 18), p(74, 3, 23))),
             ]
         );
 
@@ -701,257 +692,149 @@ mod tests {
         let tokens = Tokenizer::new().tokenize(&file_contents)?;
         let expected = vec![
             t(
-                TokenKind::STRING,
+                TokenKind::WORD,
                 "multiple_children.t.sol",
                 s(p(0, 1, 1), p(22, 1, 23)),
             ),
             t(TokenKind::TEE, "├", s(p(24, 2, 1), p(24, 2, 1))),
             t(TokenKind::WHEN, "when", s(p(34, 2, 5), p(37, 2, 8))),
-            t(TokenKind::STRING, "stuff", s(p(39, 2, 10), p(43, 2, 14))),
-            t(TokenKind::STRING, "called", s(p(45, 2, 16), p(50, 2, 21))),
+            t(TokenKind::WORD, "stuff", s(p(39, 2, 10), p(43, 2, 14))),
+            t(TokenKind::WORD, "called", s(p(45, 2, 16), p(50, 2, 21))),
             t(TokenKind::CORNER, "└", s(p(57, 3, 4), p(57, 3, 4))),
             t(TokenKind::IT, "it", s(p(67, 3, 8), p(68, 3, 9))),
-            t(TokenKind::STRING, "should", s(p(70, 3, 11), p(75, 3, 16))),
-            t(TokenKind::STRING, "revert", s(p(77, 3, 18), p(82, 3, 23))),
+            t(TokenKind::WORD, "should", s(p(70, 3, 11), p(75, 3, 16))),
+            t(TokenKind::WORD, "revert", s(p(77, 3, 18), p(82, 3, 23))),
             t(TokenKind::CORNER, "└", s(p(84, 4, 1), p(84, 4, 1))),
             t(TokenKind::WHEN, "when", s(p(94, 4, 5), p(97, 4, 8))),
-            t(TokenKind::STRING, "not", s(p(99, 4, 10), p(101, 4, 12))),
-            t(TokenKind::STRING, "stuff", s(p(103, 4, 14), p(107, 4, 18))),
-            t(TokenKind::STRING, "called", s(p(109, 4, 20), p(114, 4, 25))),
+            t(TokenKind::WORD, "not", s(p(99, 4, 10), p(101, 4, 12))),
+            t(TokenKind::WORD, "stuff", s(p(103, 4, 14), p(107, 4, 18))),
+            t(TokenKind::WORD, "called", s(p(109, 4, 20), p(114, 4, 25))),
             t(TokenKind::TEE, "├", s(p(119, 5, 4), p(119, 5, 4))),
             t(TokenKind::WHEN, "when", s(p(129, 5, 8), p(132, 5, 11))),
-            t(TokenKind::STRING, "the", s(p(134, 5, 13), p(136, 5, 15))),
-            t(
-                TokenKind::STRING,
-                "deposit",
-                s(p(138, 5, 17), p(144, 5, 23)),
-            ),
-            t(TokenKind::STRING, "amount", s(p(146, 5, 25), p(151, 5, 30))),
-            t(TokenKind::STRING, "is", s(p(153, 5, 32), p(154, 5, 33))),
-            t(TokenKind::STRING, "zero", s(p(156, 5, 35), p(159, 5, 38))),
+            t(TokenKind::WORD, "the", s(p(134, 5, 13), p(136, 5, 15))),
+            t(TokenKind::WORD, "deposit", s(p(138, 5, 17), p(144, 5, 23))),
+            t(TokenKind::WORD, "amount", s(p(146, 5, 25), p(151, 5, 30))),
+            t(TokenKind::WORD, "is", s(p(153, 5, 32), p(154, 5, 33))),
+            t(TokenKind::WORD, "zero", s(p(156, 5, 35), p(159, 5, 38))),
             t(TokenKind::CORNER, "└", s(p(169, 6, 7), p(169, 6, 7))),
             t(TokenKind::IT, "it", s(p(179, 6, 11), p(180, 6, 12))),
-            t(TokenKind::STRING, "should", s(p(182, 6, 14), p(187, 6, 19))),
-            t(TokenKind::STRING, "revert", s(p(189, 6, 21), p(194, 6, 26))),
+            t(TokenKind::WORD, "should", s(p(182, 6, 14), p(187, 6, 19))),
+            t(TokenKind::WORD, "revert", s(p(189, 6, 21), p(194, 6, 26))),
             t(TokenKind::CORNER, "└", s(p(199, 7, 4), p(199, 7, 4))),
             t(TokenKind::WHEN, "when", s(p(209, 7, 8), p(212, 7, 11))),
-            t(TokenKind::STRING, "the", s(p(214, 7, 13), p(216, 7, 15))),
-            t(
-                TokenKind::STRING,
-                "deposit",
-                s(p(218, 7, 17), p(224, 7, 23)),
-            ),
-            t(TokenKind::STRING, "amount", s(p(226, 7, 25), p(231, 7, 30))),
-            t(TokenKind::STRING, "is", s(p(233, 7, 32), p(234, 7, 33))),
-            t(TokenKind::STRING, "not", s(p(236, 7, 35), p(238, 7, 37))),
-            t(TokenKind::STRING, "zero", s(p(240, 7, 39), p(243, 7, 42))),
+            t(TokenKind::WORD, "the", s(p(214, 7, 13), p(216, 7, 15))),
+            t(TokenKind::WORD, "deposit", s(p(218, 7, 17), p(224, 7, 23))),
+            t(TokenKind::WORD, "amount", s(p(226, 7, 25), p(231, 7, 30))),
+            t(TokenKind::WORD, "is", s(p(233, 7, 32), p(234, 7, 33))),
+            t(TokenKind::WORD, "not", s(p(236, 7, 35), p(238, 7, 37))),
+            t(TokenKind::WORD, "zero", s(p(240, 7, 39), p(243, 7, 42))),
             t(TokenKind::TEE, "├", s(p(251, 8, 7), p(251, 8, 7))),
             t(TokenKind::WHEN, "when", s(p(261, 8, 11), p(264, 8, 14))),
-            t(TokenKind::STRING, "the", s(p(266, 8, 16), p(268, 8, 18))),
-            t(TokenKind::STRING, "number", s(p(270, 8, 20), p(275, 8, 25))),
-            t(TokenKind::STRING, "count", s(p(277, 8, 27), p(281, 8, 31))),
-            t(TokenKind::STRING, "is", s(p(283, 8, 33), p(284, 8, 34))),
-            t(TokenKind::STRING, "zero", s(p(286, 8, 36), p(289, 8, 39))),
+            t(TokenKind::WORD, "the", s(p(266, 8, 16), p(268, 8, 18))),
+            t(TokenKind::WORD, "number", s(p(270, 8, 20), p(275, 8, 25))),
+            t(TokenKind::WORD, "count", s(p(277, 8, 27), p(281, 8, 31))),
+            t(TokenKind::WORD, "is", s(p(283, 8, 33), p(284, 8, 34))),
+            t(TokenKind::WORD, "zero", s(p(286, 8, 36), p(289, 8, 39))),
             t(TokenKind::CORNER, "└", s(p(302, 9, 10), p(302, 9, 10))),
             t(TokenKind::IT, "it", s(p(312, 9, 14), p(313, 9, 15))),
-            t(TokenKind::STRING, "should", s(p(315, 9, 17), p(320, 9, 22))),
-            t(TokenKind::STRING, "revert", s(p(322, 9, 24), p(327, 9, 29))),
+            t(TokenKind::WORD, "should", s(p(315, 9, 17), p(320, 9, 22))),
+            t(TokenKind::WORD, "revert", s(p(322, 9, 24), p(327, 9, 29))),
             t(TokenKind::TEE, "├", s(p(335, 10, 7), p(335, 10, 7))),
             t(TokenKind::WHEN, "when", s(p(345, 10, 11), p(348, 10, 14))),
-            t(TokenKind::STRING, "the", s(p(350, 10, 16), p(352, 10, 18))),
+            t(TokenKind::WORD, "the", s(p(350, 10, 16), p(352, 10, 18))),
+            t(TokenKind::WORD, "asset", s(p(354, 10, 20), p(358, 10, 24))),
+            t(TokenKind::WORD, "is", s(p(360, 10, 26), p(361, 10, 27))),
+            t(TokenKind::WORD, "not", s(p(363, 10, 29), p(365, 10, 31))),
+            t(TokenKind::WORD, "a", s(p(367, 10, 33), p(367, 10, 33))),
             t(
-                TokenKind::STRING,
-                "asset",
-                s(p(354, 10, 20), p(358, 10, 24)),
-            ),
-            t(TokenKind::STRING, "is", s(p(360, 10, 26), p(361, 10, 27))),
-            t(TokenKind::STRING, "not", s(p(363, 10, 29), p(365, 10, 31))),
-            t(TokenKind::STRING, "a", s(p(367, 10, 33), p(367, 10, 33))),
-            t(
-                TokenKind::STRING,
+                TokenKind::WORD,
                 "contract",
                 s(p(369, 10, 35), p(376, 10, 42)),
             ),
             t(TokenKind::CORNER, "└", s(p(389, 11, 10), p(389, 11, 10))),
             t(TokenKind::IT, "it", s(p(399, 11, 14), p(400, 11, 15))),
-            t(
-                TokenKind::STRING,
-                "should",
-                s(p(402, 11, 17), p(407, 11, 22)),
-            ),
-            t(
-                TokenKind::STRING,
-                "revert",
-                s(p(409, 11, 24), p(414, 11, 29)),
-            ),
+            t(TokenKind::WORD, "should", s(p(402, 11, 17), p(407, 11, 22))),
+            t(TokenKind::WORD, "revert", s(p(409, 11, 24), p(414, 11, 29))),
             t(TokenKind::CORNER, "└", s(p(422, 12, 7), p(422, 12, 7))),
             t(TokenKind::WHEN, "when", s(p(432, 12, 11), p(435, 12, 14))),
-            t(TokenKind::STRING, "the", s(p(437, 12, 16), p(439, 12, 18))),
+            t(TokenKind::WORD, "the", s(p(437, 12, 16), p(439, 12, 18))),
+            t(TokenKind::WORD, "asset", s(p(441, 12, 20), p(445, 12, 24))),
+            t(TokenKind::WORD, "is", s(p(447, 12, 26), p(448, 12, 27))),
+            t(TokenKind::WORD, "a", s(p(450, 12, 29), p(450, 12, 29))),
             t(
-                TokenKind::STRING,
-                "asset",
-                s(p(441, 12, 20), p(445, 12, 24)),
-            ),
-            t(TokenKind::STRING, "is", s(p(447, 12, 26), p(448, 12, 27))),
-            t(TokenKind::STRING, "a", s(p(450, 12, 29), p(450, 12, 29))),
-            t(
-                TokenKind::STRING,
+                TokenKind::WORD,
                 "contract",
                 s(p(452, 12, 31), p(459, 12, 38)),
             ),
             t(TokenKind::TEE, "├", s(p(471, 13, 11), p(471, 13, 11))),
             t(TokenKind::WHEN, "when", s(p(481, 13, 15), p(484, 13, 18))),
-            t(TokenKind::STRING, "the", s(p(486, 13, 20), p(488, 13, 22))),
-            t(
-                TokenKind::STRING,
-                "asset",
-                s(p(490, 13, 24), p(494, 13, 28)),
-            ),
-            t(
-                TokenKind::STRING,
-                "misses",
-                s(p(496, 13, 30), p(501, 13, 35)),
-            ),
-            t(TokenKind::STRING, "the", s(p(503, 13, 37), p(505, 13, 39))),
-            t(
-                TokenKind::STRING,
-                "ERC_20",
-                s(p(507, 13, 41), p(512, 13, 46)),
-            ),
-            t(
-                TokenKind::STRING,
-                "return",
-                s(p(514, 13, 48), p(519, 13, 53)),
-            ),
-            t(
-                TokenKind::STRING,
-                "value",
-                s(p(521, 13, 55), p(525, 13, 59)),
-            ),
+            t(TokenKind::WORD, "the", s(p(486, 13, 20), p(488, 13, 22))),
+            t(TokenKind::WORD, "asset", s(p(490, 13, 24), p(494, 13, 28))),
+            t(TokenKind::WORD, "misses", s(p(496, 13, 30), p(501, 13, 35))),
+            t(TokenKind::WORD, "the", s(p(503, 13, 37), p(505, 13, 39))),
+            t(TokenKind::WORD, "ERC_20", s(p(507, 13, 41), p(512, 13, 46))),
+            t(TokenKind::WORD, "return", s(p(514, 13, 48), p(519, 13, 53))),
+            t(TokenKind::WORD, "value", s(p(521, 13, 55), p(525, 13, 59))),
             t(TokenKind::TEE, "├", s(p(542, 14, 14), p(542, 14, 14))),
             t(TokenKind::IT, "it", s(p(552, 14, 18), p(553, 14, 19))),
-            t(
-                TokenKind::STRING,
-                "should",
-                s(p(555, 14, 21), p(560, 14, 26)),
-            ),
-            t(
-                TokenKind::STRING,
-                "create",
-                s(p(562, 14, 28), p(567, 14, 33)),
-            ),
-            t(TokenKind::STRING, "the", s(p(569, 14, 35), p(571, 14, 37))),
-            t(
-                TokenKind::STRING,
-                "child",
-                s(p(573, 14, 39), p(577, 14, 43)),
-            ),
+            t(TokenKind::WORD, "should", s(p(555, 14, 21), p(560, 14, 26))),
+            t(TokenKind::WORD, "create", s(p(562, 14, 28), p(567, 14, 33))),
+            t(TokenKind::WORD, "the", s(p(569, 14, 35), p(571, 14, 37))),
+            t(TokenKind::WORD, "child", s(p(573, 14, 39), p(577, 14, 43))),
             t(TokenKind::TEE, "├", s(p(594, 15, 14), p(594, 15, 14))),
             t(TokenKind::IT, "it", s(p(604, 15, 18), p(605, 15, 19))),
+            t(TokenKind::WORD, "should", s(p(607, 15, 21), p(612, 15, 26))),
             t(
-                TokenKind::STRING,
-                "should",
-                s(p(607, 15, 21), p(612, 15, 26)),
-            ),
-            t(
-                TokenKind::STRING,
+                TokenKind::WORD,
                 "perform",
                 s(p(614, 15, 28), p(620, 15, 34)),
             ),
-            t(TokenKind::STRING, "the", s(p(622, 15, 36), p(624, 15, 38))),
+            t(TokenKind::WORD, "the", s(p(622, 15, 36), p(624, 15, 38))),
+            t(TokenKind::WORD, "ERC-20", s(p(626, 15, 40), p(631, 15, 45))),
             t(
-                TokenKind::STRING,
-                "ERC-20",
-                s(p(626, 15, 40), p(631, 15, 45)),
-            ),
-            t(
-                TokenKind::STRING,
+                TokenKind::WORD,
                 "transfers",
                 s(p(633, 15, 47), p(641, 15, 55)),
             ),
             t(TokenKind::CORNER, "└", s(p(658, 16, 14), p(658, 16, 14))),
             t(TokenKind::IT, "it", s(p(668, 16, 18), p(669, 16, 19))),
+            t(TokenKind::WORD, "should", s(p(671, 16, 21), p(676, 16, 26))),
+            t(TokenKind::WORD, "emit", s(p(678, 16, 28), p(681, 16, 31))),
+            t(TokenKind::WORD, "a", s(p(683, 16, 33), p(683, 16, 33))),
             t(
-                TokenKind::STRING,
-                "should",
-                s(p(671, 16, 21), p(676, 16, 26)),
-            ),
-            t(TokenKind::STRING, "emit", s(p(678, 16, 28), p(681, 16, 31))),
-            t(TokenKind::STRING, "a", s(p(683, 16, 33), p(683, 16, 33))),
-            t(
-                TokenKind::STRING,
+                TokenKind::WORD,
                 "{MultipleChildren}",
                 s(p(685, 16, 35), p(702, 16, 52)),
             ),
-            t(
-                TokenKind::STRING,
-                "event",
-                s(p(704, 16, 54), p(708, 16, 58)),
-            ),
+            t(TokenKind::WORD, "event", s(p(704, 16, 54), p(708, 16, 58))),
             t(TokenKind::CORNER, "└", s(p(720, 17, 11), p(720, 17, 11))),
             t(TokenKind::WHEN, "when", s(p(730, 17, 15), p(733, 17, 18))),
-            t(TokenKind::STRING, "the", s(p(735, 17, 20), p(737, 17, 22))),
-            t(
-                TokenKind::STRING,
-                "asset",
-                s(p(739, 17, 24), p(743, 17, 28)),
-            ),
-            t(TokenKind::STRING, "does", s(p(745, 17, 30), p(748, 17, 33))),
-            t(TokenKind::STRING, "not", s(p(750, 17, 35), p(752, 17, 37))),
-            t(TokenKind::STRING, "miss", s(p(754, 17, 39), p(757, 17, 42))),
-            t(TokenKind::STRING, "the", s(p(759, 17, 44), p(761, 17, 46))),
-            t(
-                TokenKind::STRING,
-                "ERC_20",
-                s(p(763, 17, 48), p(768, 17, 53)),
-            ),
-            t(
-                TokenKind::STRING,
-                "return",
-                s(p(770, 17, 55), p(775, 17, 60)),
-            ),
-            t(
-                TokenKind::STRING,
-                "value",
-                s(p(777, 17, 62), p(781, 17, 66)),
-            ),
+            t(TokenKind::WORD, "the", s(p(735, 17, 20), p(737, 17, 22))),
+            t(TokenKind::WORD, "asset", s(p(739, 17, 24), p(743, 17, 28))),
+            t(TokenKind::WORD, "does", s(p(745, 17, 30), p(748, 17, 33))),
+            t(TokenKind::WORD, "not", s(p(750, 17, 35), p(752, 17, 37))),
+            t(TokenKind::WORD, "miss", s(p(754, 17, 39), p(757, 17, 42))),
+            t(TokenKind::WORD, "the", s(p(759, 17, 44), p(761, 17, 46))),
+            t(TokenKind::WORD, "ERC_20", s(p(763, 17, 48), p(768, 17, 53))),
+            t(TokenKind::WORD, "return", s(p(770, 17, 55), p(775, 17, 60))),
+            t(TokenKind::WORD, "value", s(p(777, 17, 62), p(781, 17, 66))),
             t(TokenKind::TEE, "├", s(p(797, 18, 15), p(797, 18, 15))),
             t(TokenKind::IT, "it", s(p(807, 18, 19), p(808, 18, 20))),
-            t(
-                TokenKind::STRING,
-                "should",
-                s(p(810, 18, 22), p(815, 18, 27)),
-            ),
-            t(
-                TokenKind::STRING,
-                "create",
-                s(p(817, 18, 29), p(822, 18, 34)),
-            ),
-            t(TokenKind::STRING, "the", s(p(824, 18, 36), p(826, 18, 38))),
-            t(
-                TokenKind::STRING,
-                "child",
-                s(p(828, 18, 40), p(832, 18, 44)),
-            ),
+            t(TokenKind::WORD, "should", s(p(810, 18, 22), p(815, 18, 27))),
+            t(TokenKind::WORD, "create", s(p(817, 18, 29), p(822, 18, 34))),
+            t(TokenKind::WORD, "the", s(p(824, 18, 36), p(826, 18, 38))),
+            t(TokenKind::WORD, "child", s(p(828, 18, 40), p(832, 18, 44))),
             t(TokenKind::CORNER, "└", s(p(848, 19, 15), p(848, 19, 15))),
             t(TokenKind::IT, "it", s(p(858, 19, 19), p(859, 19, 20))),
+            t(TokenKind::WORD, "should", s(p(861, 19, 22), p(866, 19, 27))),
+            t(TokenKind::WORD, "emit", s(p(868, 19, 29), p(871, 19, 32))),
+            t(TokenKind::WORD, "a", s(p(873, 19, 34), p(873, 19, 34))),
             t(
-                TokenKind::STRING,
-                "should",
-                s(p(861, 19, 22), p(866, 19, 27)),
-            ),
-            t(TokenKind::STRING, "emit", s(p(868, 19, 29), p(871, 19, 32))),
-            t(TokenKind::STRING, "a", s(p(873, 19, 34), p(873, 19, 34))),
-            t(
-                TokenKind::STRING,
+                TokenKind::WORD,
                 "{MultipleChildren}",
                 s(p(875, 19, 36), p(892, 19, 53)),
             ),
-            t(
-                TokenKind::STRING,
-                "event",
-                s(p(894, 19, 55), p(898, 19, 59)),
-            ),
+            t(TokenKind::WORD, "event", s(p(894, 19, 55), p(898, 19, 59))),
         ];
 
         assert_eq!(tokens.len(), expected.len());

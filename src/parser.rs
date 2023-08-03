@@ -10,7 +10,7 @@ use std::fmt;
 type Result<T> = result::Result<T, Error>;
 
 /// An error that occurred while parsing a sequence of tokens into an abstract
-/// syntax tree.
+/// syntax tree (AST).
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Error {
     /// The kind of error.
@@ -54,8 +54,8 @@ pub enum ErrorKind {
     WhenUnexpected,
     /// Did not expect this IT keyword.
     ItUnexpected,
-    /// Did not expect a STRING.
-    StringUnexpected(Lexeme),
+    /// Did not expect a WORD.
+    WordUnexpected(Lexeme),
     /// Did not expect an end of file.
     EofUnexpected,
     /// The filename must have an extension to recognize the output lang.
@@ -80,7 +80,7 @@ impl fmt::Display for ErrorKind {
             TokenUnexpected(ref lexeme) => write!(f, "unexpected token: {}", lexeme),
             WhenUnexpected => write!(f, "unexpected WHEN keyword"),
             ItUnexpected => write!(f, "unexpected IT keyword"),
-            StringUnexpected(ref lexeme) => write!(f, "unexpected STRING: {}", lexeme),
+            WordUnexpected(ref lexeme) => write!(f, "unexpected WORD: {}", lexeme),
             EofUnexpected => write!(f, "unexpected end of file"),
             ExtensionMissing => write!(f, "filename must have an extension"),
             _ => unreachable!(),
@@ -88,33 +88,49 @@ impl fmt::Display for ErrorKind {
     }
 }
 
+/// A parser for a sequence of .tree tokens into an abstract syntax tree (AST).
+///
+/// This struct represents the state of the parser. It is not
+/// tied to any particular input, while `ParserI` is.
 pub struct Parser {
+    /// The index of the current token.
     current: Cell<usize>,
 }
 
 impl Parser {
+    /// Create a new parser.
     pub fn new() -> Self {
         Self {
             current: Cell::new(0),
         }
     }
 
+    /// Parse the given tokens into an abstract syntax tree (AST).
+    ///
+    /// `parse` is the main entry point for the parser. It takes a sequence of
+    /// tokens and returns an AST.
     pub fn parse(&mut self, text: &str, tokens: &[Token]) -> Result<Ast> {
         ParserI::new(self, text, tokens).parse()
     }
 
+    /// Reset the parser to its initial state.
     fn reset(&self) {
         self.current.set(0);
     }
 }
 
+/// The internal implementation of the parser.
 struct ParserI<'t, P> {
+    /// The input text.
     text: &'t str,
+    /// The sequence of tokens to parse.
     tokens: &'t [Token],
+    /// The parser state.
     parser: P,
 }
 
 impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
+    /// Create a new parser given the parser state, input text, and tokens.
     fn new(parser: P, text: &'t str, tokens: &'t [Token]) -> Self {
         Self {
             text,
@@ -123,6 +139,7 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
         }
     }
 
+    /// Return a reference to the state of the parser.
     fn parser(&self) -> &Parser {
         self.parser.borrow()
     }
@@ -136,10 +153,15 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
         }
     }
 
+    /// Return the current token.
     fn current(&self) -> Option<&Token> {
         self.tokens.get(self.parser().current.get())
     }
 
+    /// Return the previous token.
+    ///
+    /// Returns `None` if the parser is currently at the start
+    /// of the token stream.
     fn previous(&self) -> Option<&Token> {
         if self.parser().current.get() == 0 {
             return None;
@@ -147,19 +169,33 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
         self.tokens.get(self.parser().current.get() - 1)
     }
 
+    /// Move to the next token, returning a reference to it.
+    ///
+    /// If there are no more tokens, return `None`.
     fn consume(&self) -> Option<&Token> {
-        if self.parser().current.get() + 1 > self.tokens.len() {
+        if self.parser().current.get() == self.tokens.len() {
             return None;
         }
         self.parser().current.set(self.parser().current.get() + 1);
         self.tokens.get(self.parser().current.get())
     }
 
+    /// Parse the given tokens into an abstract syntax tree.
+    ///
+    /// This is the main entry point for the parser. Note that
+    /// this method resets the parser state before parsing and
+    /// that we defer the implementation of parsing to `_parse`.
     pub fn parse(&self) -> Result<Ast> {
         self.parser().reset();
         self._parse()
     }
 
+    /// Internal recursive implementation of parsing.
+    ///
+    /// The invariants of this method are:
+    /// - The first call to this function parses the root node.
+    /// - The parser is always at the start of a production when entering
+    /// this function.
     fn _parse(&self) -> Result<Ast> {
         let current_token = match self.current() {
             Some(current) => current,
@@ -171,7 +207,7 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
         };
 
         match current_token.kind {
-            TokenKind::STRING if self.parser().current.get() == 0 => self.parse_root(current_token),
+            TokenKind::WORD if self.parser().current.get() == 0 => self.parse_root(current_token),
             TokenKind::TEE | TokenKind::CORNER => {
                 let next_token = match self.consume() {
                     Some(next) => next,
@@ -220,10 +256,10 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
                         .into()),
                 }
             }
-            TokenKind::STRING => Err(self
+            TokenKind::WORD => Err(self
                 .error(
                     current_token.span,
-                    ErrorKind::StringUnexpected(current_token.lexeme.clone()),
+                    ErrorKind::WordUnexpected(current_token.lexeme.clone()),
                 )
                 .into()),
             TokenKind::WHEN => Err(self
@@ -235,6 +271,7 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
         }
     }
 
+    /// Parse the root node of the AST.
     fn parse_root(&self, current_token: &Token) -> Result<Ast> {
         // Check that the file name has an extension.
         if !current_token.lexeme.contains('.') || current_token.lexeme.ends_with('.') {
@@ -264,6 +301,9 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
         }))
     }
 
+    /// Parse a string.
+    ///
+    /// A string is a sequence of words separated by spaces.
     fn parse_string(&self, start_token: &Token) -> String {
         // Strings always start with one of IT or WHEN.
         let mut string = String::from(&start_token.lexeme);
@@ -272,7 +312,7 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
         loop {
             match self.consume() {
                 Some(token) => match token.kind {
-                    TokenKind::STRING | TokenKind::IT | TokenKind::WHEN => {
+                    TokenKind::WORD | TokenKind::IT | TokenKind::WHEN => {
                         string = string + " " + &token.lexeme;
                     }
                     _ => break,
@@ -320,7 +360,7 @@ mod tests {
     fn test_only_filename() -> Result<()> {
         let file_contents = String::from("foo");
         let tokens = vec![Token {
-            kind: TokenKind::STRING,
+            kind: TokenKind::WORD,
             lexeme: String::from("foo"),
             span: Span::new(Position::new(0, 1, 1), Position::new(2, 1, 3)),
         }];
@@ -335,7 +375,7 @@ mod tests {
 
         let file_contents = String::from("foo.");
         let tokens = vec![Token {
-            kind: TokenKind::STRING,
+            kind: TokenKind::WORD,
             lexeme: String::from("foo."),
             span: Span::new(Position::new(0, 1, 1), Position::new(3, 1, 4)),
         }];
@@ -350,7 +390,7 @@ mod tests {
 
         let file_contents = String::from("foo.sol");
         let tokens = vec![Token {
-            kind: TokenKind::STRING,
+            kind: TokenKind::WORD,
             lexeme: String::from("foo.sol"),
             span: Span::new(Position::new(0, 1, 1), Position::new(6, 1, 7)),
         }];
