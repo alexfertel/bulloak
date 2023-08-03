@@ -32,12 +32,15 @@ impl PartialOrd for Span {
 
 /// A single position.
 ///
-/// A position encodes one half of a span, and include the char offset, line
+/// A position encodes one half of a span, and includes the char offset, line
 /// number and column number.
 #[derive(Clone, Copy, Eq, PartialEq)]
 pub struct Position {
     /// The absolute offset of this position, starting at `0` from the
     /// beginning of the tree.
+    ///
+    /// Note that this is a `char` offset, which lets us use it when
+    /// indexing into the original source string.
     pub offset: usize,
     /// The line number, starting at `1`.
     pub line: usize,
@@ -82,12 +85,6 @@ impl Span {
     /// given.
     pub fn with_start(self, pos: Position) -> Span {
         Span { start: pos, ..self }
-    }
-
-    /// Create a new span by replacing the ending the position with the one
-    /// given.
-    pub fn with_end(self, pos: Position) -> Span {
-        Span { end: pos, ..self }
     }
 }
 

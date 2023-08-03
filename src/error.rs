@@ -147,7 +147,7 @@ mod test {
     #[test]
     fn test_notate() {
         let text = "hello\nworld\n";
-        let span = Span::splat(Position::new(0, 2, 1)).with_end(Position::new(4, 2, 5));
+        let span = Span::new(Position::new(0, 2, 1), Position::new(4, 2, 5));
         let formatter = Formatter {
             text,
             err: &parser::ErrorKind::TokenUnexpected("world".to_string()),

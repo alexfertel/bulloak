@@ -6,26 +6,31 @@ use crate::{
     visitor::Visitor,
 };
 
-/// Depth-first AST visitor that discovers modifiers.
+/// AST visitor that discovers modifiers.
 ///
 /// Modifiers are discovered by visiting the AST and collecting all condition titles.
 /// The collected titles are then converted to modifiers. For example, the title
-/// `only owner` is converted to the `whenOnlyOwner` modifier.
+/// `when only owner` is converted to the `whenOnlyOwner` modifier.
 ///
 /// For ease of retrieval, the discovered modifiers are stored in a `IndexMap`
 /// for the later phases of the compiler. Note that this means that
 /// we assume that duplicate titles translate to the same modifier.
+/// `IndexMap` was chosen since preserving the order of insertion
+/// to match the order of the modifiers in the source tree is helpful
+/// and the performance trade-off is dismissable.
 pub struct ModifierDiscoverer {
     modifiers: IndexMap<String, String>,
 }
 
 impl ModifierDiscoverer {
+    /// Create a new discoverer.
     pub fn new() -> Self {
         Self {
             modifiers: IndexMap::new(),
         }
     }
 
+    /// Discover modifiers in the given AST.
     pub fn discover(&mut self, ast: &ast::Ast) -> &IndexMap<String, String> {
         match ast {
             Ast::Root(root) => {
@@ -37,6 +42,8 @@ impl ModifierDiscoverer {
     }
 }
 
+/// A visitor that stores key-value pairs of condition titles and
+/// their corresponding modifiers.
 impl Visitor for ModifierDiscoverer {
     type Output = ();
     type Error = ();
@@ -70,6 +77,12 @@ impl Visitor for ModifierDiscoverer {
     }
 }
 
+/// Converts a condition title to a modifier.
+///
+/// The conversion is done by capitalizing the first letter of each word
+/// in the title and removing the spaces. For example, the title
+/// `when only owner` is converted to the `whenOnlyOwner` modifier.
+/// Note that the `w` in `when` is not capitalized following solidity conventions.
 fn to_modifier(title: &str) -> String {
     title
         .split_whitespace()

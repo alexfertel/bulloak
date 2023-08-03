@@ -67,6 +67,12 @@ impl fmt::Display for ErrorKind {
     }
 }
 
+/// `Token` represents a single unit of meaning in a .tree.
+///
+/// A token has a kind, a span, and a lexeme. The kind is
+/// the type of the token, the span is the range in which a
+/// token appears in the original text, and the lexeme is the
+/// text that the token represents.
 #[derive(PartialEq, Eq)]
 pub struct Token {
     pub kind: TokenKind,
@@ -84,34 +90,53 @@ impl fmt::Debug for Token {
     }
 }
 
+/// The type of a token.
 #[derive(Debug, PartialEq, Eq)]
 pub enum TokenKind {
+    /// A token representing the `├` character.
     TEE,
+    /// A token representing the `└` character.
     CORNER,
+    /// A token representing a string.
+    ///
+    /// For example, in the text `foo bar`, both `foo` and `bar` are
+    /// `STRING` tokens.
     STRING,
+    /// A token representing a `when` keyword.
     WHEN,
+    /// A token representing an `it` keyword.
     IT,
 }
 
-type Tokens = Vec<Token>;
-
+/// A tokenizer for .tree files.
+///
+/// This struct represents the state of the tokenizer. It is not
+/// tied to any particular input, while `TokenizerI` is.
 pub struct Tokenizer {
+    /// The current position of the tokenizer in the input.
+    ///
+    /// By default this is set to the start of the input.
     pos: Cell<Position>,
     /// When true, the tokenizer is in `identifier` mode.
     ///
     /// In `identifier` mode, the tokenizer will error if it encounters a
     /// a character that is not a valid identifier character.
     /// This is to prevent malformed names when emitting identifiers.
+    ///
+    /// This is `false` by default.
     identifier_mode: Cell<bool>,
-    /// When true, the tokenizer is in `filename` mode.
+    /// When `true`, the tokenizer is in `filename` mode.
     ///
     /// In `filename` mode, the tokenizer will error if it encounters a
     /// a character that is not a valid filename character.
     /// This is to prevent malformed names when creating the output file.
+    ///
+    /// This is `true` by default.
     filename_mode: Cell<bool>,
 }
 
 impl Tokenizer {
+    /// Create a new tokenizer.
     pub fn new() -> Self {
         Self {
             pos: Cell::new(Position::new(0, 1, 1)),
@@ -122,7 +147,7 @@ impl Tokenizer {
     }
 
     /// Tokenize the tree.
-    pub fn tokenize(&mut self, text: &str) -> Result<Tokens> {
+    pub fn tokenize(&mut self, text: &str) -> Result<Vec<Token>> {
         TokenizerI::new(self, text).tokenize()
     }
 
@@ -134,12 +159,17 @@ impl Tokenizer {
     }
 }
 
+/// TokenizerI is the internal tokenizer implementation.
 struct TokenizerI<'s, T> {
+    /// The text being tokenized.
     text: &'s str,
+    /// The tokenizer state.
     tokenizer: T,
 }
 
 impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
+    /// Create an internal tokenizer from a tokenizer state holder
+    /// and the input text.
     fn new(tokenizer: T, text: &'s str) -> Self {
         Self { text, tokenizer }
     }
@@ -185,20 +215,6 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
     /// The offset starts at `0` from the beginning of the tree.
     fn offset(&self) -> usize {
         self.tokenizer().pos.get().offset
-    }
-
-    /// Return the current line number of the tokenizer.
-    ///
-    /// The line number starts at `1`.
-    fn line(&self) -> usize {
-        self.tokenizer().pos.get().line
-    }
-
-    /// Return the current column of the tokenizer.
-    ///
-    /// The column number starts at `1` and is reset whenever a `\n` is seen.
-    fn column(&self) -> usize {
-        self.tokenizer().pos.get().column
     }
 
     /// Returns true if the next call to `next` would return false.
@@ -295,7 +311,7 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
     }
 
     /// Tokenize the text.
-    pub fn tokenize(&self) -> Result<Tokens> {
+    pub fn tokenize(&self) -> Result<Vec<Token>> {
         let mut tokens = Vec::new();
         self.tokenizer().reset();
 
@@ -325,6 +341,7 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
                     span: self.span(),
                     lexeme: "└".to_string(),
                 }),
+                // Comments start with `//`.
                 '/' if self.peek().is_some_and(|c| c == '/') => {
                     self.exit_mode();
                     self.scan_comments();
@@ -347,7 +364,7 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
         Ok(tokens)
     }
 
-    /// Parse a horizontal line.
+    /// Discards all characters until the end of the line.
     fn scan_comments(&self) {
         loop {
             match self.peek() {
@@ -360,6 +377,11 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
         }
     }
 
+    /// Consumes a word from the input.
+    ///
+    /// A word is defined as a sequence of characters that are not whitespace.
+    /// If the word is a keyword, then the appropriate token is returned.
+    /// Otherwise, a STRING token is returned.
     fn scan_word(&self) -> Result<Token> {
         let mut lexeme = String::new();
         let span_start = self.pos();
