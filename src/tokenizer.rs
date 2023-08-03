@@ -496,6 +496,59 @@ mod tests {
     }
 
     #[test]
+    fn test_comments() -> Result<()> {
+        let file_contents = String::from(
+            "file.sol\n└── when something bad happens // some comments \n   └── it should revert",
+        );
+
+        assert_eq!(
+            Tokenizer::new().tokenize(&file_contents)?,
+            vec![
+                t(TokenKind::STRING, "file.sol", s(p(0, 1, 1), p(7, 1, 8))),
+                t(TokenKind::CORNER, "└", s(p(9, 2, 1), p(9, 2, 1))),
+                t(TokenKind::WHEN, "when", s(p(19, 2, 5), p(22, 2, 8))),
+                t(
+                    TokenKind::STRING,
+                    "something",
+                    s(p(24, 2, 10), p(32, 2, 18))
+                ),
+                t(TokenKind::STRING, "bad", s(p(34, 2, 20), p(36, 2, 22))),
+                t(TokenKind::STRING, "happens", s(p(38, 2, 24), p(44, 2, 30))),
+                t(TokenKind::CORNER, "└", s(p(67, 3, 4), p(67, 3, 4))),
+                t(TokenKind::IT, "it", s(p(77, 3, 8), p(78, 3, 9))),
+                t(TokenKind::STRING, "should", s(p(80, 3, 11), p(85, 3, 16))),
+                t(TokenKind::STRING, "revert", s(p(87, 3, 18), p(92, 3, 23))),
+            ]
+        );
+
+        let file_contents = String::from(
+            "file.sol\n└── when something bad happens\n // some comments \n   └── it should revert",
+        );
+
+        assert_eq!(
+            Tokenizer::new().tokenize(&file_contents)?,
+            vec![
+                t(TokenKind::STRING, "file.sol", s(p(0, 1, 1), p(7, 1, 8))),
+                t(TokenKind::CORNER, "└", s(p(9, 2, 1), p(9, 2, 1))),
+                t(TokenKind::WHEN, "when", s(p(19, 2, 5), p(22, 2, 8))),
+                t(
+                    TokenKind::STRING,
+                    "something",
+                    s(p(24, 2, 10), p(32, 2, 18))
+                ),
+                t(TokenKind::STRING, "bad", s(p(34, 2, 20), p(36, 2, 22))),
+                t(TokenKind::STRING, "happens", s(p(38, 2, 24), p(44, 2, 30))),
+                t(TokenKind::CORNER, "└", s(p(68, 4, 4), p(68, 4, 4))),
+                t(TokenKind::IT, "it", s(p(78, 4, 8), p(79, 4, 9))),
+                t(TokenKind::STRING, "should", s(p(81, 4, 11), p(86, 4, 16))),
+                t(TokenKind::STRING, "revert", s(p(88, 4, 18), p(93, 4, 23))),
+            ]
+        );
+
+        Ok(())
+    }
+
+    #[test]
     fn test_invalid_characters() {
         assert_eq!(
             Tokenizer::new().tokenize("/foobar").unwrap_err(),
