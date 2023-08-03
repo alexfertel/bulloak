@@ -148,7 +148,7 @@ impl Tokenizer {
 
     /// Tokenize the input .tree text.
     ///
-    /// `tokenize` is the main entry point of the Tokenizer.
+    /// `tokenize` is the entry point of the Tokenizer.
     /// It takes a string of .tree text and returns a vector of tokens.
     pub fn tokenize(&mut self, text: &str) -> Result<Vec<Token>> {
         TokenizerI::new(self, text).tokenize()

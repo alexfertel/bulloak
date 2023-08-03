@@ -8,35 +8,65 @@ use crate::{
 };
 
 /// Solidity code emitter.
+///
+/// This struct holds the state of the emitter. It is not
+/// tied to a specific AST.
 pub struct Emitter {
-    with_it_as_comments: bool,
+    /// This flag determines whether actions are emitted as comments
+    /// in the body of functions.
+    with_actions_as_comments: bool,
+    /// The indentation level of the emitted code.
     indent: usize,
 }
 
 impl Emitter {
-    pub fn new(with_it_as_comments: bool, indent: usize) -> Self {
+    /// Create a new emitter with the given configuration.
+    pub fn new(with_actions_as_comments: bool, indent: usize) -> Self {
         Self {
-            with_it_as_comments,
+            with_actions_as_comments,
             indent,
         }
     }
 
+    /// Emit Solidity code from the given AST.
     pub fn emit(self, ast: &ast::Ast, modifiers: &IndexMap<String, String>) -> String {
         EmitterI::new(self, modifiers).emit(ast)
     }
 
+    /// Return the indentation string. i.e. the string that is used
+    /// to indent the emitted code.
     fn indent(&self) -> String {
         " ".repeat(self.indent)
     }
 }
 
+/// The internal implementation of the solidity code emitter.
+///
+/// This emitter generates skeleton contracts and tests functions
+/// inside that contract described in the input .tree file.
 struct EmitterI<'a> {
+    /// A stack of modifiers that will be applied to the
+    /// currently emitted function.
+    ///
+    /// This stack is updated as the emitter traverses the AST.
+    /// When the emitter finishes traversing a condition, it
+    /// pops the last modifier from the stack, since it won't
+    /// be applied to the next function. The rest of the modifiers
+    /// might be applied in case there are more sibling actions or
+    /// conditions.
     modifier_stack: Vec<&'a str>,
+    /// A map of condition titles to their corresponding modifiers.
+    ///
+    /// This map is used to retrieve a modifier given a condition title
+    /// to improve performance. Otherwise each title would be converted
+    /// to a modifier every time it is used.
     modifiers: &'a IndexMap<String, String>,
+    /// The emitter state.
     emitter: Emitter,
 }
 
 impl<'a> EmitterI<'a> {
+    /// Create a new emitter with the given emitter state and modifier map.
     fn new(emitter: Emitter, modifiers: &'a IndexMap<String, String>) -> Self {
         Self {
             modifier_stack: Vec::new(),
@@ -45,6 +75,9 @@ impl<'a> EmitterI<'a> {
         }
     }
 
+    /// Emit Solidity code from the given AST.
+    ///
+    /// This function is the entry point of the emitter.
     fn emit(&mut self, ast: &ast::Ast) -> String {
         match ast {
             Ast::Root(ref root) => self.visit_root(root).unwrap(),
@@ -52,23 +85,14 @@ impl<'a> EmitterI<'a> {
         }
     }
 
-    fn emit_modifier(&self, modifier: &str) -> String {
-        let mut emitted = String::new();
-        let indentation = self.emitter.indent();
-        emitted.push_str(&format!("{}modifier {}() {{\n", indentation, modifier));
-        emitted.push_str(&format!("{}_;\n", indentation.repeat(2)));
-        emitted.push_str(&format!("{}}}\n", indentation));
-        emitted.push('\n');
-
-        emitted
-    }
-}
-
-impl<'a> Visitor for EmitterI<'a> {
-    type Output = String;
-    type Error = ();
-
-    fn visit_root(&mut self, root: &ast::Root) -> result::Result<Self::Output, Self::Error> {
+    /// Emit the contract's definition header.
+    ///
+    /// This includes:
+    /// - The Solidity version pragma with a placeholder for the
+    /// actual version.
+    /// - The contract's name.
+    /// - The modifiers.
+    fn emit_contract_header(&self, root: &ast::Root) -> String {
         let mut emitted = String::new();
         emitted.push_str("pragma solidity [VERSION];\n\n");
 
@@ -81,26 +105,36 @@ impl<'a> Visitor for EmitterI<'a> {
             emitted.push_str(&self.emit_modifier(modifier));
         }
 
-        for condition in &root.asts {
-            if let Ast::Condition(condition) = condition {
-                emitted.push_str(&self.visit_condition(condition)?);
-            }
-        }
-
-        emitted.push('}');
-
-        Ok(emitted)
+        emitted
     }
 
-    fn visit_condition(
-        &mut self,
-        condition: &ast::Condition,
-    ) -> result::Result<Self::Output, Self::Error> {
+    /// Emit a modifier.
+    ///
+    /// A modifier follows the following structure:
+    /// ```solidity
+    /// modifier [MODIFIER_NAME]() {
+    ///    _;
+    /// }
+    /// ```
+    fn emit_modifier(&self, modifier: &str) -> String {
         let mut emitted = String::new();
+        let indentation = self.emitter.indent();
+        emitted.push_str(&format!("{}modifier {}() {{\n", indentation, modifier));
+        emitted.push_str(&format!("{}_;\n", indentation.repeat(2)));
+        emitted.push_str(&format!("{}}}\n", indentation));
+        emitted.push('\n');
 
-        // It's fine to unwrap here because we discover all modifiers in a previous pass.
-        let modifier = self.modifiers.get(&condition.title).unwrap();
-        self.modifier_stack.push(modifier);
+        emitted
+    }
+
+    /// Emit a function's definition header.
+    ///
+    /// This includes:
+    /// - The function's name.
+    /// - The function's visibility.
+    /// - Any modifiers that should be applied to the function.
+    fn emit_fn_header(&self, condition: &ast::Condition) -> String {
+        let mut emitted = String::new();
 
         // We count instead of collecting into a Vec to avoid allocating a Vec for each condition.
         let action_count = condition.asts.iter().filter(|ast| ast.is_action()).count();
@@ -131,6 +165,7 @@ impl<'a> Visitor for EmitterI<'a> {
             emitted.push_str(format!("{}function {}()\n", fn_indentation, function_name).as_str());
             emitted.push_str(format!("{}external \n", fn_body_indentation).as_str());
 
+            // Emit the modifiers that should be applied to this function.
             for modifier in &self.modifier_stack {
                 emitted.push_str(format!("{}{}\n", fn_body_indentation, modifier).as_str());
             }
@@ -138,18 +173,66 @@ impl<'a> Visitor for EmitterI<'a> {
             emitted.push_str(format!("{}{{\n", fn_indentation).as_str());
         }
 
+        emitted
+    }
+}
+
+/// The visitor implementation for the emitter.
+///
+/// Note that the visitor is infallible because previous
+/// passes ensure that the AST is valid. In case an error
+/// is found, it should be added to a previous pass.
+impl<'a> Visitor for EmitterI<'a> {
+    type Output = String;
+    type Error = ();
+
+    fn visit_root(&mut self, root: &ast::Root) -> result::Result<Self::Output, Self::Error> {
+        let mut emitted = String::new();
+
+        let contract_header = self.emit_contract_header(root);
+        emitted.push_str(&contract_header);
+
+        for condition in &root.asts {
+            if let Ast::Condition(condition) = condition {
+                emitted.push_str(&self.visit_condition(condition)?);
+            }
+        }
+
+        emitted.push('}');
+
+        Ok(emitted)
+    }
+
+    fn visit_condition(
+        &mut self,
+        condition: &ast::Condition,
+    ) -> result::Result<Self::Output, Self::Error> {
+        let mut emitted = String::new();
+
+        // It's fine to unwrap here because we discover all modifiers in a previous pass.
+        let modifier = self.modifiers.get(&condition.title).unwrap();
+        self.modifier_stack.push(modifier);
+
+        let fn_header = self.emit_fn_header(condition);
+        emitted.push_str(&fn_header);
+
+        // We first visit all actions in order to emit the functions
+        // in the same order as they appear in the source .tree text.
         for action in &condition.asts {
             if let Ast::Action(action) = action {
                 emitted.push_str(&self.visit_action(action)?);
             }
         }
 
+        // Then we recursively emit all child conditions.
         for condition in &condition.asts {
             if let Ast::Condition(condition) = condition {
                 emitted.push_str(&self.visit_condition(condition)?);
             }
         }
 
+        // We count instead of collecting into a Vec to avoid allocating a Vec for each condition.
+        let action_count = condition.asts.iter().filter(|ast| ast.is_action()).count();
         if action_count > 0 {
             emitted.push_str(format!("{}}}\n\n", self.emitter.indent()).as_str());
         }
@@ -162,7 +245,7 @@ impl<'a> Visitor for EmitterI<'a> {
     fn visit_action(&mut self, action: &ast::Action) -> result::Result<Self::Output, Self::Error> {
         let mut emitted = String::new();
 
-        if self.emitter.with_it_as_comments {
+        if self.emitter.with_actions_as_comments {
             let indentation = self.emitter.indent().repeat(2);
             emitted.push_str(format!("{}// {}\n", indentation, action.title).as_str());
         }

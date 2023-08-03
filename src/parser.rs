@@ -107,7 +107,7 @@ impl Parser {
 
     /// Parse the given tokens into an abstract syntax tree (AST).
     ///
-    /// `parse` is the main entry point for the parser. It takes a sequence of
+    /// `parse` is the entry point for the parser. It takes a sequence of
     /// tokens and returns an AST.
     pub fn parse(&mut self, text: &str, tokens: &[Token]) -> Result<Ast> {
         ParserI::new(self, text, tokens).parse()
@@ -182,7 +182,7 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
 
     /// Parse the given tokens into an abstract syntax tree.
     ///
-    /// This is the main entry point for the parser. Note that
+    /// This is the entry point for the parser. Note that
     /// this method resets the parser state before parsing and
     /// that we defer the implementation of parsing to `_parse`.
     pub fn parse(&self) -> Result<Ast> {
