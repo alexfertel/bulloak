@@ -1,4 +1,5 @@
-use std::{collections::HashMap, result};
+use indexmap::IndexMap;
+use std::result;
 
 use crate::{
     ast::{self, Ast},
@@ -20,7 +21,7 @@ impl Emitter {
         }
     }
 
-    pub fn emit(self, ast: &ast::Ast, modifiers: &HashMap<String, String>) -> String {
+    pub fn emit(self, ast: &ast::Ast, modifiers: &IndexMap<String, String>) -> String {
         EmitterI::new(self, modifiers).emit(ast)
     }
 
@@ -31,12 +32,12 @@ impl Emitter {
 
 struct EmitterI<'a> {
     modifier_stack: Vec<&'a str>,
-    modifiers: &'a HashMap<String, String>,
+    modifiers: &'a IndexMap<String, String>,
     emitter: Emitter,
 }
 
 impl<'a> EmitterI<'a> {
-    fn new(emitter: Emitter, modifiers: &'a HashMap<String, String>) -> Self {
+    fn new(emitter: Emitter, modifiers: &'a IndexMap<String, String>) -> Self {
         Self {
             modifier_stack: Vec::new(),
             modifiers,
@@ -49,6 +50,17 @@ impl<'a> EmitterI<'a> {
             Ast::Root(ref root) => self.visit_root(root).unwrap(),
             _ => unreachable!(),
         }
+    }
+
+    fn emit_modifier(&self, modifier: &str) -> String {
+        let mut emitted = String::new();
+        let indentation = self.emitter.indent();
+        emitted.push_str(&format!("{}modifier {}() {{\n", indentation, modifier));
+        emitted.push_str(&format!("{}_;\n", indentation.repeat(2)));
+        emitted.push_str(&format!("{}}}\n", indentation));
+        emitted.push('\n');
+
+        emitted
     }
 }
 
@@ -65,13 +77,17 @@ impl<'a> Visitor for EmitterI<'a> {
         let contract_name = capitalize_first_letter(contract_name);
         emitted.push_str(format!("contract {}Test {{\n", contract_name).as_str());
 
+        for modifier in self.modifiers.values() {
+            emitted.push_str(&self.emit_modifier(modifier));
+        }
+
         for condition in &root.asts {
             if let Ast::Condition(condition) = condition {
                 emitted.push_str(&self.visit_condition(condition)?);
             }
         }
 
-        emitted.push_str("}");
+        emitted.push('}');
 
         Ok(emitted)
     }
@@ -183,6 +199,10 @@ mod tests {
             r"pragma solidity [VERSION];
 
 contract FileTest {
+  modifier whenSomethingBadHappens() {
+    _;
+  }
+
   function testWhenSomethingBadHappens()
     external 
     whenSomethingBadHappens
@@ -202,6 +222,10 @@ contract FileTest {
             r"pragma solidity [VERSION];
 
 contract FileTest {
+  modifier whenSomethingBadHappens() {
+    _;
+  }
+
   function testRevertsWhenSomethingBadHappens()
     external 
     whenSomethingBadHappens
@@ -230,6 +254,14 @@ contract FileTest {
             r"pragma solidity [VERSION];
 
 contract Two_childrenTest {
+  modifier whenStuffCalled() {
+    _;
+  }
+
+  modifier whenNotStuffCalled() {
+    _;
+  }
+
   function testRevertsWhenStuffCalled()
     external 
     whenStuffCalled
@@ -266,6 +298,10 @@ contract Two_childrenTest {
             r"pragma solidity [VERSION];
 
 contract ActionsTest {
+  modifier whenStuffCalled() {
+    _;
+  }
+
   function testWhenStuffCalled()
     external 
     whenStuffCalled
@@ -310,6 +346,42 @@ contract ActionsTest {
             r"pragma solidity [VERSION];
 
 contract DeepTest {
+  modifier whenStuffCalled() {
+    _;
+  }
+
+  modifier whenNotStuffCalled() {
+    _;
+  }
+
+  modifier whenTheDepositAmountIsZero() {
+    _;
+  }
+
+  modifier whenTheDepositAmountIsNotZero() {
+    _;
+  }
+
+  modifier whenTheNumberCountIsZero() {
+    _;
+  }
+
+  modifier whenTheAssetIsNotAContract() {
+    _;
+  }
+
+  modifier whenTheAssetIsAContract() {
+    _;
+  }
+
+  modifier whenTheAssetMissesTheERC_20ReturnValue() {
+    _;
+  }
+
+  modifier whenTheAssetDoesNotMissTheERC_20ReturnValue() {
+    _;
+  }
+
   function testRevertsWhenStuffCalled()
     external 
     whenStuffCalled

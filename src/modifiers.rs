@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use indexmap::IndexMap;
 
 use crate::{
     ast::{self, Ast},
@@ -12,22 +12,21 @@ use crate::{
 /// The collected titles are then converted to modifiers. For example, the title
 /// `only owner` is converted to the `whenOnlyOwner` modifier.
 ///
-/// For ease of retrieval, the discovered modifiers are stored in a `HashMap`
+/// For ease of retrieval, the discovered modifiers are stored in a `IndexMap`
 /// for the later phases of the compiler. Note that this means that
-/// the order of the modifiers is not preserved and that we assume that
-/// duplicate titles translate to the same modifier.
+/// we assume that duplicate titles translate to the same modifier.
 pub struct ModifierDiscoverer {
-    modifiers: HashMap<String, String>,
+    modifiers: IndexMap<String, String>,
 }
 
 impl ModifierDiscoverer {
     pub fn new() -> Self {
         Self {
-            modifiers: HashMap::new(),
+            modifiers: IndexMap::new(),
         }
     }
 
-    pub fn discover(&mut self, ast: &ast::Ast) -> &HashMap<String, String> {
+    pub fn discover(&mut self, ast: &ast::Ast) -> &IndexMap<String, String> {
         match ast {
             Ast::Root(root) => {
                 self.visit_root(root).unwrap();
@@ -87,7 +86,7 @@ fn to_modifier(title: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
+    use indexmap::IndexMap;
 
     use pretty_assertions::assert_eq;
 
@@ -115,7 +114,7 @@ mod tests {
 
         assert_eq!(
             modifiers,
-            &HashMap::from([(
+            &IndexMap::from([(
                 "when something bad happens".to_string(),
                 "whenSomethingBadHappens".to_string()
             )])
@@ -141,7 +140,7 @@ mod tests {
 
         assert_eq!(
             modifiers,
-            &HashMap::from([
+            &IndexMap::from([
                 (
                     "when stuff called".to_string(),
                     "whenStuffCalled".to_string()
@@ -187,7 +186,7 @@ mod tests {
 
         assert_eq!(
             modifiers,
-            &HashMap::from([
+            &IndexMap::from([
                 (
                     "when stuff called".to_string(),
                     "whenStuffCalled".to_string()
