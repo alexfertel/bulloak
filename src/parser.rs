@@ -49,15 +49,17 @@ pub enum ErrorKind {
     /// An example of how this might be an internal bug is if the
     /// parser ends up in a state where the current grammar production
     /// being applied doesn't expect this token to occur.
-    UnexpectedToken(Lexeme),
+    TokenUnexpected(Lexeme),
     /// Did not expect this WHEN keyword.
-    UnexpectedWhen,
+    WhenUnexpected,
     /// Did not expect this IT keyword.
-    UnexpectedIt,
+    ItUnexpected,
     /// Did not expect a STRING.
-    UnexpectedString(Lexeme),
+    StringUnexpected(Lexeme),
     /// Did not expect an end of file.
-    UnexpectedEof,
+    EofUnexpected,
+    /// The filename should have an extension to recognize the output lang.
+    ExtensionMissing,
     /// This enum may grow additional variants, so this makes sure clients
     /// don't count on exhaustive matching. (Otherwise, adding a new variant
     /// could break existing code.)
@@ -75,11 +77,11 @@ impl fmt::Display for ErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use self::ErrorKind::*;
         match *self {
-            UnexpectedToken(ref lexeme) => write!(f, "unexpected token: {}", lexeme),
-            UnexpectedWhen => write!(f, "unexpected WHEN keyword"),
-            UnexpectedIt => write!(f, "unexpected IT keyword"),
-            UnexpectedString(ref lexeme) => write!(f, "unexpected STRING: {}", lexeme),
-            UnexpectedEof => write!(f, "unexpected end of file"),
+            TokenUnexpected(ref lexeme) => write!(f, "unexpected token: {}", lexeme),
+            WhenUnexpected => write!(f, "unexpected WHEN keyword"),
+            ItUnexpected => write!(f, "unexpected IT keyword"),
+            StringUnexpected(ref lexeme) => write!(f, "unexpected STRING: {}", lexeme),
+            EofUnexpected => write!(f, "unexpected end of file"),
             _ => unreachable!(),
         }
     }
@@ -162,7 +164,7 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
             Some(current) => current,
             None => {
                 return Err(self
-                    .error(self.tokens.last().unwrap().span, ErrorKind::UnexpectedEof)
+                    .error(self.tokens.last().unwrap().span, ErrorKind::EofUnexpected)
                     .into())
             }
         };
@@ -174,7 +176,7 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
                     Some(next) => next,
                     None => {
                         return Err(self
-                            .error(self.tokens.last().unwrap().span, ErrorKind::UnexpectedEof)
+                            .error(self.tokens.last().unwrap().span, ErrorKind::EofUnexpected)
                             .into())
                     }
                 };
@@ -212,7 +214,7 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
                     _ => Err(self
                         .error(
                             current_token.span,
-                            ErrorKind::UnexpectedToken(next_token.lexeme.clone()),
+                            ErrorKind::TokenUnexpected(next_token.lexeme.clone()),
                         )
                         .into()),
                 }
@@ -220,14 +222,14 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
             TokenKind::STRING => Err(self
                 .error(
                     current_token.span,
-                    ErrorKind::UnexpectedString(current_token.lexeme.clone()),
+                    ErrorKind::StringUnexpected(current_token.lexeme.clone()),
                 )
                 .into()),
             TokenKind::WHEN => Err(self
-                .error(current_token.span, ErrorKind::UnexpectedWhen)
+                .error(current_token.span, ErrorKind::WhenUnexpected)
                 .into()),
             TokenKind::IT => Err(self
-                .error(current_token.span, ErrorKind::UnexpectedIt)
+                .error(current_token.span, ErrorKind::ItUnexpected)
                 .into()),
         }
     }

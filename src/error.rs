@@ -150,7 +150,7 @@ mod test {
         let span = Span::splat(Position::new(0, 2, 1)).with_end(Position::new(4, 2, 5));
         let formatter = Formatter {
             text,
-            err: &parser::ErrorKind::UnexpectedToken("world".to_string()),
+            err: &parser::ErrorKind::TokenUnexpected("world".to_string()),
             span: &span,
         };
         let notated = format!("{}", formatter);

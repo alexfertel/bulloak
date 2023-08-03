@@ -40,9 +40,9 @@ impl Error {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ErrorKind {
     /// Found an invalid identifier character.
-    InvalidIdentifierCharacter(char),
+    IdentifierCharInvalid(char),
     /// Found an invalid filename character.
-    InvalidFileNameCharacter(char),
+    FileNameCharInvalid(char),
     /// This enum may grow additional variants, so this makes sure clients
     /// don't count on exhaustive matching. (Otherwise, adding a new variant
     /// could break existing code.)
@@ -60,8 +60,8 @@ impl fmt::Display for ErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use self::ErrorKind::*;
         match *self {
-            InvalidFileNameCharacter(c) => write!(f, "invalid filename: {:?}", c),
-            InvalidIdentifierCharacter(c) => write!(f, "invalid identifier: {:?}", c),
+            FileNameCharInvalid(c) => write!(f, "invalid filename: {:?}", c),
+            IdentifierCharInvalid(c) => write!(f, "invalid identifier: {:?}", c),
             _ => unreachable!(),
         }
     }
@@ -306,16 +306,10 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
 
             match self.char() {
                 '─' | '│' if self.is_identifier_mode() => {
-                    self.error(
-                        self.span(),
-                        ErrorKind::InvalidIdentifierCharacter(self.char()),
-                    );
+                    self.error(self.span(), ErrorKind::IdentifierCharInvalid(self.char()));
                 }
                 '─' | '│' if self.is_filename_mode() => {
-                    self.error(
-                        self.span(),
-                        ErrorKind::InvalidFileNameCharacter(self.char()),
-                    );
+                    self.error(self.span(), ErrorKind::FileNameCharInvalid(self.char()));
                 }
                 ' ' | '─' | '│' => {}
                 '\n' | '\t' | '\r' => {
@@ -373,17 +367,11 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
         loop {
             if self.is_identifier_mode() && !is_valid_identifier_char(self.char()) {
                 return Err(self
-                    .error(
-                        self.span(),
-                        ErrorKind::InvalidIdentifierCharacter(self.char()),
-                    )
+                    .error(self.span(), ErrorKind::IdentifierCharInvalid(self.char()))
                     .into());
             } else if self.is_filename_mode() && !is_valid_filename_char(self.char()) {
                 return Err(self
-                    .error(
-                        self.span(),
-                        ErrorKind::InvalidFileNameCharacter(self.char()),
-                    )
+                    .error(self.span(), ErrorKind::FileNameCharInvalid(self.char()))
                     .into());
             } else if self.peek().is_none() || self.peek().is_some_and(|c| c.is_whitespace()) {
                 lexeme.push(self.char());
@@ -491,21 +479,21 @@ mod tests {
             Tokenizer::new().tokenize("/foobar").unwrap_err(),
             TestError {
                 span: s(p(0, 1, 1), p(0, 1, 1)),
-                kind: tokenizer::ErrorKind::InvalidFileNameCharacter('/'),
+                kind: tokenizer::ErrorKind::FileNameCharInvalid('/'),
             }
         );
         assert_eq!(
             Tokenizer::new().tokenize("foo/bar").unwrap_err(),
             TestError {
                 span: s(p(3, 1, 4), p(3, 1, 4)),
-                kind: tokenizer::ErrorKind::InvalidFileNameCharacter('/'),
+                kind: tokenizer::ErrorKind::FileNameCharInvalid('/'),
             }
         );
         assert_eq!(
             Tokenizer::new().tokenize("foobar/").unwrap_err(),
             TestError {
                 span: s(p(6, 1, 7), p(6, 1, 7)),
-                kind: tokenizer::ErrorKind::InvalidFileNameCharacter('/'),
+                kind: tokenizer::ErrorKind::FileNameCharInvalid('/'),
             }
         );
         assert_eq!(
@@ -514,7 +502,7 @@ mod tests {
                 .unwrap_err(),
             TestError {
                 span: s(p(19, 2, 10), p(19, 2, 10)),
-                kind: tokenizer::ErrorKind::InvalidIdentifierCharacter('|'),
+                kind: tokenizer::ErrorKind::IdentifierCharInvalid('|'),
             }
         );
         assert_eq!(
@@ -523,7 +511,7 @@ mod tests {
                 .unwrap_err(),
             TestError {
                 span: s(p(20, 2, 11), p(20, 2, 11)),
-                kind: tokenizer::ErrorKind::InvalidIdentifierCharacter('|'),
+                kind: tokenizer::ErrorKind::IdentifierCharInvalid('|'),
             }
         );
         assert_eq!(
@@ -532,7 +520,7 @@ mod tests {
                 .unwrap_err(),
             TestError {
                 span: s(p(24, 2, 15), p(24, 2, 15)),
-                kind: tokenizer::ErrorKind::InvalidIdentifierCharacter('|'),
+                kind: tokenizer::ErrorKind::IdentifierCharInvalid('|'),
             }
         );
         assert_eq!(
@@ -541,7 +529,7 @@ mod tests {
                 .unwrap_err(),
             TestError {
                 span: s(p(19, 2, 10), p(19, 2, 10)),
-                kind: tokenizer::ErrorKind::InvalidIdentifierCharacter('.'),
+                kind: tokenizer::ErrorKind::IdentifierCharInvalid('.'),
             }
         );
         assert_eq!(
@@ -550,7 +538,7 @@ mod tests {
                 .unwrap_err(),
             TestError {
                 span: s(p(20, 2, 11), p(20, 2, 11)),
-                kind: tokenizer::ErrorKind::InvalidIdentifierCharacter(','),
+                kind: tokenizer::ErrorKind::IdentifierCharInvalid(','),
             }
         );
         assert_eq!(
@@ -559,7 +547,7 @@ mod tests {
                 .unwrap_err(),
             TestError {
                 span: s(p(24, 2, 15), p(24, 2, 15)),
-                kind: tokenizer::ErrorKind::InvalidIdentifierCharacter('\''),
+                kind: tokenizer::ErrorKind::IdentifierCharInvalid('\''),
             }
         );
     }
