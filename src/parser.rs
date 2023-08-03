@@ -369,7 +369,6 @@ mod tests {
 
     #[test]
     fn test_one_child() -> Result<()> {
-        // TODO: Setup tokens by hand instead of relying on the tokenizer.
         let file_contents =
             String::from("file.sol\n└── when something bad happens\n   └── it should revert");
 
@@ -397,7 +396,6 @@ mod tests {
 
     #[test]
     fn test_two_children() -> Result<()> {
-        // TODO: Setup tokens by hand instead of relying on the tokenizer.
         let file_contents = String::from(
             r#"two_children.t.sol
 ├── when stuff called

@@ -3,10 +3,12 @@ use std::{fs, io::Result};
 mod ast;
 mod emitter;
 mod error;
+mod modifiers;
 mod parser;
 mod semantics;
 mod span;
 mod tokenizer;
+mod utils;
 mod visitor;
 
 pub fn run(file_name: &str) -> Result<()> {
@@ -28,13 +30,17 @@ fn scaffold(text: &str) -> error::Result<()> {
     println!("AST: {:#?}", ast);
 
     match ast {
-        ast::Ast::Root(root) => {
+        ast::Ast::Root(ref root) => {
             let mut analyzer = semantics::SemanticAnalyzer::new(&text);
             let errors = analyzer.analyze(&root)?;
             println!("errors: {:#?}", errors);
         }
         _ => unreachable!(),
     }
+
+    let mut discoverer = modifiers::ModifierDiscoverer::new();
+    let modifiers = discoverer.discover(&ast);
+    println!("modifiers: {:#?}", modifiers);
 
     Ok(())
 }
