@@ -56,6 +56,12 @@ impl Visitor for ModifierDiscoverer {
         self.modifiers
             .insert(condition.title.clone(), to_modifier(&condition.title));
 
+        for condition in &condition.asts {
+            if let Ast::Condition(condition) = condition {
+                self.visit_condition(condition)?;
+            }
+        }
+
         Ok(())
     }
 
@@ -85,15 +91,10 @@ mod tests {
 
     use pretty_assertions::assert_eq;
 
-    use crate::ast::{Action, Ast, Condition, Root};
     use crate::error::Result;
     use crate::modifiers::{to_modifier, ModifierDiscoverer};
-    use crate::parser::{self, ErrorKind, Parser};
+    use crate::parser::Parser;
     use crate::tokenizer::Tokenizer;
-    use crate::{
-        span::{Position, Span},
-        tokenizer::{Token, TokenKind},
-    };
 
     #[test]
     fn test_to_modifier() {
@@ -126,11 +127,11 @@ mod tests {
     #[test]
     fn test_two_children() -> Result<()> {
         let file_contents = String::from(
-            r#"two_children.t.sol
+            r"two_children.t.sol
 ├── when stuff called
 │  └── it should revert
 └── when not stuff called
-   └── it should revert"#,
+   └── it should revert",
         );
 
         let tokens = Tokenizer::new().tokenize(&file_contents)?;
@@ -149,6 +150,80 @@ mod tests {
                     "when not stuff called".to_string(),
                     "whenNotStuffCalled".to_string()
                 )
+            ])
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_deep_tree() -> Result<()> {
+        let file_contents = String::from(
+            r#"deep.sol
+├── when stuff called
+│  └── it should revert
+└── when not stuff called
+   ├── when the deposit amount is zero
+   │  └── it should revert
+   └── when the deposit amount is not zero
+      ├── when the number count is zero
+      │  └── it should revert
+      ├── when the asset is not a contract
+      │  └── it should revert
+      └── when the asset is a contract
+          ├── when the asset misses the ERC_20 return value
+          │  ├── it should create the child
+          │  ├── it should perform the ERC-20 transfers
+          │  └── it should emit a {MultipleChildren} event
+          └── when the asset does not miss the ERC_20 return value
+              ├── it should create the child
+              └── it should emit a {MultipleChildren} event"#,
+        );
+
+        let tokens = Tokenizer::new().tokenize(&file_contents)?;
+        let ast = Parser::new().parse(&file_contents, &tokens)?;
+        let mut discoverer = ModifierDiscoverer::new();
+        let modifiers = discoverer.discover(&ast);
+
+        assert_eq!(
+            modifiers,
+            &HashMap::from([
+                (
+                    "when stuff called".to_string(),
+                    "whenStuffCalled".to_string()
+                ),
+                (
+                    "when not stuff called".to_string(),
+                    "whenNotStuffCalled".to_string()
+                ),
+                (
+                    "when the deposit amount is zero".to_string(),
+                    "whenTheDepositAmountIsZero".to_string()
+                ),
+                (
+                    "when the deposit amount is not zero".to_string(),
+                    "whenTheDepositAmountIsNotZero".to_string()
+                ),
+                (
+                    "when the number count is zero".to_string(),
+                    "whenTheNumberCountIsZero".to_string()
+                ),
+                (
+                    "when the asset is not a contract".to_string(),
+                    "whenTheAssetIsNotAContract".to_string()
+                ),
+                (
+                    "when the asset is a contract".to_string(),
+                    "whenTheAssetIsAContract".to_string()
+                ),
+                (
+                    "when the asset misses the ERC_20 return value".to_string(),
+                    "whenTheAssetMissesTheERC_20ReturnValue".to_string()
+                ),
+                (
+                    "when the asset does not miss the ERC_20 return value".to_string(),
+                    "whenTheAssetDoesNotMissTheERC_20ReturnValue".to_string()
+                ),
             ])
         );
 

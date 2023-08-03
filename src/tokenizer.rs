@@ -616,7 +616,7 @@ mod tests {
       └── when the asset is a contract
           ├── when the asset misses the ERC_20 return value
           │  ├── it should create the child
-          │  ├── it should perform the ERC_20 transfers
+          │  ├── it should perform the ERC-20 transfers
           │  └── it should emit a {MultipleChildren} event
           └── when the asset does not miss the ERC_20 return value
               ├── it should create the child
@@ -786,7 +786,7 @@ mod tests {
             t(TokenKind::STRING, "the", s(p(622, 15, 36), p(624, 15, 38))),
             t(
                 TokenKind::STRING,
-                "ERC_20",
+                "ERC-20",
                 s(p(626, 15, 40), p(631, 15, 45)),
             ),
             t(

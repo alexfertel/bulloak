@@ -71,7 +71,7 @@ impl<'a> Visitor for EmitterI<'a> {
             }
         }
 
-        emitted.push_str("}\n");
+        emitted.push_str("}");
 
         Ok(emitted)
     }
@@ -133,7 +133,10 @@ impl<'a> Visitor for EmitterI<'a> {
                 emitted.push_str(&self.visit_condition(condition)?);
             }
         }
-        emitted.push_str(format!("{}}}\n\n", self.emitter.indent()).as_str());
+
+        if action_count > 0 {
+            emitted.push_str(format!("{}}}\n\n", self.emitter.indent()).as_str());
+        }
 
         self.modifier_stack.pop();
 
@@ -149,5 +152,223 @@ impl<'a> Visitor for EmitterI<'a> {
         }
 
         Ok(emitted)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use pretty_assertions::assert_eq;
+
+    use crate::emitter;
+    use crate::error::Result;
+    use crate::modifiers;
+    use crate::parser::Parser;
+    use crate::tokenizer::Tokenizer;
+
+    fn scaffold(text: &str) -> Result<String> {
+        let tokens = Tokenizer::new().tokenize(&text)?;
+        let ast = Parser::new().parse(&text, &tokens)?;
+        let mut discoverer = modifiers::ModifierDiscoverer::new();
+        let modifiers = discoverer.discover(&ast);
+        Ok(emitter::Emitter::new(true, 2).emit(&ast, &modifiers))
+    }
+
+    #[test]
+    fn test_one_child() -> Result<()> {
+        let file_contents =
+            String::from("file.sol\n└── when something bad happens\n   └── it should not revert");
+
+        assert_eq!(
+            &scaffold(&file_contents)?,
+            r"pragma solidity [VERSION];
+
+contract FileTest {
+  function testWhenSomethingBadHappens()
+    external 
+    whenSomethingBadHappens
+  {
+    // it should not revert
+  }
+
+}"
+        );
+
+        // Test that "it should revert" actions change the test name.
+        let file_contents =
+            String::from("file.sol\n└── when something bad happens\n   └── it should revert");
+
+        assert_eq!(
+            &scaffold(&file_contents)?,
+            r"pragma solidity [VERSION];
+
+contract FileTest {
+  function testRevertsWhenSomethingBadHappens()
+    external 
+    whenSomethingBadHappens
+  {
+    // it should revert
+  }
+
+}"
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_two_children() -> Result<()> {
+        let file_contents = String::from(
+            r"two_children.t.sol
+├── when stuff called
+│  └── it should revert
+└── when not stuff called
+   └── it should revert",
+        );
+
+        assert_eq!(
+            &scaffold(&file_contents)?,
+            r"pragma solidity [VERSION];
+
+contract Two_childrenTest {
+  function testRevertsWhenStuffCalled()
+    external 
+    whenStuffCalled
+  {
+    // it should revert
+  }
+
+  function testRevertsWhenNotStuffCalled()
+    external 
+    whenNotStuffCalled
+  {
+    // it should revert
+  }
+
+}"
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_action_recollection() -> Result<()> {
+        let file_contents = String::from(
+            r"actions.sol
+└── when stuff called
+   ├── it should revert
+   ├── it should be cool
+   └── it might break
+",
+        );
+
+        assert_eq!(
+            &scaffold(&file_contents)?,
+            r"pragma solidity [VERSION];
+
+contract ActionsTest {
+  function testWhenStuffCalled()
+    external 
+    whenStuffCalled
+  {
+    // it should revert
+    // it should be cool
+    // it might break
+  }
+
+}"
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_deep_tree() -> Result<()> {
+        let file_contents = String::from(
+            r#"deep.sol
+├── when stuff called
+│  └── it should revert
+└── when not stuff called
+   ├── when the deposit amount is zero
+   │  └── it should revert
+   └── when the deposit amount is not zero
+      ├── when the number count is zero
+      │  └── it should revert
+      ├── when the asset is not a contract
+      │  └── it should revert
+      └── when the asset is a contract
+          ├── when the asset misses the ERC_20 return value
+          │  ├── it should create the child
+          │  ├── it should perform the ERC-20 transfers
+          │  └── it should emit a {MultipleChildren} event
+          └── when the asset does not miss the ERC_20 return value
+              ├── it should create the child
+              └── it should emit a {MultipleChildren} event"#,
+        );
+
+        assert_eq!(
+            &scaffold(&file_contents)?,
+            r"pragma solidity [VERSION];
+
+contract DeepTest {
+  function testRevertsWhenStuffCalled()
+    external 
+    whenStuffCalled
+  {
+    // it should revert
+  }
+
+  function testRevertsWhenTheDepositAmountIsZero()
+    external 
+    whenNotStuffCalled
+    whenTheDepositAmountIsZero
+  {
+    // it should revert
+  }
+
+  function testRevertsWhenTheNumberCountIsZero()
+    external 
+    whenNotStuffCalled
+    whenTheDepositAmountIsNotZero
+    whenTheNumberCountIsZero
+  {
+    // it should revert
+  }
+
+  function testRevertsWhenTheAssetIsNotAContract()
+    external 
+    whenNotStuffCalled
+    whenTheDepositAmountIsNotZero
+    whenTheAssetIsNotAContract
+  {
+    // it should revert
+  }
+
+  function testWhenTheAssetMissesTheERC_20ReturnValue()
+    external 
+    whenNotStuffCalled
+    whenTheDepositAmountIsNotZero
+    whenTheAssetIsAContract
+    whenTheAssetMissesTheERC_20ReturnValue
+  {
+    // it should create the child
+    // it should perform the ERC-20 transfers
+    // it should emit a {MultipleChildren} event
+  }
+
+  function testWhenTheAssetDoesNotMissTheERC_20ReturnValue()
+    external 
+    whenNotStuffCalled
+    whenTheDepositAmountIsNotZero
+    whenTheAssetIsAContract
+    whenTheAssetDoesNotMissTheERC_20ReturnValue
+  {
+    // it should create the child
+    // it should emit a {MultipleChildren} event
+  }
+
+}"
+        );
+
+        Ok(())
     }
 }
