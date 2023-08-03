@@ -58,7 +58,7 @@ pub enum ErrorKind {
     StringUnexpected(Lexeme),
     /// Did not expect an end of file.
     EofUnexpected,
-    /// The filename should have an extension to recognize the output lang.
+    /// The filename must have an extension to recognize the output lang.
     ExtensionMissing,
     /// This enum may grow additional variants, so this makes sure clients
     /// don't count on exhaustive matching. (Otherwise, adding a new variant
@@ -82,6 +82,7 @@ impl fmt::Display for ErrorKind {
             ItUnexpected => write!(f, "unexpected IT keyword"),
             StringUnexpected(ref lexeme) => write!(f, "unexpected STRING: {}", lexeme),
             EofUnexpected => write!(f, "unexpected end of file"),
+            ExtensionMissing => write!(f, "filename must have an extension"),
             _ => unreachable!(),
         }
     }
@@ -235,6 +236,13 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
     }
 
     fn parse_root(&self, current_token: &Token) -> Result<Ast> {
+        // Check that the file name has an extension.
+        if !current_token.lexeme.contains('.') || current_token.lexeme.ends_with('.') {
+            return Err(self
+                .error(current_token.span, ErrorKind::ExtensionMissing)
+                .into());
+        }
+
         self.consume();
         // A string at the start of the file is the root ast node.
         let mut asts = vec![];
@@ -283,12 +291,30 @@ mod tests {
 
     use crate::ast::{Action, Ast, Condition, Root};
     use crate::error::Result;
-    use crate::parser::Parser;
+    use crate::parser::{self, ErrorKind, Parser};
     use crate::tokenizer::Tokenizer;
     use crate::{
         span::{Position, Span},
         tokenizer::{Token, TokenKind},
     };
+
+    #[derive(Clone, Debug)]
+    struct TestError {
+        span: Span,
+        kind: parser::ErrorKind,
+    }
+
+    impl PartialEq<parser::Error> for TestError {
+        fn eq(&self, other: &parser::Error) -> bool {
+            self.span == other.span && self.kind == other.kind
+        }
+    }
+
+    impl PartialEq<TestError> for parser::Error {
+        fn eq(&self, other: &TestError) -> bool {
+            self.span == other.span && self.kind == other.kind
+        }
+    }
 
     #[test]
     fn test_only_filename() -> Result<()> {
@@ -298,14 +324,43 @@ mod tests {
             lexeme: String::from("foo"),
             span: Span::new(Position::new(0, 1, 1), Position::new(2, 1, 3)),
         }];
-        let ast = Parser::new().parse(&file_contents, &tokens)?;
-
+        let result = Parser::new().parse(&file_contents, &tokens).unwrap_err();
         assert_eq!(
-            ast,
-            Ast::Root(Root {
+            result,
+            TestError {
                 span: Span::new(Position::new(0, 1, 1), Position::new(2, 1, 3)),
+                kind: ErrorKind::ExtensionMissing,
+            }
+        );
+
+        let file_contents = String::from("foo.");
+        let tokens = vec![Token {
+            kind: TokenKind::STRING,
+            lexeme: String::from("foo."),
+            span: Span::new(Position::new(0, 1, 1), Position::new(3, 1, 4)),
+        }];
+        let result = Parser::new().parse(&file_contents, &tokens).unwrap_err();
+        assert_eq!(
+            result,
+            TestError {
+                span: Span::new(Position::new(0, 1, 1), Position::new(3, 1, 4)),
+                kind: ErrorKind::ExtensionMissing,
+            }
+        );
+
+        let file_contents = String::from("foo.sol");
+        let tokens = vec![Token {
+            kind: TokenKind::STRING,
+            lexeme: String::from("foo.sol"),
+            span: Span::new(Position::new(0, 1, 1), Position::new(6, 1, 7)),
+        }];
+        let result = Parser::new().parse(&file_contents, &tokens)?;
+        assert_eq!(
+            result,
+            Ast::Root(Root {
+                span: Span::new(Position::new(0, 1, 1), Position::new(6, 1, 7)),
                 asts: vec![],
-                file_name: String::from("foo"),
+                file_name: String::from("foo.sol"),
             })
         );
 
