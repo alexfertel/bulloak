@@ -9,14 +9,14 @@ use crate::{
 
 /// Solidity code emitter.
 pub struct Emitter {
-    with_comments: bool,
+    with_it_as_comments: bool,
     indent: usize,
 }
 
 impl Emitter {
-    pub fn new(with_comments: bool, indent: usize) -> Self {
+    pub fn new(with_it_as_comments: bool, indent: usize) -> Self {
         Self {
-            with_comments,
+            with_it_as_comments,
             indent,
         }
     }
@@ -162,7 +162,7 @@ impl<'a> Visitor for EmitterI<'a> {
     fn visit_action(&mut self, action: &ast::Action) -> result::Result<Self::Output, Self::Error> {
         let mut emitted = String::new();
 
-        if self.emitter.with_comments {
+        if self.emitter.with_it_as_comments {
             let indentation = self.emitter.indent().repeat(2);
             emitted.push_str(format!("{}// {}\n", indentation, action.title).as_str());
         }

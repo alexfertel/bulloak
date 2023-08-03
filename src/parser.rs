@@ -397,11 +397,11 @@ mod tests {
     #[test]
     fn test_two_children() -> Result<()> {
         let file_contents = String::from(
-            r#"two_children.t.sol
+            r"two_children.t.sol
 ├── when stuff called
 │  └── it should revert
 └── when not stuff called
-   └── it should revert"#,
+   └── it should revert",
         );
 
         let tokens = Tokenizer::new().tokenize(&file_contents)?;
