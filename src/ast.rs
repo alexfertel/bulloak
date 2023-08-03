@@ -16,6 +16,13 @@ impl Ast {
             Ast::Action(ref x) => &x.span,
         }
     }
+
+    pub fn is_action(&self) -> bool {
+        match self {
+            Ast::Action(_) => true,
+            _ => false,
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Eq)]

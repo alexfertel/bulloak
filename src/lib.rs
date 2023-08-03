@@ -24,23 +24,26 @@ pub fn run(file_name: &str) -> Result<()> {
 
 fn scaffold(text: &str) -> error::Result<()> {
     let tokens = tokenizer::Tokenizer::new().tokenize(&text)?;
-    println!("Tokens: {:#?}", tokens);
+    println!("Tokens:\n {:#?}", tokens);
 
     let ast = parser::Parser::new().parse(&text, &tokens)?;
-    println!("AST: {:#?}", ast);
+    println!("AST:\n {:#?}", ast);
 
     match ast {
         ast::Ast::Root(ref root) => {
             let mut analyzer = semantics::SemanticAnalyzer::new(&text);
             let errors = analyzer.analyze(&root)?;
-            println!("errors: {:#?}", errors);
+            println!("errors:\n {:#?}", errors);
         }
         _ => unreachable!(),
     }
 
     let mut discoverer = modifiers::ModifierDiscoverer::new();
     let modifiers = discoverer.discover(&ast);
-    println!("modifiers: {:#?}", modifiers);
+    println!("modifiers:\n {:#?}", modifiers);
+
+    let solcode = emitter::Emitter::new(true, 2).emit(&ast, &modifiers);
+    println!("solcode:\n{}", solcode);
 
     Ok(())
 }
