@@ -114,7 +114,7 @@ impl<'e, E: fmt::Display> fmt::Display for Formatter<'e, E> {
         let divider = repeat_str("•", 79);
         writeln!(f, "{}", divider)?;
         writeln!(f, "bulloak error:")?;
-        let notated = notate(&self);
+        let notated = notate(self);
         write!(f, "{}", notated)?;
         write!(f, "error: {}", self.err)?;
         Ok(())
@@ -122,7 +122,7 @@ impl<'e, E: fmt::Display> fmt::Display for Formatter<'e, E> {
 }
 
 /// Notate the text string with carets (`^`) pointing at the span.
-fn notate<'e, E>(f: &Formatter<'e, E>) -> String {
+fn notate<E>(f: &Formatter<'_, E>) -> String {
     let mut notated = String::new();
     if let Some(line) = f.text.lines().nth(f.span.start.line - 1) {
         notated.push_str(line);
@@ -139,7 +139,7 @@ fn notate<'e, E>(f: &Formatter<'e, E>) -> String {
 }
 
 fn repeat_str(s: &str, n: usize) -> String {
-    ::std::iter::repeat(s).take(n).collect()
+    s.repeat(n)
 }
 
 #[cfg(test)]

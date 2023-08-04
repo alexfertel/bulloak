@@ -18,10 +18,7 @@ impl Ast {
     }
 
     pub fn is_action(&self) -> bool {
-        match self {
-            Ast::Action(_) => true,
-            _ => false,
-        }
+        matches!(self, Ast::Action(_))
     }
 }
 

@@ -50,11 +50,11 @@ pub enum ErrorKind {
     /// parser ends up in a state where the current grammar production
     /// being applied doesn't expect this token to occur.
     TokenUnexpected(Lexeme),
-    /// Did not expect this WHEN keyword.
+    /// Did not expect this When keyword.
     WhenUnexpected,
-    /// Did not expect this IT keyword.
+    /// Did not expect this It keyword.
     ItUnexpected,
-    /// Did not expect a WORD.
+    /// Did not expect a Word.
     WordUnexpected(Lexeme),
     /// Did not expect an end of file.
     EofUnexpected,
@@ -78,9 +78,9 @@ impl fmt::Display for ErrorKind {
         use self::ErrorKind::*;
         match *self {
             TokenUnexpected(ref lexeme) => write!(f, "unexpected token: {}", lexeme),
-            WhenUnexpected => write!(f, "unexpected WHEN keyword"),
-            ItUnexpected => write!(f, "unexpected IT keyword"),
-            WordUnexpected(ref lexeme) => write!(f, "unexpected WORD: {}", lexeme),
+            WhenUnexpected => write!(f, "unexpected When keyword"),
+            ItUnexpected => write!(f, "unexpected It keyword"),
+            WordUnexpected(ref lexeme) => write!(f, "unexpected Word: {}", lexeme),
             EofUnexpected => write!(f, "unexpected end of file"),
             ExtensionMissing => write!(f, "filename must have an extension"),
             _ => unreachable!(),
@@ -200,26 +200,24 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
         let current_token = match self.current() {
             Some(current) => current,
             None => {
-                return Err(self
-                    .error(self.tokens.last().unwrap().span, ErrorKind::EofUnexpected)
-                    .into())
+                return Err(self.error(self.tokens.last().unwrap().span, ErrorKind::EofUnexpected))
             }
         };
 
         match current_token.kind {
-            TokenKind::WORD if self.parser().current.get() == 0 => self.parse_root(current_token),
-            TokenKind::TEE | TokenKind::CORNER => {
+            TokenKind::Word if self.parser().current.get() == 0 => self.parse_root(current_token),
+            TokenKind::Tee | TokenKind::Corner => {
                 let next_token = match self.consume() {
                     Some(next) => next,
                     None => {
-                        return Err(self
-                            .error(self.tokens.last().unwrap().span, ErrorKind::EofUnexpected)
-                            .into())
+                        return Err(
+                            self.error(self.tokens.last().unwrap().span, ErrorKind::EofUnexpected)
+                        )
                     }
                 };
 
                 match next_token.kind {
-                    TokenKind::IT => {
+                    TokenKind::It => {
                         let title = self.parse_string(next_token);
                         let previous = self.previous().unwrap();
                         Ok(Ast::Action(Action {
@@ -227,7 +225,7 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
                             span: Span::new(current_token.span.start, previous.span.end),
                         }))
                     }
-                    TokenKind::WHEN => {
+                    TokenKind::When => {
                         let title = self.parse_string(next_token);
 
                         let mut asts = vec![];
@@ -248,26 +246,18 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
                             span: Span::new(current_token.span.start, previous.span.end),
                         }))
                     }
-                    _ => Err(self
-                        .error(
-                            current_token.span,
-                            ErrorKind::TokenUnexpected(next_token.lexeme.clone()),
-                        )
-                        .into()),
+                    _ => Err(self.error(
+                        current_token.span,
+                        ErrorKind::TokenUnexpected(next_token.lexeme.clone()),
+                    )),
                 }
             }
-            TokenKind::WORD => Err(self
-                .error(
-                    current_token.span,
-                    ErrorKind::WordUnexpected(current_token.lexeme.clone()),
-                )
-                .into()),
-            TokenKind::WHEN => Err(self
-                .error(current_token.span, ErrorKind::WhenUnexpected)
-                .into()),
-            TokenKind::IT => Err(self
-                .error(current_token.span, ErrorKind::ItUnexpected)
-                .into()),
+            TokenKind::Word => Err(self.error(
+                current_token.span,
+                ErrorKind::WordUnexpected(current_token.lexeme.clone()),
+            )),
+            TokenKind::When => Err(self.error(current_token.span, ErrorKind::WhenUnexpected)),
+            TokenKind::It => Err(self.error(current_token.span, ErrorKind::ItUnexpected)),
         }
     }
 
@@ -275,9 +265,7 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
     fn parse_root(&self, current_token: &Token) -> Result<Ast> {
         // Check that the file name has an extension.
         if !current_token.lexeme.contains('.') || current_token.lexeme.ends_with('.') {
-            return Err(self
-                .error(current_token.span, ErrorKind::ExtensionMissing)
-                .into());
+            return Err(self.error(current_token.span, ErrorKind::ExtensionMissing));
         }
 
         self.consume();
@@ -288,7 +276,7 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
             asts.push(ast);
         }
 
-        let last_span = if asts.len() > 0 {
+        let last_span = if !asts.is_empty() {
             asts[asts.len() - 1].span()
         } else {
             &current_token.span
@@ -305,19 +293,16 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
     ///
     /// A string is a sequence of words separated by spaces.
     fn parse_string(&self, start_token: &Token) -> String {
-        // Strings always start with one of IT or WHEN.
+        // Strings always start with one of It or When.
         let mut string = String::from(&start_token.lexeme);
 
         // Consume all words.
-        loop {
-            match self.consume() {
-                Some(token) => match token.kind {
-                    TokenKind::WORD | TokenKind::IT | TokenKind::WHEN => {
-                        string = string + " " + &token.lexeme;
-                    }
-                    _ => break,
-                },
-                None => break,
+        while let Some(token) = self.consume() {
+            match token.kind {
+                TokenKind::Word | TokenKind::It | TokenKind::When => {
+                    string = string + " " + &token.lexeme;
+                }
+                _ => break,
             }
         }
 
