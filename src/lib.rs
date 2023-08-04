@@ -65,8 +65,8 @@ fn scaffold(text: &str, config: &Config) -> error::Result<String> {
     analyzer.analyze(&ast)?;
     let mut discoverer = modifiers::ModifierDiscoverer::new();
     let modifiers = discoverer.discover(&ast);
-    let solcode = emitter::Emitter::new(config.with_actions_as_comments, config.indent)
-        .emit(&ast, modifiers);
+    let solcode =
+        emitter::Emitter::new(config.with_actions_as_comments, config.indent).emit(&ast, modifiers);
 
     Ok(solcode)
 }
