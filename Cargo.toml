@@ -9,7 +9,7 @@ repository = "https://github.com/alexfertel/bulloak"
 homepage = "https://github.com/alexfertel/bulloak"
 description = """
 A simple, fast, and easy to use Solidity test generator based on
-.tree files.
+the Branching Tree Technique.
 """
 exclude = ["/.github/*"]
 
