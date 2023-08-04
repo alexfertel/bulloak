@@ -26,6 +26,13 @@ pub struct Config {
     /// The indentation of the output code.
     #[arg(short = 'i', default_value = "2")]
     indent: usize,
+
+    /// Whether to write to files instead of stdout.
+    ///
+    /// This will write the output for each input file to the file
+    /// specified at the root of the input file.
+    #[arg(short = 'w', long = "write-files")]
+    write_files: bool,
 }
 
 pub fn run(config: &Config) -> Result<()> {
@@ -33,7 +40,13 @@ pub fn run(config: &Config) -> Result<()> {
         let text = fs::read_to_string(file)?;
         match scaffold(&text, &config) {
             Ok(code) => {
-                println!("{}", code);
+                if config.write_files {
+                    let mut path = file.clone();
+                    path.set_extension("sol");
+                    fs::write(path, code)?;
+                } else {
+                    println!("{}", code);
+                }
             }
             Err(err) => {
                 eprintln!("{}", err);
