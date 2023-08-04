@@ -264,12 +264,16 @@ mod tests {
     use crate::parser::Parser;
     use crate::tokenizer::Tokenizer;
 
-    fn scaffold(text: &str) -> Result<String> {
+    fn scaffold_with_flags(text: &str, with_comments: bool, indent: usize) -> Result<String> {
         let tokens = Tokenizer::new().tokenize(&text)?;
         let ast = Parser::new().parse(&text, &tokens)?;
         let mut discoverer = modifiers::ModifierDiscoverer::new();
         let modifiers = discoverer.discover(&ast);
-        Ok(emitter::Emitter::new(true, 2).emit(&ast, &modifiers))
+        Ok(emitter::Emitter::new(with_comments, indent).emit(&ast, &modifiers))
+    }
+
+    fn scaffold(text: &str) -> Result<String> {
+        scaffold_with_flags(text, true, 2)
     }
 
     #[test]
@@ -315,6 +319,58 @@ contract FileTest {
   {
     // it should revert
   }
+
+}"
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_without_actions_as_comments() -> Result<()> {
+        let file_contents =
+            String::from("file.sol\n└── when something bad happens\n   └── it should not revert");
+
+        assert_eq!(
+            &scaffold_with_flags(&file_contents, false, 2)?,
+            r"pragma solidity [VERSION];
+
+contract FileTest {
+  modifier whenSomethingBadHappens() {
+    _;
+  }
+
+  function testWhenSomethingBadHappens()
+    external 
+    whenSomethingBadHappens
+  {
+  }
+
+}"
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_indentation() -> Result<()> {
+        let file_contents =
+            String::from("file.sol\n└── when something bad happens\n   └── it should not revert");
+
+        assert_eq!(
+            &scaffold_with_flags(&file_contents, false, 4)?,
+            r"pragma solidity [VERSION];
+
+contract FileTest {
+    modifier whenSomethingBadHappens() {
+        _;
+    }
+
+    function testWhenSomethingBadHappens()
+        external 
+        whenSomethingBadHappens
+    {
+    }
 
 }"
         );
