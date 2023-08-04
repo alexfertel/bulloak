@@ -48,13 +48,8 @@ pub fn run(config: &Config) -> Result<()> {
 fn scaffold(text: &str, config: &Config) -> error::Result<String> {
     let tokens = tokenizer::Tokenizer::new().tokenize(&text)?;
     let ast = parser::Parser::new().parse(&text, &tokens)?;
-    match ast {
-        ast::Ast::Root(ref root) => {
-            let mut analyzer = semantics::SemanticAnalyzer::new(&text);
-            analyzer.analyze(&root)?;
-        }
-        _ => unreachable!(),
-    }
+    let mut analyzer = semantics::SemanticAnalyzer::new(&text);
+    analyzer.analyze(&ast)?;
     let mut discoverer = modifiers::ModifierDiscoverer::new();
     let modifiers = discoverer.discover(&ast);
     let solcode = emitter::Emitter::new(config.with_actions_as_comments, config.indent)

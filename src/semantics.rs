@@ -79,13 +79,18 @@ impl fmt::Display for ErrorKind {
     }
 }
 
+/// A visitor that performs semantic analysis on an AST.
 pub struct SemanticAnalyzer<'t> {
-    pub errors: Vec<Error>,
+    /// A list of errors that occurred while analyzing the AST.
+    errors: Vec<Error>,
+    /// The original text that the visitor generated the errors from. Every
+    /// span in an error is a valid range into this string.
     text: &'t str,
 }
 
-impl SemanticAnalyzer<'_> {
-    pub fn new(text: &str) -> SemanticAnalyzer {
+impl<'t> SemanticAnalyzer<'t> {
+    /// Create a new semantic analyzer.
+    pub fn new(text: &'t str) -> SemanticAnalyzer {
         SemanticAnalyzer {
             errors: Vec::new(),
             text,
@@ -101,8 +106,20 @@ impl SemanticAnalyzer<'_> {
         }
     }
 
-    pub fn analyze(&mut self, root: &ast::Root) -> Result<()> {
-        let _ = self.visit_root(root);
+    /// Traverse the given AST and store any errors that occur.
+    ///
+    /// Note that this implementation is a bit weird in that we
+    /// create the `Err` variant of the result by hand.
+    pub fn analyze(&mut self, ast: &ast::Ast) -> Result<()> {
+        match ast {
+            Ast::Root(root) => self.visit_root(root),
+            Ast::Condition(condition) => self.visit_condition(condition),
+            Ast::Action(action) => self.visit_action(action),
+        }
+        // It is fine to unwrap here since analysis errors will
+        // be stored in `self.errors`.
+        .unwrap();
+
         if !self.errors.is_empty() {
             return Err(self.errors.clone());
         }
@@ -111,6 +128,7 @@ impl SemanticAnalyzer<'_> {
     }
 }
 
+/// A visitor that performs semantic analysis on an AST.
 impl Visitor for SemanticAnalyzer<'_> {
     type Output = ();
     type Error = ();
@@ -199,13 +217,8 @@ mod tests {
     fn analyze(text: &str) -> semantics::Result<()> {
         let tokens = Tokenizer::new().tokenize(text).unwrap();
         let ast = Parser::new().parse(text, &tokens).unwrap();
-        match ast {
-            ast::Ast::Root(ref root) => {
-                let mut analyzer = semantics::SemanticAnalyzer::new(&text);
-                analyzer.analyze(&root)?;
-            }
-            _ => unreachable!(),
-        }
+        let mut analyzer = semantics::SemanticAnalyzer::new(&text);
+        analyzer.analyze(&ast)?;
 
         Ok(())
     }
@@ -258,7 +271,7 @@ mod tests {
 
     #[test]
     fn test_unexpected_node() {
-        let root = ast::Root {
+        let ast = ast::Ast::Root(ast::Root {
             file_name: "file.sol".to_string(),
             asts: vec![ast::Ast::Root(ast::Root {
                 file_name: "file.sol".to_string(),
@@ -266,10 +279,10 @@ mod tests {
                 span: Span::new(Position::new(0, 1, 1), Position::new(7, 1, 8)),
             })],
             span: Span::new(Position::new(0, 1, 1), Position::new(7, 1, 8)),
-        };
+        });
 
         let mut analyzer = semantics::SemanticAnalyzer::new("file.sol");
-        let result = analyzer.analyze(&root);
+        let result = analyzer.analyze(&ast);
         assert_eq!(
             result.unwrap_err(),
             vec![semantics::Error {
