@@ -437,7 +437,10 @@ mod tests {
     use crate::error::Result;
     use crate::{
         span::{Position, Span},
-        tokenizer::{self, Token, TokenKind, Tokenizer},
+        tokenizer::{
+            self, ErrorKind::FileNameCharInvalid, ErrorKind::IdentifierCharInvalid, Token,
+            TokenKind, Tokenizer,
+        },
     };
 
     #[derive(Clone, Debug)]
@@ -458,6 +461,10 @@ mod tests {
         }
     }
 
+    fn e(kind: tokenizer::ErrorKind, span: Span) -> TestError {
+        TestError { kind, span }
+    }
+
     fn p(offset: usize, line: usize, column: usize) -> Position {
         Position::new(offset, line, column)
     }
@@ -472,6 +479,10 @@ mod tests {
             lexeme: lexeme.to_string(),
             span,
         }
+    }
+
+    fn tokenize(text: &str) -> tokenizer::Result<Vec<Token>> {
+        Tokenizer::new().tokenize(text)
     }
 
     #[test]
@@ -505,7 +516,7 @@ mod tests {
         );
 
         assert_eq!(
-            Tokenizer::new().tokenize(&file_contents)?,
+            tokenize(&file_contents)?,
             vec![
                 t(TokenKind::WORD, "file.sol", s(p(0, 1, 1), p(7, 1, 8))),
                 t(TokenKind::CORNER, "└", s(p(9, 2, 1), p(9, 2, 1))),
@@ -525,7 +536,7 @@ mod tests {
         );
 
         assert_eq!(
-            Tokenizer::new().tokenize(&file_contents)?,
+            tokenize(&file_contents)?,
             vec![
                 t(TokenKind::WORD, "file.sol", s(p(0, 1, 1), p(7, 1, 8))),
                 t(TokenKind::CORNER, "└", s(p(9, 2, 1), p(9, 2, 1))),
@@ -546,84 +557,45 @@ mod tests {
     #[test]
     fn test_invalid_characters() {
         assert_eq!(
-            Tokenizer::new().tokenize("/foobar").unwrap_err(),
-            TestError {
-                span: s(p(0, 1, 1), p(0, 1, 1)),
-                kind: tokenizer::ErrorKind::FileNameCharInvalid('/'),
-            }
+            tokenize("/foobar").unwrap_err(),
+            e(FileNameCharInvalid('/'), s(p(0, 1, 1), p(0, 1, 1)))
         );
         assert_eq!(
-            Tokenizer::new().tokenize("foo/bar").unwrap_err(),
-            TestError {
-                span: s(p(3, 1, 4), p(3, 1, 4)),
-                kind: tokenizer::ErrorKind::FileNameCharInvalid('/'),
-            }
+            tokenize("foo/bar").unwrap_err(),
+            e(FileNameCharInvalid('/'), s(p(3, 1, 4), p(3, 1, 4)),)
         );
         assert_eq!(
-            Tokenizer::new().tokenize("foobar/").unwrap_err(),
-            TestError {
-                span: s(p(6, 1, 7), p(6, 1, 7)),
-                kind: tokenizer::ErrorKind::FileNameCharInvalid('/'),
-            }
+            tokenize("foobar/").unwrap_err(),
+            e(FileNameCharInvalid('/'), s(p(6, 1, 7), p(6, 1, 7)),)
         );
         assert_eq!(
-            Tokenizer::new()
-                .tokenize("foo\n└── when |weird identifier")
-                .unwrap_err(),
-            TestError {
-                span: s(p(19, 2, 10), p(19, 2, 10)),
-                kind: tokenizer::ErrorKind::IdentifierCharInvalid('|'),
-            }
+            tokenize("foo\n└── when |weird identifier").unwrap_err(),
+            e(IdentifierCharInvalid('|'), s(p(19, 2, 10), p(19, 2, 10)),)
         );
         assert_eq!(
-            Tokenizer::new()
-                .tokenize("foo\n└── when w|eird identifier")
-                .unwrap_err(),
-            TestError {
-                span: s(p(20, 2, 11), p(20, 2, 11)),
-                kind: tokenizer::ErrorKind::IdentifierCharInvalid('|'),
-            }
+            tokenize("foo\n└── when w|eird identifier").unwrap_err(),
+            e(IdentifierCharInvalid('|'), s(p(20, 2, 11), p(20, 2, 11)),)
         );
         assert_eq!(
-            Tokenizer::new()
-                .tokenize("foo\n└── when weird| identifier")
-                .unwrap_err(),
-            TestError {
-                span: s(p(24, 2, 15), p(24, 2, 15)),
-                kind: tokenizer::ErrorKind::IdentifierCharInvalid('|'),
-            }
+            tokenize("foo\n└── when weird| identifier").unwrap_err(),
+            e(IdentifierCharInvalid('|'), s(p(24, 2, 15), p(24, 2, 15)),)
         );
         assert_eq!(
-            Tokenizer::new()
-                .tokenize("foo\n└── when .weird identifier")
-                .unwrap_err(),
-            TestError {
-                span: s(p(19, 2, 10), p(19, 2, 10)),
-                kind: tokenizer::ErrorKind::IdentifierCharInvalid('.'),
-            }
+            tokenize("foo\n└── when .weird identifier").unwrap_err(),
+            e(IdentifierCharInvalid('.'), s(p(19, 2, 10), p(19, 2, 10)),)
         );
         assert_eq!(
-            Tokenizer::new()
-                .tokenize("foo\n└── when w,eird identifier")
-                .unwrap_err(),
-            TestError {
-                span: s(p(20, 2, 11), p(20, 2, 11)),
-                kind: tokenizer::ErrorKind::IdentifierCharInvalid(','),
-            }
+            tokenize("foo\n└── when w,eird identifier").unwrap_err(),
+            e(IdentifierCharInvalid(','), s(p(20, 2, 11), p(20, 2, 11)),)
         );
         assert_eq!(
-            Tokenizer::new()
-                .tokenize("foo\n└── when weird' identifier")
-                .unwrap_err(),
-            TestError {
-                span: s(p(24, 2, 15), p(24, 2, 15)),
-                kind: tokenizer::ErrorKind::IdentifierCharInvalid('\''),
-            }
+            tokenize("foo\n└── when weird' identifier").unwrap_err(),
+            e(IdentifierCharInvalid('\''), s(p(24, 2, 15), p(24, 2, 15)),)
         );
     }
 
     #[test]
-    fn test_only_filename_and_newline() -> Result<()> {
+    fn test_only_filename_and_newline() {
         let simple_name = String::from("foo\n");
         let starts_whitespace = String::from(" foo\n");
         let ends_whitespace = String::from("foo \n");
@@ -631,23 +603,21 @@ mod tests {
         let expected = vec![t(TokenKind::WORD, "foo", s(p(0, 1, 1), p(2, 1, 3)))];
         let mut tokenizer = Tokenizer::new();
 
-        assert_eq!(tokenizer.tokenize(&simple_name)?, expected);
+        assert_eq!(tokenizer.tokenize(&simple_name).unwrap(), expected);
         assert_eq!(
-            tokenizer.tokenize(&starts_whitespace)?,
+            tokenizer.tokenize(&starts_whitespace).unwrap(),
             vec![t(TokenKind::WORD, "foo", s(p(1, 1, 2), p(3, 1, 4)))]
         );
-        assert_eq!(tokenizer.tokenize(&ends_whitespace)?, expected);
-
-        Ok(())
+        assert_eq!(tokenizer.tokenize(&ends_whitespace).unwrap(), expected);
     }
 
     #[test]
-    fn test_one_child() -> Result<()> {
+    fn test_one_child() {
         let file_contents =
             String::from("file.sol\n└── when something bad happens\n   └── it should revert");
 
         assert_eq!(
-            Tokenizer::new().tokenize(&file_contents)?,
+            tokenize(&file_contents).unwrap(),
             vec![
                 t(TokenKind::WORD, "file.sol", s(p(0, 1, 1), p(7, 1, 8))),
                 t(TokenKind::CORNER, "└", s(p(9, 2, 1), p(9, 2, 1))),
@@ -661,12 +631,10 @@ mod tests {
                 t(TokenKind::WORD, "revert", s(p(69, 3, 18), p(74, 3, 23))),
             ]
         );
-
-        Ok(())
     }
 
     #[test]
-    fn test_multiple_children() -> Result<()> {
+    fn test_multiple_children() {
         let file_contents = String::from(
             r#"multiple_children.t.sol
 ├── when stuff called
@@ -689,7 +657,7 @@ mod tests {
               └── it should emit a {MultipleChildren} event"#,
         );
 
-        let tokens = Tokenizer::new().tokenize(&file_contents)?;
+        let tokens = tokenize(&file_contents).unwrap();
         let expected = vec![
             t(
                 TokenKind::WORD,
@@ -839,7 +807,5 @@ mod tests {
 
         assert_eq!(tokens.len(), expected.len());
         assert_eq!(tokens, expected);
-
-        Ok(())
     }
 }

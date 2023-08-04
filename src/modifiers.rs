@@ -108,6 +108,15 @@ mod tests {
     use crate::parser::Parser;
     use crate::tokenizer::Tokenizer;
 
+    fn discover(file_contents: &str) -> Result<IndexMap<String, String>> {
+        let tokens = Tokenizer::new().tokenize(file_contents)?;
+        let ast = Parser::new().parse(file_contents, &tokens)?;
+        let mut discoverer = ModifierDiscoverer::new();
+        discoverer.discover(&ast);
+
+        Ok(discoverer.modifiers)
+    }
+
     #[test]
     fn test_to_modifier() {
         assert_eq!(to_modifier("when only owner"), "whenOnlyOwner");
@@ -116,44 +125,28 @@ mod tests {
     }
 
     #[test]
-    fn test_one_child() -> Result<()> {
-        let file_contents =
-            String::from("file.sol\n└── when something bad happens\n   └── it should revert");
-
-        let tokens = Tokenizer::new().tokenize(&file_contents)?;
-        let ast = Parser::new().parse(&file_contents, &tokens)?;
-        let mut discoverer = ModifierDiscoverer::new();
-        let modifiers = discoverer.discover(&ast);
-
+    fn test_one_child() {
         assert_eq!(
-            modifiers,
-            &IndexMap::from([(
+            discover("file.sol\n└── when something bad happens\n   └── it should revert").unwrap(),
+            IndexMap::from([(
                 "when something bad happens".to_string(),
                 "whenSomethingBadHappens".to_string()
             )])
         );
-
-        Ok(())
     }
 
     #[test]
-    fn test_two_children() -> Result<()> {
-        let file_contents = String::from(
-            r"two_children.t.sol
+    fn test_two_children() {
+        assert_eq!(
+            discover(
+                r"two_children.t.sol
 ├── when stuff called
 │  └── it should revert
 └── when not stuff called
    └── it should revert",
-        );
-
-        let tokens = Tokenizer::new().tokenize(&file_contents)?;
-        let ast = Parser::new().parse(&file_contents, &tokens)?;
-        let mut discoverer = ModifierDiscoverer::new();
-        let modifiers = discoverer.discover(&ast);
-
-        assert_eq!(
-            modifiers,
-            &IndexMap::from([
+            )
+            .unwrap(),
+            IndexMap::from([
                 (
                     "when stuff called".to_string(),
                     "whenStuffCalled".to_string()
@@ -164,14 +157,13 @@ mod tests {
                 )
             ])
         );
-
-        Ok(())
     }
 
     #[test]
-    fn test_deep_tree() -> Result<()> {
-        let file_contents = String::from(
-            r#"deep.sol
+    fn test_deep_tree() {
+        assert_eq!(
+            discover(
+                r#"deep.sol
 ├── when stuff called
 │  └── it should revert
 └── when not stuff called
@@ -190,16 +182,9 @@ mod tests {
           └── when the asset does not miss the ERC_20 return value
               ├── it should create the child
               └── it should emit a {MultipleChildren} event"#,
-        );
-
-        let tokens = Tokenizer::new().tokenize(&file_contents)?;
-        let ast = Parser::new().parse(&file_contents, &tokens)?;
-        let mut discoverer = ModifierDiscoverer::new();
-        let modifiers = discoverer.discover(&ast);
-
-        assert_eq!(
-            modifiers,
-            &IndexMap::from([
+            )
+            .unwrap(),
+            IndexMap::from([
                 (
                     "when stuff called".to_string(),
                     "whenStuffCalled".to_string()
@@ -238,7 +223,5 @@ mod tests {
                 ),
             ])
         );
-
-        Ok(())
     }
 }

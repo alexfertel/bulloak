@@ -330,13 +330,9 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     use crate::ast::{Action, Ast, Condition, Root};
-    use crate::error::Result;
     use crate::parser::{self, ErrorKind, Parser};
+    use crate::span::{Position, Span};
     use crate::tokenizer::Tokenizer;
-    use crate::{
-        span::{Position, Span},
-        tokenizer::{Token, TokenKind},
-    };
 
     #[derive(Clone, Debug)]
     struct TestError {
@@ -356,67 +352,42 @@ mod tests {
         }
     }
 
+    fn parse(file_contents: &str) -> parser::Result<Ast> {
+        let tokens = Tokenizer::new().tokenize(file_contents).unwrap();
+        Parser::new().parse(file_contents, &tokens)
+    }
+
     #[test]
-    fn test_only_filename() -> Result<()> {
-        let file_contents = String::from("foo");
-        let tokens = vec![Token {
-            kind: TokenKind::WORD,
-            lexeme: String::from("foo"),
-            span: Span::new(Position::new(0, 1, 1), Position::new(2, 1, 3)),
-        }];
-        let result = Parser::new().parse(&file_contents, &tokens).unwrap_err();
+    fn test_only_filename() {
         assert_eq!(
-            result,
+            parse("foo").unwrap_err(),
             TestError {
                 span: Span::new(Position::new(0, 1, 1), Position::new(2, 1, 3)),
                 kind: ErrorKind::ExtensionMissing,
             }
         );
-
-        let file_contents = String::from("foo.");
-        let tokens = vec![Token {
-            kind: TokenKind::WORD,
-            lexeme: String::from("foo."),
-            span: Span::new(Position::new(0, 1, 1), Position::new(3, 1, 4)),
-        }];
-        let result = Parser::new().parse(&file_contents, &tokens).unwrap_err();
         assert_eq!(
-            result,
+            parse("foo.").unwrap_err(),
             TestError {
                 span: Span::new(Position::new(0, 1, 1), Position::new(3, 1, 4)),
                 kind: ErrorKind::ExtensionMissing,
             }
         );
 
-        let file_contents = String::from("foo.sol");
-        let tokens = vec![Token {
-            kind: TokenKind::WORD,
-            lexeme: String::from("foo.sol"),
-            span: Span::new(Position::new(0, 1, 1), Position::new(6, 1, 7)),
-        }];
-        let result = Parser::new().parse(&file_contents, &tokens)?;
         assert_eq!(
-            result,
+            parse("foo.sol").unwrap(),
             Ast::Root(Root {
                 span: Span::new(Position::new(0, 1, 1), Position::new(6, 1, 7)),
                 asts: vec![],
                 file_name: String::from("foo.sol"),
             })
         );
-
-        Ok(())
     }
 
     #[test]
-    fn test_one_child() -> Result<()> {
-        let file_contents =
-            String::from("file.sol\n└── when something bad happens\n   └── it should revert");
-
-        let tokens = Tokenizer::new().tokenize(&file_contents)?;
-        let ast = Parser::new().parse(&file_contents, &tokens)?;
-
+    fn test_one_child() {
         assert_eq!(
-            ast,
+            parse("file.sol\n└── when something bad happens\n   └── it should revert").unwrap(),
             Ast::Root(Root {
                 span: Span::new(Position::new(0, 1, 1), Position::new(74, 3, 23)),
                 asts: vec![Ast::Condition(Condition {
@@ -430,25 +401,19 @@ mod tests {
                 file_name: String::from("file.sol"),
             })
         );
-
-        Ok(())
     }
 
     #[test]
-    fn test_two_children() -> Result<()> {
-        let file_contents = String::from(
-            r"two_children.t.sol
+    fn test_two_children() {
+        assert_eq!(
+            parse(
+                r"two_children.t.sol
 ├── when stuff called
 │  └── it should revert
 └── when not stuff called
-   └── it should revert",
-        );
-
-        let tokens = Tokenizer::new().tokenize(&file_contents)?;
-        let ast = Parser::new().parse(&file_contents, &tokens)?;
-
-        assert_eq!(
-            ast,
+   └── it should revert"
+            )
+            .unwrap(),
             Ast::Root(Root {
                 file_name: String::from("two_children.t.sol"),
                 span: Span::new(Position::new(0, 1, 1), Position::new(139, 5, 23)),
@@ -472,7 +437,5 @@ mod tests {
                 ],
             })
         );
-
-        Ok(())
     }
 }

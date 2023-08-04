@@ -21,7 +21,7 @@ pub enum Error {
     Parse(parser::Error),
     /// An error that occurred while doing semantic analysis on the abstract
     /// syntax tree.
-    Semantic(semantics::Error),
+    Semantic(Vec<semantics::Error>),
     /// Hints that destructuring should not be exhaustive.
     ///
     /// This enum may grow additional variants, so this makes sure clients
@@ -43,9 +43,9 @@ impl From<tokenizer::Error> for Error {
     }
 }
 
-impl From<semantics::Error> for Error {
-    fn from(err: semantics::Error) -> Error {
-        Error::Semantic(err)
+impl From<Vec<semantics::Error>> for Error {
+    fn from(errors: Vec<semantics::Error>) -> Error {
+        Error::Semantic(errors)
     }
 }
 
@@ -54,7 +54,12 @@ impl fmt::Display for Error {
         match *self {
             Error::Parse(ref x) => x.fmt(f),
             Error::Tokenize(ref x) => x.fmt(f),
-            Error::Semantic(ref x) => x.fmt(f),
+            Error::Semantic(ref errors) => {
+                for x in errors {
+                    x.fmt(f)?;
+                }
+                Ok(())
+            }
             _ => unreachable!(),
         }
     }

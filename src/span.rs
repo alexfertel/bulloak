@@ -81,10 +81,16 @@ impl Span {
         Span::new(pos, pos)
     }
 
-    /// Create a new span by replacing the starting the position with the one
+    /// Create a new span by replacing the starting position with the one
     /// given.
     pub fn with_start(self, pos: Position) -> Span {
         Span { start: pos, ..self }
+    }
+
+    /// Create a new span by replacing the ending position with the one
+    /// given.
+    pub fn with_end(self, pos: Position) -> Span {
+        Span { end: pos, ..self }
     }
 }
 
