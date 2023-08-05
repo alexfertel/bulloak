@@ -1,14 +1,63 @@
+use std::fs;
+use std::io::Result;
+use std::path::PathBuf;
 use std::process;
 
-use bulloak::{run, Config};
+use bulloak::*;
 use clap::Parser;
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+#[derive(Parser)]
+#[command(author, version, about, long_about = None)] // Read from `Cargo.toml`
+struct Config {
+    /// .tree files to process.
+    files: Vec<PathBuf>,
+
+    /// Whether to print `it` branches as comments
+    /// in the output code.
+    #[arg(short = 'c', default_value = "true")]
+    with_actions_as_comments: bool,
+
+    /// The indentation of the output code.
+    #[arg(short = 'i', default_value = "2")]
+    indent: usize,
+
+    /// Whether to write to files instead of stdout.
+    ///
+    /// This will write the output for each input file to the file
+    /// specified at the root of the input file.
+    #[arg(short = 'w', long = "write-files")]
+    write_files: bool,
+}
+
+fn main() -> Result<()> {
     let config = Config::parse();
 
     if let Err(e) = run(&config) {
         println!("Application error: {e}");
         process::exit(1);
+    }
+
+    Ok(())
+}
+
+fn run(config: &Config) -> Result<()> {
+    for file in config.files.iter() {
+        let text = fs::read_to_string(file)?;
+        match scaffold(&text, config.with_actions_as_comments, config.indent) {
+            Ok(code) => {
+                if config.write_files {
+                    let mut path = file.clone();
+                    path.set_extension("sol");
+                    fs::write(path, code)?;
+                } else {
+                    println!("{}", code);
+                }
+            }
+            Err(err) => {
+                eprintln!("{}", err);
+                std::process::exit(1);
+            }
+        };
     }
 
     Ok(())
