@@ -7,10 +7,13 @@ edition = "2021"
 readme = "README.md"
 repository = "https://github.com/alexfertel/bulloak"
 homepage = "https://github.com/alexfertel/bulloak"
+documentation = "https://github.com/alexfertel/bulloak"
 description = """
 A simple, fast, and easy to use Solidity test generator based on
 the Branching Tree Technique.
 """
+keywords = ["solidity", "testing", "branching-tree-technique", "cli"]
+categories = ["development-tools::testing", "command-line-utilities", "compilers", "parsing"]
 exclude = ["/.github/*"]
 
 [dependencies]
