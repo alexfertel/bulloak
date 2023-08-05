@@ -78,9 +78,9 @@ impl fmt::Display for ErrorKind {
         use self::ErrorKind::*;
         match *self {
             TokenUnexpected(ref lexeme) => write!(f, "unexpected token: {}", lexeme),
-            WhenUnexpected => write!(f, "unexpected When keyword"),
-            ItUnexpected => write!(f, "unexpected It keyword"),
-            WordUnexpected(ref lexeme) => write!(f, "unexpected Word: {}", lexeme),
+            WhenUnexpected => write!(f, "unexpected `when` keyword"),
+            ItUnexpected => write!(f, "unexpected `it` keyword"),
+            WordUnexpected(ref lexeme) => write!(f, "unexpected `word`: {}", lexeme),
             EofUnexpected => write!(f, "unexpected end of file"),
             ExtensionMissing => write!(f, "filename must have an extension"),
             _ => unreachable!(),

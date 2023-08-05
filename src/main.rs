@@ -55,6 +55,7 @@ fn run(config: &Config) -> Result<()> {
             }
             Err(err) => {
                 eprintln!("{}", err);
+                eprintln!("file: {}", file.display());
                 std::process::exit(1);
             }
         };

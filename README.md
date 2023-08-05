@@ -69,6 +69,23 @@ Options:
   -V, --version      Print version
 ```
 
+### Compiler Errors
+
+Another feature of `bulloak` is reporting errors in your input trees.
+
+For example, say you have a buggy `foo.tree` file, which is missing a
+`└` character. Running `bulloak foo.tree` would report the error like this:
+
+```
+•••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••
+bulloak error: unexpected `when` keyword
+
+── when the id references a null stream
+   ^^^^
+
+--- (line 2, column 4) ---
+file: test.tree
+```
 
 ## Contributing
 

@@ -113,10 +113,14 @@ impl<'e, E: fmt::Display> fmt::Display for Formatter<'e, E> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let divider = repeat_str("•", 79);
         writeln!(f, "{}", divider)?;
-        writeln!(f, "bulloak error:")?;
+        writeln!(f, "bulloak error: {}\n", self.err)?;
         let notated = notate(self);
-        write!(f, "{}", notated)?;
-        write!(f, "error: {}", self.err)?;
+        writeln!(f, "{}", notated)?;
+        write!(
+            f,
+            "--- (line {}, column {}) ---",
+            self.span.start.line, self.span.start.column
+        )?;
         Ok(())
     }
 }
@@ -131,7 +135,6 @@ fn notate<E>(f: &Formatter<'_, E>) -> String {
         let note_len = f.span.end.column.saturating_sub(f.span.start.column) + 1;
         let note_len = cmp::max(1, note_len);
         notated.push_str(&repeat_str("^", note_len));
-        notated.push('\n');
         notated.push('\n');
     }
 
@@ -163,10 +166,16 @@ mod test {
         let mut expected = String::from("");
         expected.push_str(&repeat_str("•", 79));
         expected.push('\n');
-        expected.push_str("bulloak error:\n");
+        expected.push_str(format!("bulloak error: {}\n\n", formatter.err).as_str());
         expected.push_str("world\n");
         expected.push_str("^^^^^\n\n");
-        expected.push_str(format!("error: {}", formatter.err).as_str());
+        expected.push_str(
+            format!(
+                "--- (line {}, column {}) ---",
+                formatter.span.start.line, formatter.span.start.column
+            )
+            .as_str(),
+        );
         assert_eq!(notated, expected);
     }
 }
