@@ -12,7 +12,7 @@ description = """
 A simple, fast, and easy to use Solidity test generator based on
 the Branching Tree Technique.
 """
-keywords = ["solidity", "testing", "branching-tree-technique", "cli"]
+keywords = ["solidity", "testing", "compiler", "cli", "tree"]
 categories = ["development-tools::testing", "command-line-utilities", "compilers", "parsing"]
 exclude = ["/.github/*"]
 
