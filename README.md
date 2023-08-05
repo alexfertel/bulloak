@@ -84,7 +84,7 @@ bulloak error: unexpected `when` keyword
    ^^^^
 
 --- (line 2, column 4) ---
-file: test.tree
+file: foo.tree
 ```
 
 ## Contributing
