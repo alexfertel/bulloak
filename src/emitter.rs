@@ -163,7 +163,7 @@ impl<'a> EmitterI<'a> {
                 format!("test{}", test_name)
             };
             emitted.push_str(format!("{}function {}()\n", fn_indentation, function_name).as_str());
-            emitted.push_str(format!("{}external \n", fn_body_indentation).as_str());
+            emitted.push_str(format!("{}external\n", fn_body_indentation).as_str());
 
             // Emit the modifiers that should be applied to this function.
             for modifier in &self.modifier_stack {
@@ -291,7 +291,7 @@ contract FileTest {
   }
 
   function testWhenSomethingBadHappens()
-    external 
+    external
     whenSomethingBadHappens
   {
     // it should not revert
@@ -314,7 +314,7 @@ contract FileTest {
   }
 
   function testRevertsWhenSomethingBadHappens()
-    external 
+    external
     whenSomethingBadHappens
   {
     // it should revert
@@ -341,7 +341,7 @@ contract FileTest {
   }
 
   function testWhenSomethingBadHappens()
-    external 
+    external
     whenSomethingBadHappens
   {
   }
@@ -367,7 +367,7 @@ contract FileTest {
     }
 
     function testWhenSomethingBadHappens()
-        external 
+        external
         whenSomethingBadHappens
     {
     }
@@ -402,14 +402,14 @@ contract Two_childrenTest {
   }
 
   function testRevertsWhenStuffCalled()
-    external 
+    external
     whenStuffCalled
   {
     // it should revert
   }
 
   function testRevertsWhenNotStuffCalled()
-    external 
+    external
     whenNotStuffCalled
   {
     // it should revert
@@ -442,7 +442,7 @@ contract ActionsTest {
   }
 
   function testWhenStuffCalled()
-    external 
+    external
     whenStuffCalled
   {
     // it should revert
@@ -522,14 +522,14 @@ contract DeepTest {
   }
 
   function testRevertsWhenStuffCalled()
-    external 
+    external
     whenStuffCalled
   {
     // it should revert
   }
 
   function testRevertsWhenTheDepositAmountIsZero()
-    external 
+    external
     whenNotStuffCalled
     whenTheDepositAmountIsZero
   {
@@ -537,7 +537,7 @@ contract DeepTest {
   }
 
   function testRevertsWhenTheNumberCountIsZero()
-    external 
+    external
     whenNotStuffCalled
     whenTheDepositAmountIsNotZero
     whenTheNumberCountIsZero
@@ -546,7 +546,7 @@ contract DeepTest {
   }
 
   function testRevertsWhenTheAssetIsNotAContract()
-    external 
+    external
     whenNotStuffCalled
     whenTheDepositAmountIsNotZero
     whenTheAssetIsNotAContract
@@ -555,7 +555,7 @@ contract DeepTest {
   }
 
   function testWhenTheAssetMissesTheERC_20ReturnValue()
-    external 
+    external
     whenNotStuffCalled
     whenTheDepositAmountIsNotZero
     whenTheAssetIsAContract
@@ -567,7 +567,7 @@ contract DeepTest {
   }
 
   function testWhenTheAssetDoesNotMissTheERC_20ReturnValue()
-    external 
+    external
     whenNotStuffCalled
     whenTheDepositAmountIsNotZero
     whenTheAssetIsAContract
