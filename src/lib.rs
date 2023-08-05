@@ -26,7 +26,6 @@ Then, you would use it like so:
 
 ```rust
 # use bulloak::scaffold;
-# use std::error::Error;
 let text = String::from(
 "foo.sol
  └── when stuff called

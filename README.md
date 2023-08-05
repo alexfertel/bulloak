@@ -5,7 +5,74 @@ A simple, fast, and easy to use Solidity test generator based on the
 
 ## Installing
 
+```bash
+cargo install bulloak
+```
+
+## Usage
+
+### Basic Usage
+
+Say you have a `foo.tree` file with the following contents:
+
+```text
+foo.sol
+ └── when stuff called
+    └── it should revert
+```
+
+If you pass it to `bulloak` like so, you will get the skeleton
+of a test contract printed to `stdout`:
+
+```
+$ bulloak foo.tree
+pragma solidity [VERSION];
+
+contract FooTest {
+    modifier whenStuffCalled() {
+        _;
+    }
+
+    function testRevertsWhenStuffCalled()
+        external
+        whenStuffCalled
+    {
+    }
+}
+```
+
+### Scaffold Multiple Trees
+
+If you are working in a solidity project and you have
+multiple trees you want to scaffold, you can use the `-w` option.
+
+```
+$ bulloak -w ./**/*.tree
+```
+
+This will create `solidity` files with the same name as the `.tree`
+files with the result of scaffolding each tree.
+
+### Options
+
+```
+Usage: bulloak [OPTIONS] [FILES]...
+
+Arguments:
+  [FILES]...  .tree files to process
+
+Options:
+  -c                 Whether to print `it` branches as comments in the output code
+  -i <INDENT>        The indentation of the output code [default: 2]
+  -w, --write-files  Whether to write to files instead of stdout
+  -h, --help         Print help (see more with '--help')
+  -V, --version      Print version
+```
+
+
 ## Contributing
+
+Please refer to [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 ## Inspired By
 
@@ -15,6 +82,6 @@ A simple, fast, and easy to use Solidity test generator based on the
 
 This project is licensed under either of:
 
-* Apache License, Version 2.0, ([LICENSE-APACHE](LICENSE-APACHE) or https://www.apache.org/licenses/LICENSE-2.0)
-* MIT license ([LICENSE-MIT](LICENSE-MIT) or https://opensource.org/licenses/MIT)
+* Apache License, Version 2.0, ([LICENSE-APACHE](LICENSE-APACHE) or https://www.apache.org/licenses/LICENSE-2.0).
+* MIT license ([LICENSE-MIT](LICENSE-MIT) or https://opensource.org/licenses/MIT).
 
