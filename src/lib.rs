@@ -156,6 +156,11 @@ mod tokenizer;
 mod utils;
 mod visitor;
 
+/// Generates Solidity code from a `.tree` file.
+///
+/// See the [crate-level documentation] for details.
+///
+///   [crate-level documentation]: ./index.html
 pub fn scaffold(text: &str, with_comments: bool, indent: usize) -> error::Result<String> {
     let tokens = tokenizer::Tokenizer::new().tokenize(text)?;
     let ast = parser::Parser::new().parse(text, &tokens)?;
