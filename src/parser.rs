@@ -232,7 +232,7 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
                         while self
                             .current()
                             // Only parse tokens that are indented more than the current token.
-                            // The column is our way to determine which tree level are we in.
+                            // The column is our way to determine the tree level we are in.
                             .is_some_and(|t| t.span.start.column > current_token.span.start.column)
                         {
                             let ast = self._parse()?;
