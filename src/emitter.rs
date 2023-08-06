@@ -3,7 +3,7 @@ use std::result;
 
 use crate::{
     ast::{self, Ast},
-    utils::capitalize_first_letter,
+    utils::{capitalize_first_letter, sanitize},
     visitor::Visitor,
 };
 
@@ -98,7 +98,7 @@ impl<'a> EmitterI<'a> {
 
         // It's fine to unwrap here because we check that the filename always has an extension.
         let contract_name = root.file_name.split_once('.').unwrap().0;
-        let contract_name = capitalize_first_letter(contract_name);
+        let contract_name = sanitize(&capitalize_first_letter(contract_name));
         emitted.push_str(format!("contract {}Test {{\n", contract_name).as_str());
 
         for modifier in self.modifiers.values() {
@@ -336,6 +336,32 @@ contract FileTest {
             r"pragma solidity [VERSION];
 
 contract FileTest {
+  modifier whenSomethingBadHappens() {
+    _;
+  }
+
+  function testWhenSomethingBadHappens()
+    external
+    whenSomethingBadHappens
+  {
+  }
+
+}"
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_unsanitized_input() -> Result<()> {
+        let file_contents =
+            String::from("fi-e.sol\n└── when something bad happens\n   └── it should not revert");
+
+        assert_eq!(
+            &scaffold_with_flags(&file_contents, false, 2)?,
+            r"pragma solidity [VERSION];
+
+contract Fi_eTest {
   modifier whenSomethingBadHappens() {
     _;
   }

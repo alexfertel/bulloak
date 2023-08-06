@@ -4,6 +4,7 @@ use crate::{
     ast::{Action, Ast, Condition, Root},
     span::Span,
     tokenizer::{Token, TokenKind},
+    utils::sanitize,
 };
 use std::fmt;
 
@@ -241,7 +242,7 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
 
                         let previous = self.previous().unwrap();
                         Ok(Ast::Condition(Condition {
-                            title,
+                            title: sanitize(&title),
                             asts,
                             span: Span::new(current_token.span.start, previous.span.end),
                         }))
@@ -420,6 +421,30 @@ mod tests {
                         })],
                     }),
                 ],
+            })
+        );
+    }
+
+    #[test]
+    fn test_unsanitized_input() {
+        assert_eq!(
+            parse(
+                r"unsa-itized.tttt.sol
+└── when st-ff called
+   └── it should revert"
+            )
+            .unwrap(),
+            Ast::Root(Root {
+                file_name: String::from("unsa-itized.tttt.sol"),
+                span: Span::new(Position::new(0, 1, 1), Position::new(77, 3, 23)),
+                asts: vec![Ast::Condition(Condition {
+                    title: String::from("when st_ff called"),
+                    span: Span::new(Position::new(21, 2, 1), Position::new(77, 3, 23)),
+                    asts: vec![Ast::Action(Action {
+                        title: String::from("it should revert"),
+                        span: Span::new(Position::new(52, 3, 4), Position::new(77, 3, 23)),
+                    })],
+                }),],
             })
         );
     }

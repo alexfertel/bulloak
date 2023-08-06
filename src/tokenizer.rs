@@ -415,9 +415,10 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
 
 /// Checks whether a character might appear in an identifier.
 ///
-/// Valid identifiers are those which can be used as a variable name.
+/// Valid identifiers are those which can be used as a variable name
+/// and `-`, which will be converted to `_` in the generated code.
 fn is_valid_identifier_char(c: char) -> bool {
-    c.is_alphanumeric() || c == '_'
+    c.is_alphanumeric() || c == '_' || c == '-'
 }
 
 /// Checks whether a character might appear in a filename.
@@ -643,11 +644,11 @@ mod tests {
       ├── when the asset is not a contract
       │  └── it should revert
       └── when the asset is a contract
-          ├── when the asset misses the ERC_20 return value
+          ├── when the asset misses the ERC-20 return value
           │  ├── it should create the child
           │  ├── it should perform the ERC-20 transfers
           │  └── it should emit a {MultipleChildren} event
-          └── when the asset does not miss the ERC_20 return value
+          └── when the asset does not miss the ERC-20 return value
               ├── it should create the child
               └── it should emit a {MultipleChildren} event"#,
         );
@@ -735,7 +736,7 @@ mod tests {
             t(TokenKind::Word, "asset", s(p(490, 13, 24), p(494, 13, 28))),
             t(TokenKind::Word, "misses", s(p(496, 13, 30), p(501, 13, 35))),
             t(TokenKind::Word, "the", s(p(503, 13, 37), p(505, 13, 39))),
-            t(TokenKind::Word, "ERC_20", s(p(507, 13, 41), p(512, 13, 46))),
+            t(TokenKind::Word, "ERC-20", s(p(507, 13, 41), p(512, 13, 46))),
             t(TokenKind::Word, "return", s(p(514, 13, 48), p(519, 13, 53))),
             t(TokenKind::Word, "value", s(p(521, 13, 55), p(525, 13, 59))),
             t(TokenKind::Tee, "├", s(p(542, 14, 14), p(542, 14, 14))),
@@ -778,7 +779,7 @@ mod tests {
             t(TokenKind::Word, "not", s(p(750, 17, 35), p(752, 17, 37))),
             t(TokenKind::Word, "miss", s(p(754, 17, 39), p(757, 17, 42))),
             t(TokenKind::Word, "the", s(p(759, 17, 44), p(761, 17, 46))),
-            t(TokenKind::Word, "ERC_20", s(p(763, 17, 48), p(768, 17, 53))),
+            t(TokenKind::Word, "ERC-20", s(p(763, 17, 48), p(768, 17, 53))),
             t(TokenKind::Word, "return", s(p(770, 17, 55), p(775, 17, 60))),
             t(TokenKind::Word, "value", s(p(777, 17, 62), p(781, 17, 66))),
             t(TokenKind::Tee, "├", s(p(797, 18, 15), p(797, 18, 15))),
