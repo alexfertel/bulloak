@@ -584,10 +584,6 @@ mod tests {
             tokenize("foo\n└── when w,eird identifier").unwrap_err(),
             e(IdentifierCharInvalid(','), s(p(20, 2, 11), p(20, 2, 11)),)
         );
-        assert_eq!(
-            tokenize("foo\n└── when weird' identifier").unwrap_err(),
-            e(IdentifierCharInvalid('\''), s(p(24, 2, 15), p(24, 2, 15)),)
-        );
     }
 
     #[test]

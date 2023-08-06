@@ -429,16 +429,16 @@ mod tests {
     fn test_unsanitized_input() {
         assert_eq!(
             parse(
-                r"unsa-itized.tttt.sol
-└── when st-ff called
-   └── it should revert"
+                r#"unsa-itized.tttt.sol
+└── when st-ff "all'd
+   └── it should revert"#
             )
             .unwrap(),
             Ast::Root(Root {
                 file_name: String::from("unsa-itized.tttt.sol"),
                 span: Span::new(Position::new(0, 1, 1), Position::new(77, 3, 23)),
                 asts: vec![Ast::Condition(Condition {
-                    title: String::from("when st_ff called"),
+                    title: String::from("when st_ff alld"),
                     span: Span::new(Position::new(21, 2, 1), Position::new(77, 3, 23)),
                     asts: vec![Ast::Action(Action {
                         title: String::from("it should revert"),
