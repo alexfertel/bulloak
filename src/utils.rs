@@ -9,8 +9,5 @@ pub fn capitalize_first_letter(s: &str) -> String {
 /// This functions makes the appropriate changes to a string to
 /// make it a valid identifier.
 pub fn sanitize(identifier: &str) -> String {
-    identifier
-        .replace("-", "_")
-        .replace("'", "")
-        .replace("\"", "")
+    identifier.replace('-', "_").replace(['\'', '"'], "")
 }
