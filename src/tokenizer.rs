@@ -418,12 +418,12 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
 /// Valid identifiers are those which can be used as a variable name
 /// and `-`, which will be converted to `_` in the generated code.
 fn is_valid_identifier_char(c: char) -> bool {
-    c.is_alphanumeric() || c == '_' || c == '-'
+    c.is_alphanumeric() || c == '_' || c == '-' || c == '\'' || c == '"'
 }
 
 /// Checks whether a character might appear in a filename.
 fn is_valid_filename_char(c: char) -> bool {
-    is_valid_identifier_char(c) || c == '.'
+    c.is_alphanumeric() || c == '_' || c == '-' || c == '.'
 }
 
 #[cfg(test)]
