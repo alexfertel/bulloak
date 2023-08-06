@@ -29,15 +29,16 @@ $ bulloak foo.tree
 pragma solidity [VERSION];
 
 contract FooTest {
-    modifier whenStuffCalled() {
-        _;
-    }
+  modifier whenStuffCalled() {
+    _;
+  }
 
-    function testRevertsWhenStuffCalled()
-        external
-        whenStuffCalled
-    {
-    }
+  function testRevertsWhenStuffCalled()
+    external
+    whenStuffCalled
+  {
+    // it should revert
+  }
 }
 ```
 
