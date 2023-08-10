@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [unreleased]
+## [0.2.0] - 2023-08-10
 
 ### Bug Fixes
 
@@ -11,6 +11,11 @@ All notable changes to this project will be documented in this file.
 ### Features
 
 - *(docs)* Add logo to README- *(No Category)* Start using git-cliff
+- *(No Category)* Introduce the Compiled struct to allow setting the output file
+
+
+### Miscellaneous Tasks
+- *(No Category)* Generate CHANGELOG.md
 
 
 ### Refactor

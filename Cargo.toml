@@ -1,6 +1,6 @@
 [package]
 authors = ["Alexander Antonio Gonzalez Fertel"]
-version = "0.1.1"
+version = "0.2.0"
 name = "bulloak"
 license = "MIT OR Apache-2.0"
 edition = "2021"
@@ -9,7 +9,7 @@ repository = "https://github.com/alexfertel/bulloak"
 homepage = "https://github.com/alexfertel/bulloak"
 documentation = "https://github.com/alexfertel/bulloak"
 description = """
-A simple, fast, and easy to use Solidity test generator based on
+A simple, fast, and easy-to-use Solidity test generator based on
 the Branching Tree Technique.
 """
 keywords = ["solidity", "testing", "compiler", "cli", "tree"]
