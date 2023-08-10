@@ -32,7 +32,7 @@ let text = String::from(
     └── it should revert");
 
 assert_eq!(
-    &scaffold(&text, false, 4).unwrap(),
+    &scaffold(&text, false, 4).unwrap().emitted,
     r"pragma solidity [VERSION];
 
 contract FooTest {
@@ -156,19 +156,42 @@ mod tokenizer;
 mod utils;
 mod visitor;
 
+/// Utility struct that holds any useful information resulting
+/// from the compilation of a `.tree` file.
+///
+/// This will be populated by the `scaffold` function.
+pub struct Compiled {
+    /// The emitted Solidity code.
+    pub emitted: String,
+    /// The name of the output file.
+    ///
+    /// This is _exactly_ the filename at the top of the `.tree` file.
+    pub output_file: String,
+}
+
 /// Generates Solidity code from a `.tree` file.
 ///
 /// See the [crate-level documentation] for details.
 ///
 ///   [crate-level documentation]: ./index.html
-pub fn scaffold(text: &str, with_comments: bool, indent: usize) -> error::Result<String> {
+pub fn scaffold(text: &str, with_comments: bool, indent: usize) -> error::Result<Compiled> {
     let tokens = tokenizer::Tokenizer::new().tokenize(text)?;
     let ast = parser::Parser::new().parse(text, &tokens)?;
     let mut analyzer = semantics::SemanticAnalyzer::new(text);
     analyzer.analyze(&ast)?;
     let mut discoverer = modifiers::ModifierDiscoverer::new();
     let modifiers = discoverer.discover(&ast);
-    let solcode = emitter::Emitter::new(with_comments, indent).emit(&ast, modifiers);
+    let emitted = emitter::Emitter::new(with_comments, indent).emit(&ast, modifiers);
 
-    Ok(solcode)
+    let output_file = match ast {
+        ast::Ast::Root(root) => root.file_name,
+        // It's impossible to get here, as the parser will always return
+        // an `Ast::Root` variant.
+        _ => unreachable!(),
+    };
+
+    Ok(Compiled {
+        emitted,
+        output_file,
+    })
 }

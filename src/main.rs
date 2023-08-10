@@ -44,13 +44,13 @@ fn run(config: &Config) -> Result<()> {
     for file in config.files.iter() {
         let text = fs::read_to_string(file)?;
         match scaffold(&text, config.with_actions_as_comments, config.indent) {
-            Ok(code) => {
+            Ok(compiled) => {
                 if config.write_files {
                     let mut path = file.clone();
-                    path.set_extension("sol");
-                    fs::write(path, code)?;
+                    path.set_file_name(compiled.output_file);
+                    fs::write(path, compiled.emitted)?;
                 } else {
-                    println!("{}", code);
+                    println!("{}", compiled.emitted);
                 }
             }
             Err(err) => {
