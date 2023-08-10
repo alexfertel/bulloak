@@ -8,7 +8,7 @@
 
 # bulloak
 
-A simple, fast, and easy to use Solidity test generator based on the
+A simple, fast, and easy-to-use Solidity test generator based on the
 [Branching Tree Technique](https://twitter.com/PaulRBerg/status/1679914755014942720?s=20).
 
 ## Installing
