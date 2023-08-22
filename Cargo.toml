@@ -22,3 +22,8 @@ indexmap = "2.0.0"
 
 [dev-dependencies]
 pretty_assertions = { version= "1.4.0" }
+criterion = "0.5.1"
+
+[[bench]]
+name = "bench"
+harness = false
