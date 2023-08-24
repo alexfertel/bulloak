@@ -41,7 +41,7 @@ contract FooTest {
     _;
   }
 
-  function testRevertsWhenStuffCalled()
+  function test_RevertWhen_StuffCalled()
     external
     whenStuffCalled
   {
