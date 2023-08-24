@@ -45,7 +45,6 @@ contract FooTest {
         whenStuffCalled
     {
     }
-
 }");
 ```
 
@@ -96,7 +95,6 @@ contract FooTest {
         whenStuffCalled
     {
     }
-
 }
 ```
 
@@ -139,7 +137,6 @@ contract FooTest {
         // it should setup something
         // it should do something else
     }
-
 }
 ```
 */
