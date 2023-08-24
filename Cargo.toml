@@ -19,6 +19,7 @@ exclude = ["/.github/*"]
 [dependencies]
 clap = { version = "4.3.19", features = ["derive"] }
 indexmap = "2.0.0"
+owo-colors = "3.5.0"
 
 [dev-dependencies]
 pretty_assertions = { version= "1.4.0" }
