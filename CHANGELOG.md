@@ -2,43 +2,73 @@
 
 All notable changes to this project will be documented in this file.
 
+## [unreleased]
+
+### Bug Fixes
+
+- *(emit)* Use foundry's naming practices for tests (#13)
+- *(emit)* Co-locate modifiers with test functions
+
+
+### Documentation
+
+- *(README)* Update BTT reference tweet (#5)
+
+
+### Features
+
+- *(bench)* Add benchmarks using the criterion crate (#6)
+
+
+### Miscellaneous Tasks
+
+- *(release)* Update Cargo.toml & CHANGELOG
+
+
 ## [0.2.0] - 2023-08-10
 
 ### Bug Fixes
 
 - *(docs)* Fix typo in README
 
+
 ### Features
 
-- *(docs)* Add logo to README- *(No Category)* Start using git-cliff
-- *(No Category)* Introduce the Compiled struct to allow setting the output file
+- *(docs)* Add logo to README
+- Start using git-cliff
+- Introduce the Compiled struct to allow setting the output file
 
 
 ### Miscellaneous Tasks
-- *(No Category)* Generate CHANGELOG.md
+
+- Generate CHANGELOG.md
 
 
 ### Refactor
 
 - *(docs)* Add missing tag to README
 
+
 ## [0.1.1] - 2023-08-06
 
 ### Bug Fixes
 
 - *(README)* Fix typo
-- *(tests)* Remove ticks from identifiers- *(No Category)* Support the ~/code/rust character in identifiers
-- *(No Category)* Support ticks in identifiers
+- *(tests)* Remove ticks from identifiers
+- Support the ~/code/rust character in identifiers
+- Support ticks in identifiers
 
 
 ### Miscellaneous Tasks
-- *(No Category)* Update pkg version
+
+- Update pkg version
 
 
 ### Refactor
 
 - *(docs)* Update README's example indentation
 - *(lint)* Appease clippy
+
 
 ## [0.1.0] - 2023-08-05
 
@@ -54,7 +84,8 @@ All notable changes to this project will be documented in this file.
 - *(tokenizer)* Restrict possible character in WHEN/IT blocks
 - *(tokenizer)* Start rework to parse filenames and identifiers
 - *(tokenizer)* Finish rework to parse filenames and identifiers
-- *(tokenizer)* Properly parse filenames- *(No Category)* Support all characters in strings for now
+- *(tokenizer)* Properly parse filenames
+- Support all characters in strings for now
 
 
 ### Features
@@ -79,9 +110,10 @@ All notable changes to this project will be documented in this file.
 - *(parser)* Start parser implementation
 - *(semantics)* Add a simple semantic analyzer
 - *(tests)* Add unit tests for comments
-- *(visitor)* Add the visitor trait- *(No Category)* Add tokenizer
-- *(No Category)* Properly setup bin entrypoint
-- *(No Category)* Add the --write-files option
+- *(visitor)* Add the visitor trait
+- Add tokenizer
+- Properly setup bin entrypoint
+- Add the --write-files option
 
 
 ### Refactor
@@ -92,15 +124,17 @@ All notable changes to this project will be documented in this file.
 - *(fmt)* Fix formatting
 - *(semantics)* Simplify types a bit
 - *(tests)* Revamp tokenizer tests
-- *(tokenizer)* Remove the TokenStream abstraction- *(No Category)* Use full qualifier for the tokenizer mod
-- *(No Category)* Rename LICENSE_MIT -> LICENSE-MIT
-- *(No Category)* Rework tests across the binary
-- *(No Category)* Apply clippy rules
-- *(No Category)* Flesh out public API
+- *(tokenizer)* Remove the TokenStream abstraction
+- Use full qualifier for the tokenizer mod
+- Rename LICENSE_MIT -> LICENSE-MIT
+- Rework tests across the binary
+- Apply clippy rules
+- Flesh out public API
 
 
 ### Build
 
-- *(ci)* Improve ci workflow- *(No Category)* Add basic github workflow
+- *(ci)* Improve ci workflow
+- Add basic github workflow
 
 
