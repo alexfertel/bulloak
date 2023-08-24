@@ -2,12 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
-## [unreleased]
+## [0.2.2] - 2023-08-24
+
+### Bug Fixes
+
+- *(cli)* Stop overwriting output files (#15)
+
+
+## [0.2.1] - 2023-08-24
 
 ### Bug Fixes
 
 - *(emit)* Use foundry's naming practices for tests (#13)
-- *(emit)* Co-locate modifiers with test functions
+- *(emit)* Co-locate modifiers with test functions (#14)
 
 
 ### Documentation
@@ -22,6 +29,7 @@ All notable changes to this project will be documented in this file.
 
 ### Miscellaneous Tasks
 
+- *(release)* Update Cargo.toml & CHANGELOG
 - *(release)* Update Cargo.toml & CHANGELOG
 
 
