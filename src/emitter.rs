@@ -143,25 +143,44 @@ impl<'a> EmitterI<'a> {
         if action_count > 0 {
             let fn_indentation = self.emitter.indent();
             let fn_body_indentation = fn_indentation.repeat(2);
-            // It's fine to unwrap here because we check that no action appears outside of a condition.
-            let last_modifier = *self.modifier_stack.last().unwrap();
-            let test_name = capitalize_first_letter(last_modifier);
 
             // If the only action is `it should revert`, we slightly change the function name
             // to reflect this.
             let is_revert = action_count == 1
-                && actions.next().is_some_and(|a| {
-                    if let Ast::Action(action) = a {
+                && actions.next().is_some_and(|action| {
+                    if let Ast::Action(action) = action {
                         action.title == "it should revert"
                     } else {
                         false
                     }
                 });
+
+            // It's fine to unwrap here because we check that no action appears outside of a condition.
+            let last_modifier = self.modifier_stack.last().unwrap();
             let function_name = if is_revert {
-                format!("testReverts{}", test_name)
+                let mut words = condition.title.split(' ');
+                // It is fine to unwrap because conditions have at least one word in them.
+                let keyword = capitalize_first_letter(words.next().unwrap());
+                let test_name = words.fold(
+                    String::with_capacity(condition.title.len() - keyword.len()),
+                    |mut acc, w| {
+                        acc.reserve(w.len() + 1);
+                        acc.push_str(&capitalize_first_letter(w));
+                        acc
+                    },
+                );
+
+                // The structure for a function name when it is a revert is:
+                //
+                // test_Revert[KEYWORD]_Description
+                //
+                // where `KEYWORD` is the starting word of the condition.
+                format!("test_Revert{}_{}", keyword, test_name)
             } else {
-                format!("test{}", test_name)
+                let test_name = capitalize_first_letter(last_modifier);
+                format!("test_{}", test_name)
             };
+
             emitted.push_str(format!("{}function {}()\n", fn_indentation, function_name).as_str());
             emitted.push_str(format!("{}external\n", fn_body_indentation).as_str());
 
@@ -290,7 +309,7 @@ contract FileTest {
     _;
   }
 
-  function testWhenSomethingBadHappens()
+  function test_WhenSomethingBadHappens()
     external
     whenSomethingBadHappens
   {
@@ -313,7 +332,7 @@ contract FileTest {
     _;
   }
 
-  function testRevertsWhenSomethingBadHappens()
+  function test_RevertWhen_SomethingBadHappens()
     external
     whenSomethingBadHappens
   {
@@ -340,7 +359,7 @@ contract FileTest {
     _;
   }
 
-  function testWhenSomethingBadHappens()
+  function test_WhenSomethingBadHappens()
     external
     whenSomethingBadHappens
   {
@@ -366,7 +385,7 @@ contract Fi_eTest {
     _;
   }
 
-  function testWhenSomethingBadHappens()
+  function test_WhenSomethingBadHappens()
     external
     whenSomethingBadHappens
   {
@@ -392,7 +411,7 @@ contract FileTest {
         _;
     }
 
-    function testWhenSomethingBadHappens()
+    function test_WhenSomethingBadHappens()
         external
         whenSomethingBadHappens
     {
@@ -427,14 +446,14 @@ contract Two_childrenTest {
     _;
   }
 
-  function testRevertsWhenStuffCalled()
+  function test_RevertWhen_StuffCalled()
     external
     whenStuffCalled
   {
     // it should revert
   }
 
-  function testRevertsWhenNotStuffCalled()
+  function test_RevertWhen_NotStuffCalled()
     external
     whenNotStuffCalled
   {
@@ -467,7 +486,7 @@ contract ActionsTest {
     _;
   }
 
-  function testWhenStuffCalled()
+  function test_WhenStuffCalled()
     external
     whenStuffCalled
   {
@@ -547,14 +566,14 @@ contract DeepTest {
     _;
   }
 
-  function testRevertsWhenStuffCalled()
+  function test_RevertWhen_StuffCalled()
     external
     whenStuffCalled
   {
     // it should revert
   }
 
-  function testRevertsWhenTheDepositAmountIsZero()
+  function test_RevertWhen_TheDepositAmountIsZero()
     external
     whenNotStuffCalled
     whenTheDepositAmountIsZero
@@ -562,7 +581,7 @@ contract DeepTest {
     // it should revert
   }
 
-  function testRevertsWhenTheNumberCountIsZero()
+  function test_RevertWhen_TheNumberCountIsZero()
     external
     whenNotStuffCalled
     whenTheDepositAmountIsNotZero
@@ -571,7 +590,7 @@ contract DeepTest {
     // it should revert
   }
 
-  function testRevertsWhenTheAssetIsNotAContract()
+  function test_RevertWhen_TheAssetIsNotAContract()
     external
     whenNotStuffCalled
     whenTheDepositAmountIsNotZero
@@ -580,7 +599,7 @@ contract DeepTest {
     // it should revert
   }
 
-  function testWhenTheAssetMissesTheERC_20ReturnValue()
+  function test_WhenTheAssetMissesTheERC_20ReturnValue()
     external
     whenNotStuffCalled
     whenTheDepositAmountIsNotZero
@@ -592,7 +611,7 @@ contract DeepTest {
     // it should emit a {MultipleChildren} event
   }
 
-  function testWhenTheAssetDoesNotMissTheERC_20ReturnValue()
+  function test_WhenTheAssetDoesNotMissTheERC_20ReturnValue()
     external
     whenNotStuffCalled
     whenTheDepositAmountIsNotZero

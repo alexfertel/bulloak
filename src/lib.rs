@@ -40,7 +40,7 @@ contract FooTest {
         _;
     }
 
-    function testRevertsWhenStuffCalled()
+    function test_RevertWhen_StuffCalled()
         external
         whenStuffCalled
     {
@@ -91,7 +91,7 @@ contract FooTest {
         _;
     }
 
-    function testRevertsWhenStuffCalled()
+    function test_RevertWhen_StuffCalled()
         external
         whenStuffCalled
     {
@@ -100,15 +100,14 @@ contract FooTest {
 }
 ```
 
-Note that the name of the contract is inferred from the name of the file.
-In future versions of the compiler, a better mechanism for this might be
-implemented. Also note that `[VERSION]` is a placeholder for the version of
+Note that we follow Foundry's naming practices for tests.
+Also note that `[VERSION]` is a placeholder for the version of
 Solidity used in the file. We cannot infer that yet.
 
 ### Reverts
 
 Note that the special action `it should revert` will generate a test with
-`Reverts` in the name.
+`Revert` in the name.
 
 ### Comments
 
