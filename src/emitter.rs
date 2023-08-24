@@ -91,7 +91,6 @@ impl<'a> EmitterI<'a> {
     /// - The Solidity version pragma with a placeholder for the
     /// actual version.
     /// - The contract's name.
-    /// - The modifiers.
     fn emit_contract_header(&self, root: &ast::Root) -> String {
         let mut emitted = String::new();
         emitted.push_str("pragma solidity [VERSION];\n\n");
@@ -100,10 +99,6 @@ impl<'a> EmitterI<'a> {
         let contract_name = root.file_name.split_once('.').unwrap().0;
         let contract_name = sanitize(&capitalize_first_letter(contract_name));
         emitted.push_str(format!("contract {}Test {{\n", contract_name).as_str());
-
-        for modifier in self.modifiers.values() {
-            emitted.push_str(&self.emit_modifier(modifier));
-        }
 
         emitted
     }
@@ -217,6 +212,9 @@ impl<'a> Visitor for EmitterI<'a> {
             }
         }
 
+        // Remove the last char, which is the extra '\n' from
+        // emitting functions.
+        emitted.pop();
         emitted.push('}');
 
         Ok(emitted)
@@ -231,6 +229,8 @@ impl<'a> Visitor for EmitterI<'a> {
         // It's fine to unwrap here because we discover all modifiers in a previous pass.
         let modifier = self.modifiers.get(&condition.title).unwrap();
         self.modifier_stack.push(modifier);
+
+        emitted.push_str(&self.emit_modifier(modifier));
 
         let fn_header = self.emit_fn_header(condition);
         emitted.push_str(&fn_header);
@@ -252,6 +252,8 @@ impl<'a> Visitor for EmitterI<'a> {
 
         // We count instead of collecting into a Vec to avoid allocating a Vec for each condition.
         let action_count = condition.asts.iter().filter(|ast| ast.is_action()).count();
+        // We check that there is more than one action to avoid printing extra closing
+        // braces when conditions are nested.
         if action_count > 0 {
             emitted.push_str(format!("{}}}\n\n", self.emitter.indent()).as_str());
         }
@@ -315,7 +317,6 @@ contract FileTest {
   {
     // it should not revert
   }
-
 }"
         );
 
@@ -338,7 +339,6 @@ contract FileTest {
   {
     // it should revert
   }
-
 }"
         );
 
@@ -364,7 +364,6 @@ contract FileTest {
     whenSomethingBadHappens
   {
   }
-
 }"
         );
 
@@ -390,7 +389,6 @@ contract Fi_eTest {
     whenSomethingBadHappens
   {
   }
-
 }"
         );
 
@@ -416,7 +414,6 @@ contract FileTest {
         whenSomethingBadHappens
     {
     }
-
 }"
         );
 
@@ -442,15 +439,15 @@ contract Two_childrenTest {
     _;
   }
 
-  modifier whenNotStuffCalled() {
-    _;
-  }
-
   function test_RevertWhen_StuffCalled()
     external
     whenStuffCalled
   {
     // it should revert
+  }
+
+  modifier whenNotStuffCalled() {
+    _;
   }
 
   function test_RevertWhen_NotStuffCalled()
@@ -459,7 +456,6 @@ contract Two_childrenTest {
   {
     // it should revert
   }
-
 }"
         );
 
@@ -494,7 +490,6 @@ contract ActionsTest {
     // it should be cool
     // it might break
   }
-
 }"
         );
 
@@ -534,6 +529,13 @@ contract DeepTest {
     _;
   }
 
+  function test_RevertWhen_StuffCalled()
+    external
+    whenStuffCalled
+  {
+    // it should revert
+  }
+
   modifier whenNotStuffCalled() {
     _;
   }
@@ -542,43 +544,20 @@ contract DeepTest {
     _;
   }
 
-  modifier whenTheDepositAmountIsNotZero() {
-    _;
-  }
-
-  modifier whenTheNumberCountIsZero() {
-    _;
-  }
-
-  modifier whenTheAssetIsNotAContract() {
-    _;
-  }
-
-  modifier whenTheAssetIsAContract() {
-    _;
-  }
-
-  modifier whenTheAssetMissesTheERC_20ReturnValue() {
-    _;
-  }
-
-  modifier whenTheAssetDoesNotMissTheERC_20ReturnValue() {
-    _;
-  }
-
-  function test_RevertWhen_StuffCalled()
-    external
-    whenStuffCalled
-  {
-    // it should revert
-  }
-
   function test_RevertWhen_TheDepositAmountIsZero()
     external
     whenNotStuffCalled
     whenTheDepositAmountIsZero
   {
     // it should revert
+  }
+
+  modifier whenTheDepositAmountIsNotZero() {
+    _;
+  }
+
+  modifier whenTheNumberCountIsZero() {
+    _;
   }
 
   function test_RevertWhen_TheNumberCountIsZero()
@@ -590,6 +569,10 @@ contract DeepTest {
     // it should revert
   }
 
+  modifier whenTheAssetIsNotAContract() {
+    _;
+  }
+
   function test_RevertWhen_TheAssetIsNotAContract()
     external
     whenNotStuffCalled
@@ -597,6 +580,14 @@ contract DeepTest {
     whenTheAssetIsNotAContract
   {
     // it should revert
+  }
+
+  modifier whenTheAssetIsAContract() {
+    _;
+  }
+
+  modifier whenTheAssetMissesTheERC_20ReturnValue() {
+    _;
   }
 
   function test_WhenTheAssetMissesTheERC_20ReturnValue()
@@ -611,6 +602,10 @@ contract DeepTest {
     // it should emit a {MultipleChildren} event
   }
 
+  modifier whenTheAssetDoesNotMissTheERC_20ReturnValue() {
+    _;
+  }
+
   function test_WhenTheAssetDoesNotMissTheERC_20ReturnValue()
     external
     whenNotStuffCalled
@@ -621,7 +616,6 @@ contract DeepTest {
     // it should create the child
     // it should emit a {MultipleChildren} event
   }
-
 }"
         );
 
