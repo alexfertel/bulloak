@@ -17,14 +17,17 @@ pub struct Emitter {
     with_actions_as_comments: bool,
     /// The indentation level of the emitted code.
     indent: usize,
+    /// The solidity version to use in the emitted code.
+    version: String,
 }
 
 impl Emitter {
     /// Create a new emitter with the given configuration.
-    pub fn new(with_actions_as_comments: bool, indent: usize) -> Self {
+    pub fn new(with_actions_as_comments: bool, indent: usize, version: String) -> Self {
         Self {
             with_actions_as_comments,
             indent,
+            version,
         }
     }
 
@@ -93,7 +96,8 @@ impl<'a> EmitterI<'a> {
     /// - The contract's name.
     fn emit_contract_header(&self, root: &ast::Root) -> String {
         let mut emitted = String::new();
-        emitted.push_str("pragma solidity [VERSION];\n\n");
+        // add version from self.emitter.version which is a String
+        emitted.push_str(&format!("pragma solidity {};\n\n", self.emitter.version));
 
         // It's fine to unwrap here because we check that the filename always has an extension.
         let contract_name = root.file_name.split_once('.').unwrap().0;
@@ -285,16 +289,24 @@ mod tests {
     use crate::parser::Parser;
     use crate::tokenizer::Tokenizer;
 
-    fn scaffold_with_flags(text: &str, with_comments: bool, indent: usize) -> Result<String> {
+    fn scaffold_with_flags(
+        text: &str,
+        with_comments: bool,
+        indent: usize,
+        version: &str,
+    ) -> Result<String> {
         let tokens = Tokenizer::new().tokenize(&text)?;
         let ast = Parser::new().parse(&text, &tokens)?;
         let mut discoverer = modifiers::ModifierDiscoverer::new();
         let modifiers = discoverer.discover(&ast);
-        Ok(emitter::Emitter::new(with_comments, indent).emit(&ast, &modifiers))
+        Ok(
+            emitter::Emitter::new(with_comments, indent, version.to_string())
+                .emit(&ast, &modifiers),
+        )
     }
 
     fn scaffold(text: &str) -> Result<String> {
-        scaffold_with_flags(text, true, 2)
+        scaffold_with_flags(text, true, 2, "0.8.0")
     }
 
     #[test]
@@ -304,7 +316,7 @@ mod tests {
 
         assert_eq!(
             &scaffold(&file_contents)?,
-            r"pragma solidity [VERSION];
+            r"pragma solidity 0.8.0;
 
 contract FileTest {
   modifier whenSomethingBadHappens() {
@@ -326,7 +338,7 @@ contract FileTest {
 
         assert_eq!(
             &scaffold(&file_contents)?,
-            r"pragma solidity [VERSION];
+            r"pragma solidity 0.8.0;
 
 contract FileTest {
   modifier whenSomethingBadHappens() {
@@ -351,8 +363,8 @@ contract FileTest {
             String::from("file.sol\n└── when something bad happens\n   └── it should not revert");
 
         assert_eq!(
-            &scaffold_with_flags(&file_contents, false, 2)?,
-            r"pragma solidity [VERSION];
+            &scaffold_with_flags(&file_contents, false, 2, "0.8.0")?,
+            r"pragma solidity 0.8.0;
 
 contract FileTest {
   modifier whenSomethingBadHappens() {
@@ -376,8 +388,8 @@ contract FileTest {
             String::from("fi-e.sol\n└── when something bad happens\n   └── it should not revert");
 
         assert_eq!(
-            &scaffold_with_flags(&file_contents, false, 2)?,
-            r"pragma solidity [VERSION];
+            &scaffold_with_flags(&file_contents, false, 2, "0.8.0")?,
+            r"pragma solidity 0.8.0;
 
 contract Fi_eTest {
   modifier whenSomethingBadHappens() {
@@ -401,8 +413,8 @@ contract Fi_eTest {
             String::from("file.sol\n└── when something bad happens\n   └── it should not revert");
 
         assert_eq!(
-            &scaffold_with_flags(&file_contents, false, 4)?,
-            r"pragma solidity [VERSION];
+            &scaffold_with_flags(&file_contents, false, 4, "0.8.0")?,
+            r"pragma solidity 0.8.0;
 
 contract FileTest {
     modifier whenSomethingBadHappens() {
@@ -432,7 +444,7 @@ contract FileTest {
 
         assert_eq!(
             &scaffold(&file_contents)?,
-            r"pragma solidity [VERSION];
+            r"pragma solidity 0.8.0;
 
 contract Two_childrenTest {
   modifier whenStuffCalled() {
@@ -475,7 +487,7 @@ contract Two_childrenTest {
 
         assert_eq!(
             &scaffold(&file_contents)?,
-            r"pragma solidity [VERSION];
+            r"pragma solidity 0.8.0;
 
 contract ActionsTest {
   modifier whenStuffCalled() {
@@ -522,7 +534,7 @@ contract ActionsTest {
 
         assert_eq!(
             &scaffold(&file_contents)?,
-            r"pragma solidity [VERSION];
+            r"pragma solidity 0.8.0;
 
 contract DeepTest {
   modifier whenStuffCalled() {

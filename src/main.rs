@@ -35,6 +35,10 @@ struct Config {
     /// overwrite the output files.
     #[arg(short = 'f', long, requires = "file-handling", default_value = "false")]
     force_write: bool,
+
+    /// Arg to specify the output solidity version for the tests.
+    #[arg(short = 's', long, default_value = "0.8.0")]
+    solidity_version: String,
 }
 
 fn main() -> Result<()> {
@@ -53,7 +57,7 @@ fn run(config: &Config) -> Result<()> {
     // to the filesystem.
     for file in config.files.iter() {
         let text = fs::read_to_string(file)?;
-        match scaffold(&text, config.with_actions_as_comments, config.indent) {
+        match scaffold(&text, config.with_actions_as_comments, config.indent, config.solidity_version.as_str()) {
             Ok(compiled) => {
                 if config.write_files {
                     let mut output_path = file.clone();
