@@ -63,7 +63,7 @@ However, the following is a rough (and simplified) example of what it looks like
 ```text
 {CONTRACT NAME}.sol
 [├ any number of conditions or actions]
- └── when {CONDITION TITLE}
+ └── [when | given] {CONDITION TITLE}
    [├ any number of conditions or actions]
     └── it {ACTION TITLE}
 ```
