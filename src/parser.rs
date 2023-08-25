@@ -53,6 +53,8 @@ pub enum ErrorKind {
     TokenUnexpected(Lexeme),
     /// Did not expect this When keyword.
     WhenUnexpected,
+    /// Did not expect this Given keyword.
+    GivenUnexpected,
     /// Did not expect this It keyword.
     ItUnexpected,
     /// Did not expect a Word.
@@ -80,6 +82,7 @@ impl fmt::Display for ErrorKind {
         match *self {
             TokenUnexpected(ref lexeme) => write!(f, "unexpected token: {}", lexeme),
             WhenUnexpected => write!(f, "unexpected `when` keyword"),
+            GivenUnexpected => write!(f, "unexpected `given` keyword"),
             ItUnexpected => write!(f, "unexpected `it` keyword"),
             WordUnexpected(ref lexeme) => write!(f, "unexpected `word`: {}", lexeme),
             EofUnexpected => write!(f, "unexpected end of file"),
@@ -226,7 +229,7 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
                             span: Span::new(current_token.span.start, previous.span.end),
                         }))
                     }
-                    TokenKind::When => {
+                    TokenKind::When | TokenKind::Given => {
                         let title = self.parse_string(next_token);
 
                         let mut asts = vec![];
@@ -258,6 +261,7 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
                 ErrorKind::WordUnexpected(current_token.lexeme.clone()),
             )),
             TokenKind::When => Err(self.error(current_token.span, ErrorKind::WhenUnexpected)),
+            TokenKind::Given => Err(self.error(current_token.span, ErrorKind::GivenUnexpected)),
             TokenKind::It => Err(self.error(current_token.span, ErrorKind::ItUnexpected)),
         }
     }
@@ -294,13 +298,13 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
     ///
     /// A string is a sequence of words separated by spaces.
     fn parse_string(&self, start_token: &Token) -> String {
-        // Strings always start with one of It or When.
+        // Strings always start with one of [It, When, Given].
         let mut string = String::from(&start_token.lexeme);
 
         // Consume all words.
         while let Some(token) = self.consume() {
             match token.kind {
-                TokenKind::Word | TokenKind::It | TokenKind::When => {
+                TokenKind::Word | TokenKind::It | TokenKind::When | TokenKind::Given => {
                     string = string + " " + &token.lexeme;
                 }
                 _ => break,
@@ -396,13 +400,13 @@ mod tests {
                 r"two_children.t.sol
 ├── when stuff called
 │  └── it should revert
-└── when not stuff called
+└── given not stuff called
    └── it should revert"
             )
             .unwrap(),
             Ast::Root(Root {
                 file_name: String::from("two_children.t.sol"),
-                span: Span::new(Position::new(0, 1, 1), Position::new(139, 5, 23)),
+                span: Span::new(Position::new(0, 1, 1), Position::new(140, 5, 23)),
                 asts: vec![
                     Ast::Condition(Condition {
                         title: String::from("when stuff called"),
@@ -413,11 +417,11 @@ mod tests {
                         })],
                     }),
                     Ast::Condition(Condition {
-                        title: String::from("when not stuff called"),
-                        span: Span::new(Position::new(79, 4, 1), Position::new(139, 5, 23)),
+                        title: String::from("given not stuff called"),
+                        span: Span::new(Position::new(79, 4, 1), Position::new(140, 5, 23)),
                         asts: vec![Ast::Action(Action {
                             title: String::from("it should revert"),
-                            span: Span::new(Position::new(114, 5, 4), Position::new(139, 5, 23)),
+                            span: Span::new(Position::new(115, 5, 4), Position::new(140, 5, 23)),
                         })],
                     }),
                 ],

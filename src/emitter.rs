@@ -510,7 +510,7 @@ contract ActionsTest {
       │  └── it should revert
       ├── when the asset is not a contract
       │  └── it should revert
-      └── when the asset is a contract
+      └── given the asset is a contract
           ├── when the asset misses the ERC_20 return value
           │  ├── it should create the child
           │  ├── it should perform the ERC-20 transfers
@@ -582,7 +582,7 @@ contract DeepTest {
     // it should revert
   }
 
-  modifier whenTheAssetIsAContract() {
+  modifier givenTheAssetIsAContract() {
     _;
   }
 
@@ -594,7 +594,7 @@ contract DeepTest {
     external
     whenNotStuffCalled
     whenTheDepositAmountIsNotZero
-    whenTheAssetIsAContract
+    givenTheAssetIsAContract
     whenTheAssetMissesTheERC_20ReturnValue
   {
     // it should create the child
@@ -610,7 +610,7 @@ contract DeepTest {
     external
     whenNotStuffCalled
     whenTheDepositAmountIsNotZero
-    whenTheAssetIsAContract
+    givenTheAssetIsAContract
     whenTheAssetDoesNotMissTheERC_20ReturnValue
   {
     // it should create the child

@@ -104,6 +104,8 @@ pub enum TokenKind {
     Word,
     /// A token representing a `when` keyword.
     When,
+    /// A token representing a `given` keyword.
+    Given,
     /// A token representing an `it` keyword.
     It,
 }
@@ -398,6 +400,7 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
                 let kind = match lexeme.as_str() {
                     "when" => TokenKind::When,
                     "it" => TokenKind::It,
+                    "given" => TokenKind::Given,
                     _ => TokenKind::Word,
                 };
                 return Ok(Token {
@@ -605,6 +608,7 @@ mod tests {
 
     #[test]
     fn test_one_child() {
+        // Test parsing a when.
         let file_contents =
             String::from("file.sol\n└── when something bad happens\n   └── it should revert");
 
@@ -621,6 +625,26 @@ mod tests {
                 t(TokenKind::It, "it", s(p(59, 3, 8), p(60, 3, 9))),
                 t(TokenKind::Word, "should", s(p(62, 3, 11), p(67, 3, 16))),
                 t(TokenKind::Word, "revert", s(p(69, 3, 18), p(74, 3, 23))),
+            ]
+        );
+
+        // Test parsing a given.
+        let file_contents =
+            String::from("file.sol\n└── given something bad happens\n   └── it should revert");
+
+        assert_eq!(
+            tokenize(&file_contents).unwrap(),
+            vec![
+                t(TokenKind::Word, "file.sol", s(p(0, 1, 1), p(7, 1, 8))),
+                t(TokenKind::Corner, "└", s(p(9, 2, 1), p(9, 2, 1))),
+                t(TokenKind::Given, "given", s(p(19, 2, 5), p(23, 2, 9))),
+                t(TokenKind::Word, "something", s(p(25, 2, 11), p(33, 2, 19))),
+                t(TokenKind::Word, "bad", s(p(35, 2, 21), p(37, 2, 23))),
+                t(TokenKind::Word, "happens", s(p(39, 2, 25), p(45, 2, 31))),
+                t(TokenKind::Corner, "└", s(p(50, 3, 4), p(50, 3, 4))),
+                t(TokenKind::It, "it", s(p(60, 3, 8), p(61, 3, 9))),
+                t(TokenKind::Word, "should", s(p(63, 3, 11), p(68, 3, 16))),
+                t(TokenKind::Word, "revert", s(p(70, 3, 18), p(75, 3, 23))),
             ]
         );
     }
