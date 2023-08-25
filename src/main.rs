@@ -57,7 +57,12 @@ fn run(config: &Config) -> Result<()> {
     // to the filesystem.
     for file in config.files.iter() {
         let text = fs::read_to_string(file)?;
-        match scaffold(&text, config.with_actions_as_comments, config.indent, config.solidity_version.as_str()) {
+        match scaffold(
+            &text,
+            config.with_actions_as_comments,
+            config.indent,
+            config.solidity_version.as_str(),
+        ) {
             Ok(compiled) => {
                 if config.write_files {
                     let mut output_path = file.clone();
