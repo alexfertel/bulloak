@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.0] - 2023-08-25
+
+### Features
+
+- Add support for the 'given' keyword (#16)
+
+
 ## [0.2.2] - 2023-08-24
 
 ### Bug Fixes
@@ -25,12 +32,6 @@ All notable changes to this project will be documented in this file.
 ### Features
 
 - *(bench)* Add benchmarks using the criterion crate (#6)
-
-
-### Miscellaneous Tasks
-
-- *(release)* Update Cargo.toml & CHANGELOG
-- *(release)* Update Cargo.toml & CHANGELOG
 
 
 ## [0.2.0] - 2023-08-10

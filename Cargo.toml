@@ -1,6 +1,6 @@
 [package]
 authors = ["Alexander Antonio Gonzalez Fertel"]
-version = "0.2.2"
+version = "0.3.0"
 name = "bulloak"
 license = "MIT OR Apache-2.0"
 edition = "2021"
