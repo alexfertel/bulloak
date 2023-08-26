@@ -62,6 +62,11 @@ $ bulloak -w ./**/*.tree
 This will create `solidity` files with the same name as the `.tree`
 files with the result of scaffolding each tree.
 
+If there exists a file with a title that matches the name at the
+root node of the `.tree`, then `bulloak` will skip writing that file.
+However, you may override this behaviour with the `-f` flag. This
+will write to the filesystem overwriting any files that exist.
+
 ### Options
 
 ```
@@ -71,11 +76,20 @@ Arguments:
   [FILES]...  .tree files to process
 
 Options:
-  -c                 Whether to print `it` branches as comments in the output code
-  -i <INDENT>        The indentation of the output code [default: 2]
-  -w, --write-files  Whether to write to files instead of stdout
-  -h, --help         Print help (see more with '--help')
-  -V, --version      Print version
+  -c
+          Whether to print `it` branches as comments in the output code
+  -i <INDENT>
+          The indentation of the output code [default: 2]
+  -w, --write-files
+          Whether to write to files instead of stdout
+  -f, --force-write
+          When `write_files` is specified, use `--force-write` to overwrite the output files
+  -s, --solidity-version <SOLIDITY_VERSION>
+          Sets a solidity version for the test contracts [default: 0.8.0]
+  -h, --help
+          Print help (see more with '--help')
+  -V, --version
+          Print version
 ```
 
 ### Compiler Errors
