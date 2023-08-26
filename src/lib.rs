@@ -170,14 +170,20 @@ pub struct Compiled {
 /// See the [crate-level documentation] for details.
 ///
 ///   [crate-level documentation]: ./index.html
-pub fn scaffold(text: &str, with_comments: bool, indent: usize) -> error::Result<Compiled> {
+pub fn scaffold(
+    text: &str,
+    with_comments: bool,
+    indent: usize,
+    solidity_version: &str,
+) -> error::Result<Compiled> {
     let tokens = tokenizer::Tokenizer::new().tokenize(text)?;
     let ast = parser::Parser::new().parse(text, &tokens)?;
     let mut analyzer = semantics::SemanticAnalyzer::new(text);
     analyzer.analyze(&ast)?;
     let mut discoverer = modifiers::ModifierDiscoverer::new();
     let modifiers = discoverer.discover(&ast);
-    let emitted = emitter::Emitter::new(with_comments, indent).emit(&ast, modifiers);
+    let emitted = emitter::Emitter::new(with_comments, indent, solidity_version.to_string())
+        .emit(&ast, modifiers);
 
     let output_file = match ast {
         ast::Ast::Root(root) => root.file_name,
