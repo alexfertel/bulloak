@@ -9,7 +9,7 @@ use owo_colors::OwoColorize;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)] // Read from `Cargo.toml`
-struct Config {
+struct Cli {
     /// .tree files to process.
     files: Vec<PathBuf>,
 
@@ -36,13 +36,13 @@ struct Config {
     #[arg(short = 'f', long, requires = "file-handling", default_value = "false")]
     force_write: bool,
 
-    /// Arg to specify the output solidity version for the tests.
+    /// Sets a solidity version for the test contracts.
     #[arg(short = 's', long, default_value = "0.8.0")]
     solidity_version: String,
 }
 
 fn main() -> Result<()> {
-    let config = Config::parse();
+    let config = Cli::parse();
 
     if let Err(e) = run(&config) {
         println!("Application error: {e}");
@@ -52,23 +52,23 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn run(config: &Config) -> Result<()> {
+fn run(config: &Cli) -> Result<()> {
+    let scaffolder = Scaffolder::new(
+        config.with_actions_as_comments,
+        config.indent,
+        &config.solidity_version,
+    );
     // For each input file, compile it and print it or write it
     // to the filesystem.
     for file in config.files.iter() {
         let text = fs::read_to_string(file)?;
-        match scaffold(
-            &text,
-            config.with_actions_as_comments,
-            config.indent,
-            config.solidity_version.as_str(),
-        ) {
-            Ok(compiled) => {
+        match scaffolder.scaffold(&text) {
+            Ok(scaffolded) => {
                 if config.write_files {
                     let mut output_path = file.clone();
 
                     // Get the path to the output file.
-                    output_path.set_file_name(compiled.output_file);
+                    output_path.set_file_name(scaffolded.output_file);
 
                     // Don't overwrite files unless `--force-write` was passed.
                     if output_path.try_exists().is_ok() && !config.force_write {
@@ -81,11 +81,11 @@ fn run(config: &Config) -> Result<()> {
                         continue;
                     }
 
-                    if let Err(e) = fs::write(output_path, compiled.emitted) {
+                    if let Err(e) = fs::write(output_path, scaffolded.emitted) {
                         eprintln!("{}: {}", "ERROR".red(), e);
                     };
                 } else {
-                    println!("{}", compiled.emitted);
+                    println!("{}", scaffolded.emitted);
                 }
             }
             Err(err) => {

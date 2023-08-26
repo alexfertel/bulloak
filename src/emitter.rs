@@ -11,23 +11,23 @@ use crate::{
 ///
 /// This struct holds the state of the emitter. It is not
 /// tied to a specific AST.
-pub struct Emitter {
+pub struct Emitter<'s> {
     /// This flag determines whether actions are emitted as comments
     /// in the body of functions.
     with_actions_as_comments: bool,
     /// The indentation level of the emitted code.
     indent: usize,
     /// The solidity version to use in the emitted code.
-    version: String,
+    solidity_version: &'s str,
 }
 
-impl Emitter {
+impl<'s> Emitter<'s> {
     /// Create a new emitter with the given configuration.
-    pub fn new(with_actions_as_comments: bool, indent: usize, version: String) -> Self {
+    pub fn new(with_actions_as_comments: bool, indent: usize, solidity_version: &'s str) -> Self {
         Self {
             with_actions_as_comments,
             indent,
-            version,
+            solidity_version,
         }
     }
 
@@ -65,12 +65,12 @@ struct EmitterI<'a> {
     /// to a modifier every time it is used.
     modifiers: &'a IndexMap<String, String>,
     /// The emitter state.
-    emitter: Emitter,
+    emitter: Emitter<'a>,
 }
 
 impl<'a> EmitterI<'a> {
     /// Create a new emitter with the given emitter state and modifier map.
-    fn new(emitter: Emitter, modifiers: &'a IndexMap<String, String>) -> Self {
+    fn new(emitter: Emitter<'a>, modifiers: &'a IndexMap<String, String>) -> Self {
         Self {
             modifier_stack: Vec::new(),
             modifiers,
@@ -91,13 +91,14 @@ impl<'a> EmitterI<'a> {
     /// Emit the contract's definition header.
     ///
     /// This includes:
-    /// - The Solidity version pragma with a placeholder for the
-    /// actual version.
+    /// - The Solidity version pragma.
     /// - The contract's name.
     fn emit_contract_header(&self, root: &ast::Root) -> String {
         let mut emitted = String::new();
-        // add version from self.emitter.version which is a String
-        emitted.push_str(&format!("pragma solidity {};\n\n", self.emitter.version));
+        emitted.push_str(&format!(
+            "pragma solidity {};\n\n",
+            self.emitter.solidity_version
+        ));
 
         // It's fine to unwrap here because we check that the filename always has an extension.
         let contract_name = root.file_name.split_once('.').unwrap().0;
@@ -299,10 +300,7 @@ mod tests {
         let ast = Parser::new().parse(&text, &tokens)?;
         let mut discoverer = modifiers::ModifierDiscoverer::new();
         let modifiers = discoverer.discover(&ast);
-        Ok(
-            emitter::Emitter::new(with_comments, indent, version.to_string())
-                .emit(&ast, &modifiers),
-        )
+        Ok(emitter::Emitter::new(with_comments, indent, version).emit(&ast, &modifiers))
     }
 
     fn scaffold(text: &str) -> Result<String> {

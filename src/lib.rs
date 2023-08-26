@@ -19,21 +19,24 @@ used by adding `bulloak` to your dependencies in your project's `Cargo.toml`.
 
 ```toml
 [dependencies]
-bulloak = "0.1.0"
+bulloak = "0.4.0"
 ```
 
 Then, you would use it like so:
 
 ```rust
-# use bulloak::scaffold;
+use bulloak::Scaffolder;
+
 let text = String::from(
 "foo.sol
  └── when stuff called
     └── it should revert");
 
+let scaffolder = Scaffolder::new(false, 4, "0.8.0");
+
 assert_eq!(
-    &scaffold(&text, false, 4).unwrap().emitted,
-    r"pragma solidity [VERSION];
+    scaffolder.scaffold(&text).unwrap().emitted,
+    r"pragma solidity 0.8.0;
 
 contract FooTest {
     modifier whenStuffCalled() {
@@ -83,7 +86,7 @@ foo.sol
 This will generate the following Solidity code:
 
 ```solidity
-pragma solidity [VERSION];
+pragma solidity 0.8.0;
 
 contract FooTest {
     modifier whenStuffCalled() {
@@ -99,8 +102,6 @@ contract FooTest {
 ```
 
 Note that we follow Foundry's naming practices for tests.
-Also note that `[VERSION]` is a placeholder for the version of
-Solidity used in the file. We cannot infer that yet.
 
 ### Reverts
 
@@ -123,7 +124,7 @@ foo.sol
 Will generate the following Solidity code:
 
 ```solidity
-pragma solidity [VERSION];
+pragma solidity 0.8.0;
 
 contract FooTest {
     modifier whenStuffCalled() {
@@ -156,7 +157,7 @@ mod visitor;
 /// from the compilation of a `.tree` file.
 ///
 /// This will be populated by the `scaffold` function.
-pub struct Compiled {
+pub struct Scaffolded {
     /// The emitted Solidity code.
     pub emitted: String,
     /// The name of the output file.
@@ -165,35 +166,52 @@ pub struct Compiled {
     pub output_file: String,
 }
 
-/// Generates Solidity code from a `.tree` file.
-///
-/// See the [crate-level documentation] for details.
-///
-///   [crate-level documentation]: ./index.html
-pub fn scaffold(
-    text: &str,
+/// The overarching struct that generates Solidity
+/// code from a `.tree` file.
+pub struct Scaffolder<'s> {
+    /// Whether to print `it` branches as comments
+    /// in the output code.
     with_comments: bool,
+    /// The indentation of the output code.
     indent: usize,
-    solidity_version: &str,
-) -> error::Result<Compiled> {
-    let tokens = tokenizer::Tokenizer::new().tokenize(text)?;
-    let ast = parser::Parser::new().parse(text, &tokens)?;
-    let mut analyzer = semantics::SemanticAnalyzer::new(text);
-    analyzer.analyze(&ast)?;
-    let mut discoverer = modifiers::ModifierDiscoverer::new();
-    let modifiers = discoverer.discover(&ast);
-    let emitted = emitter::Emitter::new(with_comments, indent, solidity_version.to_string())
-        .emit(&ast, modifiers);
+    /// Sets a solidity version for the test contracts.
+    solidity_version: &'s str,
+}
 
-    let output_file = match ast {
-        ast::Ast::Root(root) => root.file_name,
-        // It's impossible to get here, as the parser will always return
-        // an `Ast::Root` variant.
-        _ => unreachable!(),
-    };
+impl<'s> Scaffolder<'s> {
+    /// Creates a new scaffolder with the provided configuration.
+    pub fn new(with_comments: bool, indent: usize, solidity_version: &'s str) -> Self {
+        Scaffolder {
+            with_comments,
+            indent,
+            solidity_version,
+        }
+    }
+    /// Generates Solidity code from a `.tree` file.
+    ///
+    /// See the [crate-level documentation] for details.
+    ///
+    ///   [crate-level documentation]: ./index.html
+    pub fn scaffold(&self, text: &str) -> error::Result<Scaffolded> {
+        let tokens = tokenizer::Tokenizer::new().tokenize(text)?;
+        let ast = parser::Parser::new().parse(text, &tokens)?;
+        let mut analyzer = semantics::SemanticAnalyzer::new(text);
+        analyzer.analyze(&ast)?;
+        let mut discoverer = modifiers::ModifierDiscoverer::new();
+        let modifiers = discoverer.discover(&ast);
+        let emitted = emitter::Emitter::new(self.with_comments, self.indent, self.solidity_version)
+            .emit(&ast, modifiers);
 
-    Ok(Compiled {
-        emitted,
-        output_file,
-    })
+        let output_file = match ast {
+            ast::Ast::Root(root) => root.file_name,
+            // It's impossible to get here, as the parser will always return
+            // an `Ast::Root` variant.
+            _ => unreachable!(),
+        };
+
+        Ok(Scaffolded {
+            emitted,
+            output_file,
+        })
+    }
 }
