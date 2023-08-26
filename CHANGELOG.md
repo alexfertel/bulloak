@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.0] - 2023-08-26
+
+### Bug Fixes
+
+- *(bench)* Use the new Scaffolder struct
+
+
+### Features
+
+- *(cli)* Pass solidity version as an arg (#17)
+
+
+### Refactor
+
+- *(scaffold)* Add a Scaffolder struct replacing scaffold
+
+
 ## [0.3.0] - 2023-08-25
 
 ### Features
