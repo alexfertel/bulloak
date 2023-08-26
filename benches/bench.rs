@@ -1,14 +1,14 @@
 use ::bulloak;
-use bulloak::scaffold;
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 
 fn big_tree(c: &mut Criterion) {
     let tree = std::fs::read_to_string("benches/bench_data/cancel.tree").unwrap();
 
+    let scaffolder = bulloak::Scaffolder::new(true, 2, "some_version");
     let mut group = c.benchmark_group("sample-size-10");
     // group.sample_size(10);
     group.bench_function("big-tree", |b| {
-        b.iter(|| scaffold(&tree, black_box(true), black_box(2)))
+        b.iter(|| scaffolder.scaffold(black_box(&tree)))
     });
     group.finish();
 }
