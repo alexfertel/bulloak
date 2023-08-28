@@ -71,7 +71,7 @@ fn run(config: &Cli) -> Result<()> {
                     output_path.set_file_name(scaffolded.output_file);
 
                     // Don't overwrite files unless `--force-write` was passed.
-                    if output_path.try_exists().is_ok() && !config.force_write {
+                    if output_path.exists() && !config.force_write {
                         eprintln!(
                             "{}: Skipped emitting to {:?}.\n      The file {:?} already exists.",
                             "WARN".yellow(),

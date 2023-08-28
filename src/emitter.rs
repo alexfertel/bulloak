@@ -521,11 +521,11 @@ contract ActionsTest {
       ├── when the asset is not a contract
       │  └── it should revert
       └── given the asset is a contract
-          ├── when the asset misses the ERC_20 return value
+          ├── when the asset misses the ERC-20 return value
           │  ├── it should create the child
           │  ├── it should perform the ERC-20 transfers
           │  └── it should emit a {MultipleChildren} event
-          └── when the asset does not miss the ERC_20 return value
+          └── when the asset does not miss the ERC-20 return value
               ├── it should create the child
               └── it should emit a {MultipleChildren} event"#,
         );
