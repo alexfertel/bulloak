@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.1] - 2023-08-28
+
+### Bug Fixes
+
+- *(docs)* Add missing flags to README
+- Properly check if a file exists before generating
+
+
 ## [0.4.0] - 2023-08-26
 
 ### Bug Fixes
