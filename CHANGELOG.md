@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.2] - 2023-08-29
+
+### Features
+
+- Make keywords case-insensitive (#21)
+
+
 ## [0.4.1] - 2023-08-28
 
 ### Bug Fixes
