@@ -397,7 +397,7 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
                 return Err(self.error(self.span(), ErrorKind::FileNameCharInvalid(self.char())));
             } else if self.peek().is_none() || self.peek().is_some_and(|c| c.is_whitespace()) {
                 lexeme.push(self.char());
-                let kind = match lexeme.as_str() {
+                let kind = match lexeme.to_ascii_lowercase().as_str() {
                     "when" => TokenKind::When,
                     "it" => TokenKind::It,
                     "given" => TokenKind::Given,
@@ -823,5 +823,32 @@ mod tests {
 
         assert_eq!(tokens.len(), expected.len());
         assert_eq!(tokens, expected);
+    }
+
+    #[test]
+    fn test_case_insensitive_keywords() {
+        let file_contents =
+            String::from("file.sol\n└── GIVEN something bad happens\n   └── whEN stuff is true\n   └── It should revert.");
+
+        assert_eq!(
+            tokenize(&file_contents).unwrap(),
+            vec![
+                t(TokenKind::Word, "file.sol", s(p(0, 1, 1), p(7, 1, 8))),
+                t(TokenKind::Corner, "└", s(p(9, 2, 1), p(9, 2, 1))),
+                t(TokenKind::Given, "GIVEN", s(p(19, 2, 5), p(23, 2, 9))),
+                t(TokenKind::Word, "something", s(p(25, 2, 11), p(33, 2, 19))),
+                t(TokenKind::Word, "bad", s(p(35, 2, 21), p(37, 2, 23))),
+                t(TokenKind::Word, "happens", s(p(39, 2, 25), p(45, 2, 31))),
+                t(TokenKind::Corner, "└", s(p(50, 3, 4), p(50, 3, 4))),
+                t(TokenKind::When, "whEN", s(p(60, 3, 8), p(63, 3, 11))),
+                t(TokenKind::Word, "stuff", s(p(65, 3, 13), p(69, 3, 17))),
+                t(TokenKind::Word, "is", s(p(71, 3, 19), p(72, 3, 20))),
+                t(TokenKind::Word, "true", s(p(74, 3, 22), p(77, 3, 25))),
+                t(TokenKind::Corner, "└", s(p(82, 4, 4), p(82, 4, 4))),
+                t(TokenKind::It, "It", s(p(92, 4, 8), p(93, 4, 9))),
+                t(TokenKind::Word, "should", s(p(95, 4, 11), p(100, 4, 16))),
+                t(TokenKind::Word, "revert.", s(p(102, 4, 18), p(108, 4, 24))),
+            ]
+        );
     }
 }
