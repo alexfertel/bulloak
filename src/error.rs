@@ -116,7 +116,7 @@ impl<'e, E: fmt::Display> fmt::Display for Formatter<'e, E> {
         writeln!(f, "bulloak error: {}\n", self.err)?;
         let notated = notate(self);
         writeln!(f, "{}", notated)?;
-        write!(
+        writeln!(
             f,
             "--- (line {}, column {}) ---",
             self.span.start.line, self.span.start.column
@@ -147,9 +147,10 @@ fn repeat_str(s: &str, n: usize) -> String {
 
 #[cfg(test)]
 mod test {
-    use super::{repeat_str, Formatter};
-    use crate::parser;
+    use super::repeat_str;
+    use crate::error::Formatter;
     use crate::span::{Position, Span};
+    use crate::{error, parser, semantics};
     use pretty_assertions::assert_eq;
 
     #[test]
@@ -171,11 +172,51 @@ mod test {
         expected.push_str("^^^^^\n\n");
         expected.push_str(
             format!(
-                "--- (line {}, column {}) ---",
+                "--- (line {}, column {}) ---\n",
                 formatter.span.start.line, formatter.span.start.column
             )
             .as_str(),
         );
-        assert_eq!(notated, expected);
+        assert_eq!(expected, notated);
+    }
+
+    #[test]
+    fn test_multiple_errors() {
+        let text = r"test.sol
+├── when 1
+└── when 2"
+            .to_string();
+
+        let errors = error::Error::from(vec![
+            semantics::Error::new(
+                semantics::ErrorKind::ConditionEmpty,
+                text.clone(),
+                Span::new(Position::new(9, 2, 1), Position::new(18, 2, 10)),
+            ),
+            semantics::Error::new(
+                semantics::ErrorKind::ConditionEmpty,
+                text.clone(),
+                Span::new(Position::new(20, 3, 1), Position::new(29, 3, 10)),
+            ),
+        ]);
+        let actual = format!("{errors}");
+
+        let expected = r"•••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••
+bulloak error: found a condition with no children
+
+├── when 1
+^^^^^^^^^^
+
+--- (line 2, column 1) ---
+•••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••
+bulloak error: found a condition with no children
+
+└── when 2
+^^^^^^^^^^
+
+--- (line 3, column 1) ---
+";
+
+        assert_eq!(expected, actual);
     }
 }
