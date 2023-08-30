@@ -36,6 +36,11 @@ impl Error {
     pub fn span(&self) -> &Span {
         &self.span
     }
+
+    #[cfg(test)]
+    pub fn new(kind: ErrorKind, text: String, span: Span) -> Self {
+        Error { kind, text, span }
+    }
 }
 
 /// The type of an error that occurred while building an AST.
@@ -98,12 +103,12 @@ impl<'t> SemanticAnalyzer<'t> {
     }
 
     /// Create a new error given an AST node and error type.
-    fn error(&self, span: Span, kind: ErrorKind) -> Error {
-        Error {
+    fn error(&mut self, span: Span, kind: ErrorKind) {
+        self.errors.push(Error {
             kind,
             text: self.text.to_string(),
             span,
-        }
+        });
     }
 
     /// Traverse the given AST and store any errors that occur.
@@ -141,13 +146,12 @@ impl Visitor for SemanticAnalyzer<'_> {
                 span.start.line,
                 span.start.column + root.file_name.len() - 1,
             );
-            self.errors
-                .push(self.error(span.with_end(end), ErrorKind::FileExtensionInvalid));
+
+            self.error(span.with_end(end), ErrorKind::FileExtensionInvalid);
         }
 
         if root.asts.is_empty() {
-            self.errors
-                .push(self.error(Span::splat(root.span.end), ErrorKind::TreeEmpty));
+            self.error(Span::splat(root.span.end), ErrorKind::TreeEmpty);
         }
 
         root.asts.iter().for_each(|ast| match ast {
@@ -155,12 +159,10 @@ impl Visitor for SemanticAnalyzer<'_> {
                 let _ = self.visit_condition(condition);
             }
             Ast::Action(action) => {
-                self.errors
-                    .push(self.error(action.span, ErrorKind::ActionWithoutConditions));
+                self.error(action.span, ErrorKind::ActionWithoutConditions);
             }
             Ast::Root(root) => {
-                self.errors
-                    .push(self.error(root.span, ErrorKind::NodeUnexpected));
+                self.error(root.span, ErrorKind::NodeUnexpected);
             }
         });
 
@@ -172,8 +174,7 @@ impl Visitor for SemanticAnalyzer<'_> {
         condition: &ast::Condition,
     ) -> result::Result<Self::Output, Self::Error> {
         if condition.asts.is_empty() {
-            self.errors
-                .push(self.error(condition.span, ErrorKind::ConditionEmpty));
+            self.error(condition.span, ErrorKind::ConditionEmpty);
         }
 
         for ast in &condition.asts {
@@ -185,8 +186,7 @@ impl Visitor for SemanticAnalyzer<'_> {
                     let _ = self.visit_action(action);
                 }
                 Ast::Root(root) => {
-                    self.errors
-                        .push(self.error(root.span, ErrorKind::NodeUnexpected));
+                    self.error(root.span, ErrorKind::NodeUnexpected);
                 }
             }
         }
