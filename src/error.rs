@@ -147,7 +147,6 @@ fn repeat_str(s: &str, n: usize) -> String {
 
 #[cfg(test)]
 mod test {
-
     use super::repeat_str;
     use crate::error::Formatter;
     use crate::span::{Position, Span};
