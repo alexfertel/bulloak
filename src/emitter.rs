@@ -158,9 +158,13 @@ impl<'a> EmitterI<'a> {
             // It's fine to unwrap here because we check that no action appears outside of a condition.
             let last_modifier = self.modifier_stack.last().unwrap();
             let function_name = if is_revert {
-                let mut words = condition.title.split(' ');
+                let mut words = condition.title.split_whitespace();
                 // It is fine to unwrap because conditions have at least one word in them.
                 let keyword = capitalize_first_letter(words.next().unwrap());
+
+                // Map an iterator over the words of a condition to the test name.
+                //
+                // Example: [when, something, happens] -> WhenSomethingHappens
                 let test_name = words.fold(
                     String::with_capacity(condition.title.len() - keyword.len()),
                     |mut acc, w| {
@@ -211,9 +215,40 @@ impl<'a> Visitor for EmitterI<'a> {
         let contract_header = self.emit_contract_header(root);
         emitted.push_str(&contract_header);
 
-        for condition in &root.asts {
-            if let Ast::Condition(condition) = condition {
+        for ast in &root.asts {
+            if let Ast::Condition(condition) = ast {
                 emitted.push_str(&self.visit_condition(condition)?);
+            } else if let Ast::Action(action) = ast {
+                // We found a top-level action. These don't have parent conditions,
+                // so we emit a test without modifiers.
+                let fn_indentation = self.emitter.indent();
+
+                let words = action.title.split_whitespace();
+                // Remove "it should" if it occurs. We need this step because users will usually
+                // write "it should", but for the test name we want to keep what's after the
+                // "should".
+                let words = words.skip_while(|&s| s == "should" || s == "it");
+
+                // Map an iterator over the words of an action to the test name.
+                //
+                // Example: [do, stuff] -> DoStuff
+                let test_name =
+                    words.fold(String::with_capacity(action.title.len()), |mut acc, w| {
+                        acc.reserve(w.len() + 1);
+                        acc.push_str(&capitalize_first_letter(w));
+                        acc
+                    });
+
+                // We need to sanitize here because and not in a previous compiler
+                // phase because we want to emit the action as is in a comment.
+                let test_name = sanitize(&test_name);
+                let test_name = format!("test_{}", test_name);
+                let fn_header = format!("{}function {}() external {{\n", fn_indentation, test_name);
+
+                emitted.push_str(&fn_header);
+                emitted.push_str(&self.visit_action(action)?);
+                emitted.push_str(format!("{}}}\n", fn_indentation).as_str());
+                emitted.push('\n');
             }
         }
 
@@ -373,6 +408,92 @@ contract FileTest {
     external
     whenSomethingBadHappens
   {
+  }
+}"
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_actions_without_conditions() -> Result<()> {
+        let file_contents =
+            String::from("file.sol\n└── it should do st-ff\n   └── it never reverts");
+
+        assert_eq!(
+            &scaffold_with_flags(&file_contents, true, 2, "0.8.0")?,
+            r"pragma solidity 0.8.0;
+
+contract FileTest {
+  function test_DoSt_ff() external {
+    // it should do st-ff
+  }
+
+  function test_NeverReverts() external {
+    // it never reverts
+  }
+}"
+        );
+
+        let file_contents = String::from(
+            "file.sol
+└── it should do stuff
+└── when something happens
+    └── it should revert",
+        );
+
+        assert_eq!(
+            &scaffold_with_flags(&file_contents, true, 2, "0.8.0")?,
+            r"pragma solidity 0.8.0;
+
+contract FileTest {
+  function test_DoStuff() external {
+    // it should do stuff
+  }
+
+  modifier whenSomethingHappens() {
+    _;
+  }
+
+  function test_RevertWhen_SomethingHappens()
+    external
+    whenSomethingHappens
+  {
+    // it should revert
+  }
+}"
+        );
+
+        let file_contents = String::from(
+            "file.sol
+└── it should do stuff
+└── when something happens
+    └── it should revert
+└── it does everything",
+        );
+
+        assert_eq!(
+            &scaffold_with_flags(&file_contents, true, 2, "0.8.0")?,
+            r"pragma solidity 0.8.0;
+
+contract FileTest {
+  function test_DoStuff() external {
+    // it should do stuff
+  }
+
+  modifier whenSomethingHappens() {
+    _;
+  }
+
+  function test_RevertWhen_SomethingHappens()
+    external
+    whenSomethingHappens
+  {
+    // it should revert
+  }
+
+  function test_DoesEverything() external {
+    // it does everything
   }
 }"
         );

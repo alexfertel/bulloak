@@ -397,7 +397,7 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
                 return Err(self.error(self.span(), ErrorKind::FileNameCharInvalid(self.char())));
             } else if self.peek().is_none() || self.peek().is_some_and(|c| c.is_whitespace()) {
                 lexeme.push(self.char());
-                let kind = match lexeme.to_ascii_lowercase().as_str() {
+                let kind = match lexeme.to_lowercase().as_str() {
                     "when" => TokenKind::When,
                     "it" => TokenKind::It,
                     "given" => TokenKind::Given,
