@@ -224,10 +224,7 @@ impl<'a> Visitor for EmitterI<'a> {
                 let fn_indentation = self.emitter.indent();
 
                 let words = action.title.split_whitespace();
-                // Remove "it should" if it occurs. We need this step because users will usually
-                // write "it should", but for the test name we want to keep what's after the
-                // "should".
-                let words = words.skip_while(|&s| s == "should" || s == "it");
+                let words = words.skip(1); // Removes "it" from the test name.
 
                 // Map an iterator over the words of an action to the test name.
                 //
@@ -418,19 +415,19 @@ contract FileTest {
     #[test]
     fn test_actions_without_conditions() -> Result<()> {
         let file_contents =
-            String::from("file.sol\n└── it should do st-ff\n   └── it never reverts");
+            String::from("file.sol\n└── it should do st-ff\n   └── It never reverts.");
 
         assert_eq!(
             &scaffold_with_flags(&file_contents, true, 2, "0.8.0")?,
             r"pragma solidity 0.8.0;
 
 contract FileTest {
-  function test_DoSt_ff() external {
+  function test_ShouldDoSt_ff() external {
     // it should do st-ff
   }
 
   function test_NeverReverts() external {
-    // it never reverts
+    // It never reverts.
   }
 }"
         );
@@ -447,7 +444,7 @@ contract FileTest {
             r"pragma solidity 0.8.0;
 
 contract FileTest {
-  function test_DoStuff() external {
+  function test_ShouldDoStuff() external {
     // it should do stuff
   }
 
@@ -477,7 +474,7 @@ contract FileTest {
             r"pragma solidity 0.8.0;
 
 contract FileTest {
-  function test_DoStuff() external {
+  function test_ShouldDoStuff() external {
     // it should do stuff
   }
 
