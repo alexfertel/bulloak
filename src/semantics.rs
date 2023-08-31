@@ -53,8 +53,6 @@ pub enum ErrorKind {
     NodeUnexpected,
     /// Found no rules to emit.
     TreeEmpty,
-    /// Found an action with no conditions.
-    ActionWithoutConditions,
     /// Found a condition with no children.
     ConditionEmpty,
     /// This enum may grow additional variants, so this makes sure clients
@@ -77,7 +75,6 @@ impl fmt::Display for ErrorKind {
             FileExtensionInvalid => write!(f, "output filename should have a .sol extension"),
             NodeUnexpected => write!(f, "unexpected child node"),
             TreeEmpty => write!(f, "no rules where defined"),
-            ActionWithoutConditions => write!(f, "found an action without conditions"),
             ConditionEmpty => write!(f, "found a condition with no children"),
             _ => unreachable!(),
         }
@@ -154,17 +151,19 @@ impl Visitor for SemanticAnalyzer<'_> {
             self.error(Span::splat(root.span.end), ErrorKind::TreeEmpty);
         }
 
-        root.asts.iter().for_each(|ast| match ast {
-            Ast::Condition(condition) => {
-                let _ = self.visit_condition(condition);
+        for ast in &root.asts {
+            match ast {
+                Ast::Condition(condition) => {
+                    self.visit_condition(condition)?;
+                }
+                Ast::Action(action) => {
+                    self.visit_action(action)?;
+                }
+                Ast::Root(root) => {
+                    self.error(root.span, ErrorKind::NodeUnexpected);
+                }
             }
-            Ast::Action(action) => {
-                self.error(action.span, ErrorKind::ActionWithoutConditions);
-            }
-            Ast::Root(root) => {
-                self.error(root.span, ErrorKind::NodeUnexpected);
-            }
-        });
+        }
 
         Ok(())
     }
@@ -180,10 +179,10 @@ impl Visitor for SemanticAnalyzer<'_> {
         for ast in &condition.asts {
             match ast {
                 Ast::Condition(condition) => {
-                    let _ = self.visit_condition(condition);
+                    self.visit_condition(condition)?;
                 }
                 Ast::Action(action) => {
-                    let _ = self.visit_action(action);
+                    self.visit_action(action)?;
                 }
                 Ast::Root(root) => {
                     self.error(root.span, ErrorKind::NodeUnexpected);
@@ -306,14 +305,7 @@ mod tests {
     }
 
     #[test]
-    fn test_action_without_conditions() {
-        assert_eq!(
-            analyze("file.sol\n└── it a something").unwrap_err(),
-            vec![semantics::Error {
-                kind: ActionWithoutConditions,
-                text: "file.sol\n└── it a something".to_string(),
-                span: Span::new(Position::new(9, 2, 1), Position::new(32, 2, 18)),
-            }]
-        );
+    fn test_allow_action_without_conditions() {
+        assert!(analyze("file.sol\n└── it a something").is_ok());
     }
 }
