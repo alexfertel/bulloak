@@ -55,6 +55,7 @@ commit_parsers = [
     { message = "^style", skip = true},
     { message = "^test", skip = true},
     { message = "^chore\\(release\\):", skip = true},
+    { message = "^chore\\(v[0-9]*\\.[0-9]*\\.[0-9]*\\):", skip = true},
     { message = "^chore", group = "Miscellaneous Tasks"},
     { body = ".*security", group = "Security"},
 ]

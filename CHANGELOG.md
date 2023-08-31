@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.3] - 2023-08-31
+
+### Bug Fixes
+
+- *(error)* Properly format multiple errors at once (#25)
+
+
+### Features
+
+- Add support for actions without parent conditions (#26)
+
+
 ## [0.4.2] - 2023-08-29
 
 ### Features
