@@ -2,7 +2,7 @@ use indexmap::IndexMap;
 
 use crate::{
     ast::{self, Ast},
-    utils::capitalize_first_letter,
+    utils::{lower_first_letter, to_pascal_case},
     visitor::Visitor,
 };
 
@@ -59,8 +59,10 @@ impl Visitor for ModifierDiscoverer {
     }
 
     fn visit_condition(&mut self, condition: &ast::Condition) -> Result<Self::Output, Self::Error> {
-        self.modifiers
-            .insert(condition.title.clone(), to_modifier(&condition.title));
+        self.modifiers.insert(
+            condition.title.clone(),
+            lower_first_letter(&to_pascal_case(&condition.title)),
+        );
 
         for condition in &condition.asts {
             if let Ast::Condition(condition) = condition {
@@ -77,26 +79,6 @@ impl Visitor for ModifierDiscoverer {
     }
 }
 
-/// Converts a condition title to a modifier.
-///
-/// The conversion is done by capitalizing the first letter of each word
-/// in the title and removing the spaces. For example, the title
-/// `when only owner` is converted to the `whenOnlyOwner` modifier.
-/// Note that the `w` in `when` is not capitalized following solidity conventions.
-fn to_modifier(title: &str) -> String {
-    title
-        .split_whitespace()
-        .enumerate()
-        .map(|(idx, s)| {
-            if idx > 0 {
-                capitalize_first_letter(s)
-            } else {
-                s.to_string()
-            }
-        })
-        .collect::<String>()
-}
-
 #[cfg(test)]
 mod tests {
     use indexmap::IndexMap;
@@ -104,7 +86,7 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     use crate::error::Result;
-    use crate::modifiers::{to_modifier, ModifierDiscoverer};
+    use crate::modifiers::ModifierDiscoverer;
     use crate::parser::Parser;
     use crate::tokenizer::Tokenizer;
 
@@ -115,13 +97,6 @@ mod tests {
         discoverer.discover(&ast);
 
         Ok(discoverer.modifiers)
-    }
-
-    #[test]
-    fn test_to_modifier() {
-        assert_eq!(to_modifier("when only owner"), "whenOnlyOwner");
-        assert_eq!(to_modifier("when"), "when");
-        assert_eq!(to_modifier(""), "");
     }
 
     #[test]
