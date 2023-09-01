@@ -280,19 +280,19 @@ impl<'a> Visitor for EmitterI<'a> {
             }
         }
 
-        // Then we recursively emit all child conditions.
-        for condition in &condition.asts {
-            if let Ast::Condition(condition) = condition {
-                emitted.push_str(&self.visit_condition(condition)?);
-            }
-        }
-
         // We count instead of collecting into a Vec to avoid allocating a Vec for each condition.
         let action_count = condition.asts.iter().filter(|ast| ast.is_action()).count();
         // We check that there is more than one action to avoid printing extra closing
         // braces when conditions are nested.
         if action_count > 0 {
             emitted.push_str(format!("{}}}\n\n", self.emitter.indent()).as_str());
+        }
+
+        // Then we recursively emit all child conditions.
+        for condition in &condition.asts {
+            if let Ast::Condition(condition) = condition {
+                emitted.push_str(&self.visit_condition(condition)?);
+            }
         }
 
         self.modifier_stack.pop();
@@ -415,7 +415,7 @@ contract FileTest {
     #[test]
     fn test_actions_without_conditions() -> Result<()> {
         let file_contents =
-            String::from("file.sol\n└── it should do st-ff\n   └── It never reverts.");
+            String::from("file.sol\n├── it should do st-ff\n   └── It never reverts.");
 
         assert_eq!(
             &scaffold_with_flags(&file_contents, true, 2, "0.8.0")?,
@@ -434,7 +434,7 @@ contract FileTest {
 
         let file_contents = String::from(
             "file.sol
-└── it should do stuff
+├── it should do stuff
 └── when something happens
     └── it should revert",
         );
@@ -463,9 +463,9 @@ contract FileTest {
 
         let file_contents = String::from(
             "file.sol
-└── it should do stuff
-└── when something happens
-    └── it should revert
+├── it should do stuff
+├── when something happens
+│   └── it should revert
 └── it does everything",
         );
 
@@ -583,6 +583,66 @@ contract Two_childrenTest {
     whenNotStuffCalled
   {
     // it should revert
+  }
+}"
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_action_with_sibling_condition() -> Result<()> {
+        let file_contents = String::from(
+            r"
+foo.sol
+└── when stuff called
+    ├── It should do stuff.
+    ├── when a called
+    │   └── it should revert
+    ├── It should do more.
+    └── when b called
+        └── it should not revert",
+        );
+
+        assert_eq!(
+            &scaffold(&file_contents)?,
+            r"pragma solidity 0.8.0;
+
+contract FooTest {
+  modifier whenStuffCalled() {
+    _;
+  }
+
+  function test_WhenStuffCalled()
+    external
+    whenStuffCalled
+  {
+    // It should do stuff.
+    // It should do more.
+  }
+
+  modifier whenACalled() {
+    _;
+  }
+
+  function test_RevertWhen_ACalled()
+    external
+    whenStuffCalled
+    whenACalled
+  {
+    // it should revert
+  }
+
+  modifier whenBCalled() {
+    _;
+  }
+
+  function test_WhenBCalled()
+    external
+    whenStuffCalled
+    whenBCalled
+  {
+    // it should not revert
   }
 }"
         );
