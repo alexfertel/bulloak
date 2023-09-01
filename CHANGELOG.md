@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.5] - 2023-09-01
+
+### Bug Fixes
+
+- *(emitter)* Emit closing brace after visiting actions
+
+
 ## [0.4.4] - 2023-08-31
 
 ### Bug Fixes
