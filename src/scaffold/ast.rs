@@ -1,4 +1,4 @@
-use crate::span::Span;
+use crate::scaffold::span::Span;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum Ast {

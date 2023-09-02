@@ -1,6 +1,6 @@
 use std::{fmt, result};
 
-use crate::{
+use super::{
     ast::{self, Ast},
     span::{Position, Span},
     visitor::Visitor,
@@ -64,7 +64,7 @@ pub enum ErrorKind {
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        crate::error::Formatter::from(self).fmt(f)
+        crate::scaffold::error::Formatter::from(self).fmt(f)
     }
 }
 
@@ -207,11 +207,11 @@ fn is_valid_sol_filename(filename: &str) -> bool {
 mod tests {
     use pretty_assertions::assert_eq;
 
-    use crate::ast;
-    use crate::parser::Parser;
-    use crate::semantics::{self, ErrorKind::*};
-    use crate::span::{Position, Span};
-    use crate::tokenizer::Tokenizer;
+    use crate::scaffold::ast;
+    use crate::scaffold::parser::Parser;
+    use crate::scaffold::semantics::{self, ErrorKind::*};
+    use crate::scaffold::span::{Position, Span};
+    use crate::scaffold::tokenizer::Tokenizer;
 
     fn analyze(text: &str) -> semantics::Result<()> {
         let tokens = Tokenizer::new().tokenize(text).unwrap();

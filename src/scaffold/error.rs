@@ -2,10 +2,10 @@ use std::cmp;
 use std::fmt;
 use std::result;
 
-use crate::parser;
-use crate::semantics;
-use crate::span;
-use crate::tokenizer;
+use super::parser;
+use super::semantics;
+use super::span;
+use super::tokenizer;
 
 /// A type alias for dealing with errors returned by this crate.
 pub type Result<T> = result::Result<T, Error>;
@@ -148,9 +148,9 @@ fn repeat_str(s: &str, n: usize) -> String {
 #[cfg(test)]
 mod test {
     use super::repeat_str;
-    use crate::error::Formatter;
-    use crate::span::{Position, Span};
-    use crate::{error, parser, semantics};
+    use crate::scaffold::error::Formatter;
+    use crate::scaffold::span::{Position, Span};
+    use crate::scaffold::{error, parser, semantics};
     use pretty_assertions::assert_eq;
 
     #[test]

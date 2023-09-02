@@ -1,12 +1,10 @@
+use std::fmt;
 use std::{borrow::Borrow, cell::Cell, result};
 
-use crate::{
-    ast::{Action, Ast, Condition, Root},
-    span::Span,
-    tokenizer::{Token, TokenKind},
-    utils::sanitize,
-};
-use std::fmt;
+use super::ast::{Action, Ast, Condition, Root};
+use super::span::Span;
+use super::tokenizer::{Token, TokenKind};
+use super::utils::sanitize;
 
 type Result<T> = result::Result<T, Error>;
 
@@ -72,7 +70,7 @@ pub enum ErrorKind {
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        crate::error::Formatter::from(self).fmt(f)
+        super::error::Formatter::from(self).fmt(f)
     }
 }
 
@@ -319,10 +317,10 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
 mod tests {
     use pretty_assertions::assert_eq;
 
-    use crate::ast::{Action, Ast, Condition, Root};
-    use crate::parser::{self, ErrorKind, Parser};
-    use crate::span::{Position, Span};
-    use crate::tokenizer::Tokenizer;
+    use crate::scaffold::ast::{Action, Ast, Condition, Root};
+    use crate::scaffold::parser::{self, ErrorKind, Parser};
+    use crate::scaffold::span::{Position, Span};
+    use crate::scaffold::tokenizer::Tokenizer;
 
     #[derive(Clone, Debug)]
     struct TestError {

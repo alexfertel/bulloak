@@ -1,6 +1,6 @@
 use std::{borrow::Borrow, cell::Cell, fmt, result};
 
-use crate::span::{Position, Span};
+use crate::scaffold::span::{Position, Span};
 
 type Result<T> = result::Result<T, Error>;
 
@@ -52,7 +52,7 @@ pub enum ErrorKind {
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        crate::error::Formatter::from(self).fmt(f)
+        super::error::Formatter::from(self).fmt(f)
     }
 }
 
@@ -433,8 +433,8 @@ fn is_valid_filename_char(c: char) -> bool {
 mod tests {
     use pretty_assertions::assert_eq;
 
-    use crate::error::Result;
-    use crate::{
+    use crate::scaffold::error::Result;
+    use crate::scaffold::{
         span::{Position, Span},
         tokenizer::{
             self, ErrorKind::FileNameCharInvalid, ErrorKind::IdentifierCharInvalid, Token,
