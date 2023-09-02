@@ -9,19 +9,6 @@ pub mod tokenizer;
 pub mod utils;
 pub mod visitor;
 
-/// Utility struct that holds any useful information resulting
-/// from the compilation of a `.tree` file.
-///
-/// This will be populated by the `scaffold` function.
-pub struct Scaffolded {
-    /// The emitted Solidity code.
-    pub emitted: String,
-    /// The name of the output file.
-    ///
-    /// This is _exactly_ the filename at the top of the `.tree` file.
-    pub output_file: String,
-}
-
 /// The overarching struct that generates Solidity
 /// code from a `.tree` file.
 pub struct Scaffolder<'s> {
@@ -48,7 +35,7 @@ impl<'s> Scaffolder<'s> {
     /// See the [crate-level documentation] for details.
     ///
     ///   [crate-level documentation]: ./index.html
-    pub fn scaffold(&self, text: &str) -> error::Result<Scaffolded> {
+    pub fn scaffold(&self, text: &str) -> error::Result<String> {
         let tokens = tokenizer::Tokenizer::new().tokenize(text)?;
         let ast = parser::Parser::new().parse(text, &tokens)?;
         let mut analyzer = semantics::SemanticAnalyzer::new(text);
@@ -58,16 +45,6 @@ impl<'s> Scaffolder<'s> {
         let emitted = emitter::Emitter::new(self.with_comments, self.indent, self.solidity_version)
             .emit(&ast, modifiers);
 
-        let output_file = match ast {
-            ast::Ast::Root(root) => root.file_name,
-            // It's impossible to get here, as the parser will always return
-            // an `Ast::Root` variant.
-            _ => unreachable!(),
-        };
-
-        Ok(Scaffolded {
-            emitted,
-            output_file,
-        })
+        Ok(emitted)
     }
 }

@@ -51,12 +51,12 @@ pub fn run() -> Result<()> {
     for file in config.files.iter() {
         let text = fs::read_to_string(file)?;
         match scaffolder.scaffold(&text) {
-            Ok(scaffolded) => {
+            Ok(emitted) => {
                 if config.write_files {
                     let mut output_path = file.clone();
 
                     // Get the path to the output file.
-                    output_path.set_file_name(scaffolded.output_file);
+                    output_path.set_extension("t.sol");
 
                     // Don't overwrite files unless `--force-write` was passed.
                     if output_path.exists() && !config.force_write {
@@ -69,11 +69,11 @@ pub fn run() -> Result<()> {
                         continue;
                     }
 
-                    if let Err(e) = fs::write(output_path, scaffolded.emitted) {
+                    if let Err(e) = fs::write(output_path, emitted) {
                         eprintln!("{}: {}", "ERROR".red(), e);
                     };
                 } else {
-                    println!("{}", scaffolded.emitted);
+                    println!("{}", emitted);
                 }
             }
             Err(err) => {

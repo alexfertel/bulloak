@@ -35,7 +35,7 @@ let text = String::from(
 let scaffolder = Scaffolder::new(false, 4, "0.8.0");
 
 assert_eq!(
-    scaffolder.scaffold(&text).unwrap().emitted,
+    scaffolder.scaffold(&text).unwrap(),
     r"pragma solidity 0.8.0;
 
 contract FooTest {
