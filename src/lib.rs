@@ -28,7 +28,7 @@ Then, you would use it like so:
 use bulloak::Scaffolder;
 
 let text = String::from(
-"foo.sol
+"FooTest
  └── when stuff called
     └── it should revert");
 
@@ -78,7 +78,7 @@ Note that this is a tree-like structure, hence the name of the technique.
 Here is an example of a `.tree` file:
 
 ```text
-foo.sol
+FooTest
 └── when stuff called
    └── it should revert
 ```
@@ -115,7 +115,7 @@ will generate comments for each action in the tree. For example, the following
 `.tree` file:
 
 ```text
-foo.sol
+FooTest
 └── when stuff called
    ├── it should setup something
    └── it should do something else

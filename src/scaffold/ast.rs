@@ -24,7 +24,7 @@ impl Ast {
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Root {
-    pub file_name: String,
+    pub contract_name: String,
     pub span: Span,
     pub asts: Vec<Ast>,
 }

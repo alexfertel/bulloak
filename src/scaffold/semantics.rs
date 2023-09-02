@@ -2,7 +2,7 @@ use std::{fmt, result};
 
 use super::{
     ast::{self, Ast},
-    span::{Position, Span},
+    span::Span,
     visitor::Visitor,
 };
 
@@ -46,8 +46,6 @@ impl Error {
 /// The type of an error that occurred while building an AST.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ErrorKind {
-    /// The output filename should have a .sol extension.
-    FileExtensionInvalid,
     /// Found an unexpected node. This is most probably a bug in the
     /// parser implementation.
     NodeUnexpected,
@@ -72,7 +70,6 @@ impl fmt::Display for ErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use self::ErrorKind::*;
         match *self {
-            FileExtensionInvalid => write!(f, "output filename should have a .sol extension"),
             NodeUnexpected => write!(f, "unexpected child node"),
             TreeEmpty => write!(f, "no rules where defined"),
             ConditionEmpty => write!(f, "found a condition with no children"),
@@ -136,17 +133,6 @@ impl Visitor for SemanticAnalyzer<'_> {
     type Error = ();
 
     fn visit_root(&mut self, root: &ast::Root) -> result::Result<Self::Output, Self::Error> {
-        if !is_valid_sol_filename(&root.file_name) {
-            let span = root.span;
-            let end = Position::new(
-                span.start.offset + root.file_name.len() - 1,
-                span.start.line,
-                span.start.column + root.file_name.len() - 1,
-            );
-
-            self.error(span.with_end(end), ErrorKind::FileExtensionInvalid);
-        }
-
         if root.asts.is_empty() {
             self.error(Span::splat(root.span.end), ErrorKind::TreeEmpty);
         }
@@ -199,10 +185,6 @@ impl Visitor for SemanticAnalyzer<'_> {
     }
 }
 
-fn is_valid_sol_filename(filename: &str) -> bool {
-    filename.ends_with(".sol")
-}
-
 #[cfg(test)]
 mod tests {
     use pretty_assertions::assert_eq;
@@ -223,70 +205,24 @@ mod tests {
     }
 
     #[test]
-    fn test_invalid_file_extension() {
-        assert_eq!(
-            analyze("file.txt\n└── when something").unwrap_err(),
-            vec![
-                semantics::Error {
-                    kind: FileExtensionInvalid,
-                    text: "file.txt\n└── when something".to_string(),
-                    span: Span::new(Position::new(0, 1, 1), Position::new(7, 1, 8)),
-                },
-                semantics::Error {
-                    kind: ConditionEmpty,
-                    text: "file.txt\n└── when something".to_string(),
-                    span: Span::new(Position::new(9, 2, 1), Position::new(32, 2, 18)),
-                },
-            ]
-        );
-    }
-
-    #[test]
-    fn test_invalid_extension_empty_tree() {
-        assert_eq!(
-            analyze("file.sol").unwrap_err(),
-            vec![semantics::Error {
-                kind: TreeEmpty,
-                text: "file.sol".to_string(),
-                span: Span::new(Position::new(7, 1, 8), Position::new(7, 1, 8)),
-            }]
-        );
-        assert_eq!(
-            analyze("file.txt").unwrap_err(),
-            vec![
-                semantics::Error {
-                    kind: FileExtensionInvalid,
-                    text: "file.txt".to_string(),
-                    span: Span::new(Position::new(0, 1, 1), Position::new(7, 1, 8)),
-                },
-                semantics::Error {
-                    kind: TreeEmpty,
-                    text: "file.txt".to_string(),
-                    span: Span::new(Position::new(7, 1, 8), Position::new(7, 1, 8)),
-                }
-            ]
-        );
-    }
-
-    #[test]
     fn test_unexpected_node() {
         let ast = ast::Ast::Root(ast::Root {
-            file_name: "file.sol".to_string(),
+            contract_name: "Foo_Test".to_string(),
             asts: vec![ast::Ast::Root(ast::Root {
-                file_name: "file.sol".to_string(),
+                contract_name: "Foo_Test".to_string(),
                 asts: vec![],
                 span: Span::new(Position::new(0, 1, 1), Position::new(7, 1, 8)),
             })],
             span: Span::new(Position::new(0, 1, 1), Position::new(7, 1, 8)),
         });
 
-        let mut analyzer = semantics::SemanticAnalyzer::new("file.sol");
+        let mut analyzer = semantics::SemanticAnalyzer::new("Foo_Test");
         let result = analyzer.analyze(&ast);
         assert_eq!(
             result.unwrap_err(),
             vec![semantics::Error {
                 kind: NodeUnexpected,
-                text: "file.sol".to_string(),
+                text: "Foo_Test".to_string(),
                 span: Span::new(Position::new(0, 1, 1), Position::new(7, 1, 8)),
             }]
         );
@@ -295,10 +231,10 @@ mod tests {
     #[test]
     fn test_condition_empty() {
         assert_eq!(
-            analyze("file.sol\n└── when something").unwrap_err(),
+            analyze("Foo_Test\n└── when something").unwrap_err(),
             vec![semantics::Error {
                 kind: ConditionEmpty,
-                text: "file.sol\n└── when something".to_string(),
+                text: "Foo_Test\n└── when something".to_string(),
                 span: Span::new(Position::new(9, 2, 1), Position::new(32, 2, 18)),
             }]
         );
@@ -306,6 +242,6 @@ mod tests {
 
     #[test]
     fn test_allow_action_without_conditions() {
-        assert!(analyze("file.sol\n└── it a something").is_ok());
+        assert!(analyze("Foo_Test\n└── it a something").is_ok());
     }
 }
