@@ -1,4 +1,4 @@
-use crate::ast;
+use super::ast;
 
 pub trait Visitor {
     type Output;

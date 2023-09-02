@@ -1,7 +1,7 @@
 use indexmap::IndexMap;
 use std::result;
 
-use crate::{
+use super::{
     ast::{self, Ast},
     utils::{capitalize_first_letter, sanitize},
     visitor::Visitor,
@@ -101,9 +101,8 @@ impl<'a> EmitterI<'a> {
         ));
 
         // It's fine to unwrap here because we check that the filename always has an extension.
-        let contract_name = root.file_name.split_once('.').unwrap().0;
-        let contract_name = sanitize(&capitalize_first_letter(contract_name));
-        emitted.push_str(format!("contract {}Test {{\n", contract_name).as_str());
+        let contract_name = sanitize(&root.contract_name);
+        emitted.push_str(format!("contract {} {{\n", contract_name).as_str());
 
         emitted
     }
@@ -316,11 +315,11 @@ impl<'a> Visitor for EmitterI<'a> {
 mod tests {
     use pretty_assertions::assert_eq;
 
-    use crate::emitter;
-    use crate::error::Result;
-    use crate::modifiers;
-    use crate::parser::Parser;
-    use crate::tokenizer::Tokenizer;
+    use crate::scaffold::emitter;
+    use crate::scaffold::error::Result;
+    use crate::scaffold::modifiers;
+    use crate::scaffold::parser::Parser;
+    use crate::scaffold::tokenizer::Tokenizer;
 
     fn scaffold_with_flags(
         text: &str,
@@ -342,7 +341,7 @@ mod tests {
     #[test]
     fn test_one_child() -> Result<()> {
         let file_contents =
-            String::from("file.sol\n└── when something bad happens\n   └── it should not revert");
+            String::from("FileTest\n└── when something bad happens\n   └── it should not revert");
 
         assert_eq!(
             &scaffold(&file_contents)?,
@@ -364,7 +363,7 @@ contract FileTest {
 
         // Test that "it should revert" actions change the test name.
         let file_contents =
-            String::from("file.sol\n└── when something bad happens\n   └── it should revert");
+            String::from("FileTest\n└── when something bad happens\n   └── it should revert");
 
         assert_eq!(
             &scaffold(&file_contents)?,
@@ -390,7 +389,7 @@ contract FileTest {
     #[test]
     fn test_without_actions_as_comments() -> Result<()> {
         let file_contents =
-            String::from("file.sol\n└── when something bad happens\n   └── it should not revert");
+            String::from("FileTest\n└── when something bad happens\n   └── it should not revert");
 
         assert_eq!(
             &scaffold_with_flags(&file_contents, false, 2, "0.8.0")?,
@@ -415,7 +414,7 @@ contract FileTest {
     #[test]
     fn test_actions_without_conditions() -> Result<()> {
         let file_contents =
-            String::from("file.sol\n├── it should do st-ff\n   └── It never reverts.");
+            String::from("FileTest\n├── it should do st-ff\n   └── It never reverts.");
 
         assert_eq!(
             &scaffold_with_flags(&file_contents, true, 2, "0.8.0")?,
@@ -433,7 +432,7 @@ contract FileTest {
         );
 
         let file_contents = String::from(
-            "file.sol
+            "FileTest
 ├── it should do stuff
 └── when something happens
     └── it should revert",
@@ -462,7 +461,7 @@ contract FileTest {
         );
 
         let file_contents = String::from(
-            "file.sol
+            "FileTest
 ├── it should do stuff
 ├── when something happens
 │   └── it should revert
@@ -501,7 +500,7 @@ contract FileTest {
     #[test]
     fn test_unsanitized_input() -> Result<()> {
         let file_contents =
-            String::from("fi-e.sol\n└── when something bad happens\n   └── it should not revert");
+            String::from("Fi-eTest\n└── when something bad happens\n   └── it should not revert");
 
         assert_eq!(
             &scaffold_with_flags(&file_contents, false, 2, "0.8.0")?,
@@ -526,7 +525,7 @@ contract Fi_eTest {
     #[test]
     fn test_indentation() -> Result<()> {
         let file_contents =
-            String::from("file.sol\n└── when something bad happens\n   └── it should not revert");
+            String::from("FileTest\n└── when something bad happens\n   └── it should not revert");
 
         assert_eq!(
             &scaffold_with_flags(&file_contents, false, 4, "0.8.0")?,
@@ -551,7 +550,7 @@ contract FileTest {
     #[test]
     fn test_two_children() -> Result<()> {
         let file_contents = String::from(
-            r"two_children.t.sol
+            r"TwoChildren_Test
 ├── when stuff called
 │  └── it should revert
 └── when not stuff called
@@ -562,7 +561,7 @@ contract FileTest {
             &scaffold(&file_contents)?,
             r"pragma solidity 0.8.0;
 
-contract Two_childrenTest {
+contract TwoChildren_Test {
   modifier whenStuffCalled() {
     _;
   }
@@ -594,7 +593,7 @@ contract Two_childrenTest {
     fn test_action_with_sibling_condition() -> Result<()> {
         let file_contents = String::from(
             r"
-foo.sol
+Foo_Test
 └── when stuff called
     ├── It should do stuff.
     ├── when a called
@@ -608,7 +607,7 @@ foo.sol
             &scaffold(&file_contents)?,
             r"pragma solidity 0.8.0;
 
-contract FooTest {
+contract Foo_Test {
   modifier whenStuffCalled() {
     _;
   }
@@ -653,7 +652,7 @@ contract FooTest {
     #[test]
     fn test_action_recollection() -> Result<()> {
         let file_contents = String::from(
-            r"actions.sol
+            r"ActionsTest
 └── when stuff called
    ├── it should revert
    ├── it should be cool
@@ -687,7 +686,7 @@ contract ActionsTest {
     #[test]
     fn test_deep_tree() -> Result<()> {
         let file_contents = String::from(
-            r#"deep.sol
+            r#"DeepTest
 ├── when stuff called
 │  └── it should revert
 └── when not stuff called

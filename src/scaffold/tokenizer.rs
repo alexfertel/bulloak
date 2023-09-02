@@ -1,6 +1,6 @@
 use std::{borrow::Borrow, cell::Cell, fmt, result};
 
-use crate::span::{Position, Span};
+use crate::scaffold::span::{Position, Span};
 
 type Result<T> = result::Result<T, Error>;
 
@@ -41,8 +41,6 @@ impl Error {
 pub enum ErrorKind {
     /// Found an invalid identifier character.
     IdentifierCharInvalid(char),
-    /// Found an invalid filename character.
-    FileNameCharInvalid(char),
     /// This enum may grow additional variants, so this makes sure clients
     /// don't count on exhaustive matching. (Otherwise, adding a new variant
     /// could break existing code.)
@@ -52,7 +50,7 @@ pub enum ErrorKind {
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        crate::error::Formatter::from(self).fmt(f)
+        super::error::Formatter::from(self).fmt(f)
     }
 }
 
@@ -60,7 +58,6 @@ impl fmt::Display for ErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use self::ErrorKind::*;
         match *self {
-            FileNameCharInvalid(c) => write!(f, "invalid filename: {:?}", c),
             IdentifierCharInvalid(c) => write!(f, "invalid identifier: {:?}", c),
             _ => unreachable!(),
         }
@@ -125,16 +122,9 @@ pub struct Tokenizer {
     /// a character that is not a valid identifier character.
     /// This is to prevent malformed names when emitting identifiers.
     ///
-    /// This is `false` by default.
+    /// This is `true` by default because the first token must be
+    /// a contract name, which has to be a valid solidity identifier.
     identifier_mode: Cell<bool>,
-    /// When `true`, the tokenizer is in `filename` mode.
-    ///
-    /// In `filename` mode, the tokenizer will error if it encounters a
-    /// a character that is not a valid filename character.
-    /// This is to prevent malformed names when creating the output file.
-    ///
-    /// This is `true` by default.
-    filename_mode: Cell<bool>,
 }
 
 impl Tokenizer {
@@ -142,9 +132,8 @@ impl Tokenizer {
     pub fn new() -> Self {
         Self {
             pos: Cell::new(Position::new(0, 1, 1)),
-            identifier_mode: Cell::new(false),
-            // Starts as `true` because the first token must always be a filename.
-            filename_mode: Cell::new(true),
+            // Starts as `true` because the first token must always be a contract name.
+            identifier_mode: Cell::new(true),
         }
     }
 
@@ -160,7 +149,6 @@ impl Tokenizer {
     fn reset(&self) {
         self.pos.set(Position::new(0, 1, 1));
         self.identifier_mode.set(false);
-        self.filename_mode.set(true);
     }
 }
 
@@ -266,21 +254,8 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
         self.tokenizer().identifier_mode.get()
     }
 
-    /// Exits filename mode.
-    fn exit_filename_mode(&self) {
-        self.tokenizer().filename_mode.set(false);
-    }
-
-    /// Returns true if the tokenizer is in filename mode.
-    fn is_filename_mode(&self) -> bool {
-        self.tokenizer().filename_mode.get()
-    }
-
     /// Returns the tokenizer to its default mode.
     fn exit_mode(&self) {
-        if self.is_filename_mode() {
-            self.exit_filename_mode();
-        }
         if self.is_identifier_mode() {
             self.exit_identifier_mode();
         }
@@ -328,9 +303,6 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
             match self.char() {
                 '─' | '│' if self.is_identifier_mode() => {
                     self.error(self.span(), ErrorKind::IdentifierCharInvalid(self.char()));
-                }
-                '─' | '│' if self.is_filename_mode() => {
-                    self.error(self.span(), ErrorKind::FileNameCharInvalid(self.char()));
                 }
                 ' ' | '─' | '│' => {}
                 '\n' | '\t' | '\r' => {
@@ -393,8 +365,6 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
         loop {
             if self.is_identifier_mode() && !is_valid_identifier_char(self.char()) {
                 return Err(self.error(self.span(), ErrorKind::IdentifierCharInvalid(self.char())));
-            } else if self.is_filename_mode() && !is_valid_filename_char(self.char()) {
-                return Err(self.error(self.span(), ErrorKind::FileNameCharInvalid(self.char())));
             } else if self.peek().is_none() || self.peek().is_some_and(|c| c.is_whitespace()) {
                 lexeme.push(self.char());
                 let kind = match lexeme.to_lowercase().as_str() {
@@ -424,22 +394,14 @@ fn is_valid_identifier_char(c: char) -> bool {
     c.is_alphanumeric() || c == '_' || c == '-' || c == '\'' || c == '"'
 }
 
-/// Checks whether a character might appear in a filename.
-fn is_valid_filename_char(c: char) -> bool {
-    c.is_alphanumeric() || c == '_' || c == '-' || c == '.'
-}
-
 #[cfg(test)]
 mod tests {
     use pretty_assertions::assert_eq;
 
-    use crate::error::Result;
-    use crate::{
+    use crate::scaffold::error::Result;
+    use crate::scaffold::{
         span::{Position, Span},
-        tokenizer::{
-            self, ErrorKind::FileNameCharInvalid, ErrorKind::IdentifierCharInvalid, Token,
-            TokenKind, Tokenizer,
-        },
+        tokenizer::{self, ErrorKind::IdentifierCharInvalid, Token, TokenKind, Tokenizer},
     };
 
     #[derive(Clone, Debug)]
@@ -485,24 +447,24 @@ mod tests {
     }
 
     #[test]
-    fn test_only_filename() -> Result<()> {
-        let simple_name = String::from("foo");
-        let starts_whitespace = String::from(" foo");
-        let ends_whitespace = String::from("foo ");
+    fn test_only_contract_name() -> Result<()> {
+        let simple_name = String::from("Foo");
+        let starts_whitespace = String::from(" Foo");
+        let ends_whitespace = String::from("Foo ");
 
         let mut tokenizer = Tokenizer::new();
 
         assert_eq!(
             tokenizer.tokenize(&simple_name)?,
-            vec![t(TokenKind::Word, "foo", s(p(0, 1, 1), p(2, 1, 3)))]
+            vec![t(TokenKind::Word, "Foo", s(p(0, 1, 1), p(2, 1, 3)))]
         );
         assert_eq!(
             tokenizer.tokenize(&starts_whitespace)?,
-            vec![t(TokenKind::Word, "foo", s(p(1, 1, 2), p(3, 1, 4)))]
+            vec![t(TokenKind::Word, "Foo", s(p(1, 1, 2), p(3, 1, 4)))]
         );
         assert_eq!(
             tokenizer.tokenize(&ends_whitespace)?,
-            vec![t(TokenKind::Word, "foo", s(p(0, 1, 1), p(2, 1, 3)))]
+            vec![t(TokenKind::Word, "Foo", s(p(0, 1, 1), p(2, 1, 3)))]
         );
 
         Ok(())
@@ -511,13 +473,13 @@ mod tests {
     #[test]
     fn test_comments() -> Result<()> {
         let file_contents = String::from(
-            "file.sol\n└── when something bad happens // some comments \n   └── it should revert",
+            "Foo_Test\n└── when something bad happens // some comments \n   └── it should revert",
         );
 
         assert_eq!(
             tokenize(&file_contents)?,
             vec![
-                t(TokenKind::Word, "file.sol", s(p(0, 1, 1), p(7, 1, 8))),
+                t(TokenKind::Word, "Foo_Test", s(p(0, 1, 1), p(7, 1, 8))),
                 t(TokenKind::Corner, "└", s(p(9, 2, 1), p(9, 2, 1))),
                 t(TokenKind::When, "when", s(p(19, 2, 5), p(22, 2, 8))),
                 t(TokenKind::Word, "something", s(p(24, 2, 10), p(32, 2, 18))),
@@ -531,13 +493,13 @@ mod tests {
         );
 
         let file_contents = String::from(
-            "file.sol\n└── when something bad happens\n // some comments \n   └── it should revert",
+            "Foo_Test\n└── when something bad happens\n // some comments \n   └── it should revert",
         );
 
         assert_eq!(
             tokenize(&file_contents)?,
             vec![
-                t(TokenKind::Word, "file.sol", s(p(0, 1, 1), p(7, 1, 8))),
+                t(TokenKind::Word, "Foo_Test", s(p(0, 1, 1), p(7, 1, 8))),
                 t(TokenKind::Corner, "└", s(p(9, 2, 1), p(9, 2, 1))),
                 t(TokenKind::When, "when", s(p(19, 2, 5), p(22, 2, 8))),
                 t(TokenKind::Word, "something", s(p(24, 2, 10), p(32, 2, 18))),
@@ -555,18 +517,6 @@ mod tests {
 
     #[test]
     fn test_invalid_characters() {
-        assert_eq!(
-            tokenize("/foobar").unwrap_err(),
-            e(FileNameCharInvalid('/'), s(p(0, 1, 1), p(0, 1, 1)))
-        );
-        assert_eq!(
-            tokenize("foo/bar").unwrap_err(),
-            e(FileNameCharInvalid('/'), s(p(3, 1, 4), p(3, 1, 4)),)
-        );
-        assert_eq!(
-            tokenize("foobar/").unwrap_err(),
-            e(FileNameCharInvalid('/'), s(p(6, 1, 7), p(6, 1, 7)),)
-        );
         assert_eq!(
             tokenize("foo\n└── when |weird identifier").unwrap_err(),
             e(IdentifierCharInvalid('|'), s(p(19, 2, 10), p(19, 2, 10)),)
@@ -610,12 +560,12 @@ mod tests {
     fn test_one_child() {
         // Test parsing a when.
         let file_contents =
-            String::from("file.sol\n└── when something bad happens\n   └── it should revert");
+            String::from("Foo_Test\n└── when something bad happens\n   └── it should revert");
 
         assert_eq!(
             tokenize(&file_contents).unwrap(),
             vec![
-                t(TokenKind::Word, "file.sol", s(p(0, 1, 1), p(7, 1, 8))),
+                t(TokenKind::Word, "Foo_Test", s(p(0, 1, 1), p(7, 1, 8))),
                 t(TokenKind::Corner, "└", s(p(9, 2, 1), p(9, 2, 1))),
                 t(TokenKind::When, "when", s(p(19, 2, 5), p(22, 2, 8))),
                 t(TokenKind::Word, "something", s(p(24, 2, 10), p(32, 2, 18))),
@@ -630,12 +580,12 @@ mod tests {
 
         // Test parsing a given.
         let file_contents =
-            String::from("file.sol\n└── given something bad happens\n   └── it should revert");
+            String::from("Foo_Test\n└── given something bad happens\n   └── it should revert");
 
         assert_eq!(
             tokenize(&file_contents).unwrap(),
             vec![
-                t(TokenKind::Word, "file.sol", s(p(0, 1, 1), p(7, 1, 8))),
+                t(TokenKind::Word, "Foo_Test", s(p(0, 1, 1), p(7, 1, 8))),
                 t(TokenKind::Corner, "└", s(p(9, 2, 1), p(9, 2, 1))),
                 t(TokenKind::Given, "given", s(p(19, 2, 5), p(23, 2, 9))),
                 t(TokenKind::Word, "something", s(p(25, 2, 11), p(33, 2, 19))),
@@ -828,12 +778,12 @@ mod tests {
     #[test]
     fn test_case_insensitive_keywords() {
         let file_contents =
-            String::from("file.sol\n└── GIVEN something bad happens\n   └── whEN stuff is true\n   └── It should revert.");
+            String::from("Foo_Test\n└── GIVEN something bad happens\n   └── whEN stuff is true\n   └── It should revert.");
 
         assert_eq!(
             tokenize(&file_contents).unwrap(),
             vec![
-                t(TokenKind::Word, "file.sol", s(p(0, 1, 1), p(7, 1, 8))),
+                t(TokenKind::Word, "Foo_Test", s(p(0, 1, 1), p(7, 1, 8))),
                 t(TokenKind::Corner, "└", s(p(9, 2, 1), p(9, 2, 1))),
                 t(TokenKind::Given, "GIVEN", s(p(19, 2, 5), p(23, 2, 9))),
                 t(TokenKind::Word, "something", s(p(25, 2, 11), p(33, 2, 19))),

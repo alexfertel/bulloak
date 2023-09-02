@@ -1,6 +1,6 @@
 use indexmap::IndexMap;
 
-use crate::{
+use super::{
     ast::{self, Ast},
     utils::{lower_first_letter, to_pascal_case},
     visitor::Visitor,
@@ -31,7 +31,7 @@ impl ModifierDiscoverer {
     }
 
     /// Discover modifiers in the given AST.
-    pub fn discover(&mut self, ast: &ast::Ast) -> &IndexMap<String, String> {
+    pub fn discover(&mut self, ast: &Ast) -> &IndexMap<String, String> {
         match ast {
             Ast::Root(root) => {
                 self.visit_root(root).unwrap();
@@ -85,10 +85,9 @@ mod tests {
 
     use pretty_assertions::assert_eq;
 
-    use crate::error::Result;
-    use crate::modifiers::ModifierDiscoverer;
-    use crate::parser::Parser;
-    use crate::tokenizer::Tokenizer;
+    use crate::scaffold::{
+        error::Result, modifiers::ModifierDiscoverer, parser::Parser, tokenizer::Tokenizer,
+    };
 
     fn discover(file_contents: &str) -> Result<IndexMap<String, String>> {
         let tokens = Tokenizer::new().tokenize(file_contents)?;

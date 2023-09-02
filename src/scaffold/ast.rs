@@ -1,4 +1,4 @@
-use crate::span::Span;
+use crate::scaffold::span::Span;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum Ast {
@@ -24,7 +24,7 @@ impl Ast {
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Root {
-    pub file_name: String,
+    pub contract_name: String,
     pub span: Span,
     pub asts: Vec<Ast>,
 }

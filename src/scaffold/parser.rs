@@ -1,12 +1,10 @@
+use std::fmt;
 use std::{borrow::Borrow, cell::Cell, result};
 
-use crate::{
-    ast::{Action, Ast, Condition, Root},
-    span::Span,
-    tokenizer::{Token, TokenKind},
-    utils::sanitize,
-};
-use std::fmt;
+use super::ast::{Action, Ast, Condition, Root};
+use super::span::Span;
+use super::tokenizer::{Token, TokenKind};
+use super::utils::sanitize;
 
 type Result<T> = result::Result<T, Error>;
 
@@ -61,8 +59,6 @@ pub enum ErrorKind {
     WordUnexpected(Lexeme),
     /// Did not expect an end of file.
     EofUnexpected,
-    /// The filename must have an extension to recognize the output lang.
-    ExtensionMissing,
     /// This enum may grow additional variants, so this makes sure clients
     /// don't count on exhaustive matching. (Otherwise, adding a new variant
     /// could break existing code.)
@@ -72,7 +68,7 @@ pub enum ErrorKind {
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        crate::error::Formatter::from(self).fmt(f)
+        super::error::Formatter::from(self).fmt(f)
     }
 }
 
@@ -86,7 +82,6 @@ impl fmt::Display for ErrorKind {
             ItUnexpected => write!(f, "unexpected `it` keyword"),
             WordUnexpected(ref lexeme) => write!(f, "unexpected `word`: {}", lexeme),
             EofUnexpected => write!(f, "unexpected end of file"),
-            ExtensionMissing => write!(f, "filename must have an extension"),
             _ => unreachable!(),
         }
     }
@@ -268,11 +263,6 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
 
     /// Parse the root node of the AST.
     fn parse_root(&self, current_token: &Token) -> Result<Ast> {
-        // Check that the file name has an extension.
-        if !current_token.lexeme.contains('.') || current_token.lexeme.ends_with('.') {
-            return Err(self.error(current_token.span, ErrorKind::ExtensionMissing));
-        }
-
         self.consume();
         // A string at the start of the file is the root ast node.
         let mut asts = vec![];
@@ -290,7 +280,7 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
         Ok(Ast::Root(Root {
             span: Span::new(current_token.span.start, last_span.end),
             asts,
-            file_name: current_token.lexeme.clone(),
+            contract_name: current_token.lexeme.clone(),
         }))
     }
 
@@ -319,10 +309,10 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
 mod tests {
     use pretty_assertions::assert_eq;
 
-    use crate::ast::{Action, Ast, Condition, Root};
-    use crate::parser::{self, ErrorKind, Parser};
-    use crate::span::{Position, Span};
-    use crate::tokenizer::Tokenizer;
+    use crate::scaffold::ast::{Action, Ast, Condition, Root};
+    use crate::scaffold::parser::{self, Parser};
+    use crate::scaffold::span::{Position, Span};
+    use crate::scaffold::tokenizer::Tokenizer;
 
     #[derive(Clone, Debug)]
     struct TestError {
@@ -348,28 +338,13 @@ mod tests {
     }
 
     #[test]
-    fn test_only_filename() {
+    fn test_only_contract_name() {
         assert_eq!(
-            parse("foo").unwrap_err(),
-            TestError {
-                span: Span::new(Position::new(0, 1, 1), Position::new(2, 1, 3)),
-                kind: ErrorKind::ExtensionMissing,
-            }
-        );
-        assert_eq!(
-            parse("foo.").unwrap_err(),
-            TestError {
-                span: Span::new(Position::new(0, 1, 1), Position::new(3, 1, 4)),
-                kind: ErrorKind::ExtensionMissing,
-            }
-        );
-
-        assert_eq!(
-            parse("foo.sol").unwrap(),
+            parse("FooTest").unwrap(),
             Ast::Root(Root {
                 span: Span::new(Position::new(0, 1, 1), Position::new(6, 1, 7)),
                 asts: vec![],
-                file_name: String::from("foo.sol"),
+                contract_name: String::from("FooTest"),
             })
         );
     }
@@ -377,7 +352,7 @@ mod tests {
     #[test]
     fn test_one_child() {
         assert_eq!(
-            parse("file.sol\n└── when something bad happens\n   └── it should revert").unwrap(),
+            parse("Foo_Test\n└── when something bad happens\n   └── it should revert").unwrap(),
             Ast::Root(Root {
                 span: Span::new(Position::new(0, 1, 1), Position::new(74, 3, 23)),
                 asts: vec![Ast::Condition(Condition {
@@ -388,7 +363,7 @@ mod tests {
                         title: String::from("it should revert"),
                     })],
                 })],
-                file_name: String::from("file.sol"),
+                contract_name: String::from("Foo_Test"),
             })
         );
     }
@@ -397,7 +372,7 @@ mod tests {
     fn test_two_children() {
         assert_eq!(
             parse(
-                r"two_children.t.sol
+                r"FooBarTheBest_Test
 ├── when stuff called
 │  └── it should revert
 └── given not stuff called
@@ -405,7 +380,7 @@ mod tests {
             )
             .unwrap(),
             Ast::Root(Root {
-                file_name: String::from("two_children.t.sol"),
+                contract_name: String::from("FooBarTheBest_Test"),
                 span: Span::new(Position::new(0, 1, 1), Position::new(140, 5, 23)),
                 asts: vec![
                     Ast::Condition(Condition {
@@ -433,13 +408,13 @@ mod tests {
     fn test_unsanitized_input() {
         assert_eq!(
             parse(
-                r#"unsa-itized.tttt.sol
+                r#"FooB-rTheBestOf_Test
 └── when st-ff "all'd
    └── it should revert"#
             )
             .unwrap(),
             Ast::Root(Root {
-                file_name: String::from("unsa-itized.tttt.sol"),
+                contract_name: String::from("FooB-rTheBestOf_Test"),
                 span: Span::new(Position::new(0, 1, 1), Position::new(77, 3, 23)),
                 asts: vec![Ast::Condition(Condition {
                     title: String::from("when st_ff alld"),
