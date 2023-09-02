@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [unreleased]
+
+### Features
+
+- *(ci)* Add code coverage
+- *(docs)* Add codecov badge to README
+- Add support for specifying the contract name (#27)
+
+
 ## [0.4.5] - 2023-09-01
 
 ### Bug Fixes

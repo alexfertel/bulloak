@@ -17,7 +17,7 @@ A simple, fast, and easy-to-use Solidity test generator based on the
 - [Installation](#installation)
 - [Usage](#usage)
   - [Scaffold Multiple Trees](#scaffold-multiple-trees)
-  - [Options](#options)
+  - [CLI Options](#cli-options)
   - [Compiler Errors](#compiler-errors)
 - [Trees](#trees)
   - [Terminology](#terminology)
@@ -102,7 +102,7 @@ bulloak error: unexpected `when` keyword
 file: foo.tree
 ```
 
-### Options
+### CLI Options
 
 ```
 Usage: bulloak [OPTIONS] [FILES]...
