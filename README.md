@@ -4,6 +4,9 @@
     <a href="https://crates.io/crates/bulloak/">
         <img src="https://img.shields.io/crates/v/bulloak?style=flat&labelColor=1C2C2E&color=C96329&logo=Rust&logoColor=white">
     </a>
+    <a href="https://codecov.io/gh/alexfertel/bulloak">
+        <img src="https://codecov.io/github/alexfertel/bulloak/coverage.svg?branch=main">
+    </a>
 </p>
 
 # bulloak
