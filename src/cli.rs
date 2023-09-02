@@ -41,7 +41,7 @@ pub(crate) struct Cli {
 
 pub fn run() -> Result<()> {
     let config = Cli::parse();
-    let scaffolder = crate::scaffold::Scaffolder::new(
+    let scaffolder = crate::Scaffolder::new(
         config.with_actions_as_comments,
         config.indent,
         &config.solidity_version,
