@@ -16,8 +16,7 @@ cargo fmt --all -- --check
 
 ## Testing
 
-You should provide rigorous tests beside the algorithm implementations. PRs without
-tests when appropriate won't be merged.
+PRs without tests when appropriate won't be merged.
 
 To run the tests:
 
