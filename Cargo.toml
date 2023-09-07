@@ -16,6 +16,10 @@ keywords = ["solidity", "testing", "compiler", "cli", "tree"]
 categories = ["development-tools::testing", "command-line-utilities", "compilers", "parsing"]
 exclude = ["/.github/*"]
 
+[[bin]]
+path = "src/main.rs"
+name = "bulloak"
+
 [dependencies]
 clap = { version = "4.3.19", features = ["derive"] }
 indexmap = "2.0.0"
