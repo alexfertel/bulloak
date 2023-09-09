@@ -1,10 +1,10 @@
 use indexmap::IndexMap;
 
-use super::{
+use crate::parse::{
     ast::{self, Ast},
-    utils::{lower_first_letter, to_pascal_case},
     visitor::Visitor,
 };
+use crate::utils::{lower_first_letter, to_pascal_case};
 
 /// AST visitor that discovers modifiers.
 ///
@@ -85,9 +85,10 @@ mod tests {
 
     use pretty_assertions::assert_eq;
 
-    use crate::scaffold::{
-        error::Result, modifiers::ModifierDiscoverer, parser::Parser, tokenizer::Tokenizer,
-    };
+    use crate::parse::error::Result;
+    use crate::parse::parser::Parser;
+    use crate::parse::tokenizer::Tokenizer;
+    use crate::scaffold::modifiers::ModifierDiscoverer;
 
     fn discover(file_contents: &str) -> Result<IndexMap<String, String>> {
         let tokens = Tokenizer::new().tokenize(file_contents)?;

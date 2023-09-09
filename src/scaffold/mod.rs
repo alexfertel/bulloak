@@ -3,16 +3,10 @@ use std::{fs, io::Result, path::PathBuf};
 use clap::Parser;
 use owo_colors::OwoColorize;
 
-pub mod ast;
+use crate::parse;
+
 pub mod emitter;
-pub mod error;
 pub mod modifiers;
-pub mod parser;
-pub mod semantics;
-pub mod span;
-pub mod tokenizer;
-pub mod utils;
-pub mod visitor;
 
 /// The cli interface for the `bulloak scaffold` command.
 #[doc(hidden)]
@@ -124,10 +118,10 @@ impl<'s> Scaffolder<'s> {
     /// See the [crate-level documentation] for details.
     ///
     ///   [crate-level documentation]: ./index.html
-    pub fn scaffold(&self, text: &str) -> error::Result<String> {
-        let tokens = tokenizer::Tokenizer::new().tokenize(text)?;
-        let ast = parser::Parser::new().parse(text, &tokens)?;
-        let mut analyzer = semantics::SemanticAnalyzer::new(text);
+    pub fn scaffold(&self, text: &str) -> parse::error::Result<String> {
+        let tokens = parse::tokenizer::Tokenizer::new().tokenize(text)?;
+        let ast = parse::parser::Parser::new().parse(text, &tokens)?;
+        let mut analyzer = parse::semantics::SemanticAnalyzer::new(text);
         analyzer.analyze(&ast)?;
         let mut discoverer = modifiers::ModifierDiscoverer::new();
         let modifiers = discoverer.discover(&ast);

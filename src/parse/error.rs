@@ -7,14 +7,13 @@ use super::semantics;
 use super::span;
 use super::tokenizer;
 
-/// A type alias for dealing with errors returned by this crate.
+/// A type alias for dealing with errors returned when parsing.
 pub type Result<T> = result::Result<T, Error>;
 
-/// This error type encompasses any error that can be returned by this crate.
+/// This error type encompasses any error that can be returned when parsing.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Error {
-    /// An error that occurred while translating abstract syntax into a high
-    /// level intermediate representation.
+    /// An error that occurred while tokenizing the input text.
     Tokenize(tokenizer::Error),
     /// An error that occurred while translating concrete syntax into abstract
     /// syntax.
@@ -148,9 +147,9 @@ fn repeat_str(s: &str, n: usize) -> String {
 #[cfg(test)]
 mod test {
     use super::repeat_str;
-    use crate::scaffold::error::Formatter;
-    use crate::scaffold::span::{Position, Span};
-    use crate::scaffold::{error, parser, semantics};
+    use crate::parse::error::Formatter;
+    use crate::parse::span::{Position, Span};
+    use crate::parse::{error, parser, semantics};
     use pretty_assertions::assert_eq;
 
     #[test]

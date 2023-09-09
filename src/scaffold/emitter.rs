@@ -1,11 +1,11 @@
 use indexmap::IndexMap;
 use std::result;
 
-use super::{
+use crate::parse::{
     ast::{self, Ast},
-    utils::{capitalize_first_letter, sanitize},
     visitor::Visitor,
 };
+use crate::utils::{capitalize_first_letter, sanitize};
 
 /// Solidity code emitter.
 ///
@@ -315,11 +315,11 @@ impl<'a> Visitor for EmitterI<'a> {
 mod tests {
     use pretty_assertions::assert_eq;
 
+    use crate::parse::error::Result;
+    use crate::parse::parser::Parser;
+    use crate::parse::tokenizer::Tokenizer;
     use crate::scaffold::emitter;
-    use crate::scaffold::error::Result;
     use crate::scaffold::modifiers;
-    use crate::scaffold::parser::Parser;
-    use crate::scaffold::tokenizer::Tokenizer;
 
     fn scaffold_with_flags(
         text: &str,

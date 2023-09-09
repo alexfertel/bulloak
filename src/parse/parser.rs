@@ -4,7 +4,7 @@ use std::{borrow::Borrow, cell::Cell, result};
 use super::ast::{Action, Ast, Condition, Root};
 use super::span::Span;
 use super::tokenizer::{Token, TokenKind};
-use super::utils::sanitize;
+use crate::utils::sanitize;
 
 type Result<T> = result::Result<T, Error>;
 
@@ -309,10 +309,10 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
 mod tests {
     use pretty_assertions::assert_eq;
 
-    use crate::scaffold::ast::{Action, Ast, Condition, Root};
-    use crate::scaffold::parser::{self, Parser};
-    use crate::scaffold::span::{Position, Span};
-    use crate::scaffold::tokenizer::Tokenizer;
+    use crate::parse::ast::{Action, Ast, Condition, Root};
+    use crate::parse::parser::{self, Parser};
+    use crate::parse::span::{Position, Span};
+    use crate::parse::tokenizer::Tokenizer;
 
     #[derive(Clone, Debug)]
     struct TestError {

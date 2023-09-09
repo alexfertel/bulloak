@@ -1,14 +1,10 @@
-use std::{io::Result, process};
+use std::process;
 
-mod check;
-mod cli;
-mod scaffold;
+use bulloak;
 
-fn main() -> Result<()> {
-    if let Err(e) = cli::run() {
+fn main() {
+    if let Err(e) = bulloak::cli::run() {
         eprintln!("Error: {e:?}");
         process::exit(1);
     }
-
-    Ok(())
 }
