@@ -3,7 +3,7 @@ use std::{fs, io::Result, path::PathBuf};
 use clap::Parser;
 use owo_colors::OwoColorize;
 
-use crate::parse;
+use crate::syntax;
 
 pub mod emitter;
 pub mod modifiers;
@@ -113,15 +113,12 @@ impl<'s> Scaffolder<'s> {
             solidity_version,
         }
     }
+
     /// Generates Solidity code from a `.tree` file.
-    ///
-    /// See the [crate-level documentation] for details.
-    ///
-    ///   [crate-level documentation]: ./index.html
-    pub fn scaffold(&self, text: &str) -> parse::error::Result<String> {
-        let tokens = parse::tokenizer::Tokenizer::new().tokenize(text)?;
-        let ast = parse::parser::Parser::new().parse(text, &tokens)?;
-        let mut analyzer = parse::semantics::SemanticAnalyzer::new(text);
+    pub fn scaffold(&self, text: &str) -> syntax::error::Result<String> {
+        let tokens = syntax::tokenizer::Tokenizer::new().tokenize(text)?;
+        let ast = syntax::parser::Parser::new().parse(text, &tokens)?;
+        let mut analyzer = syntax::semantics::SemanticAnalyzer::new(text);
         analyzer.analyze(&ast)?;
         let mut discoverer = modifiers::ModifierDiscoverer::new();
         let modifiers = discoverer.discover(&ast);

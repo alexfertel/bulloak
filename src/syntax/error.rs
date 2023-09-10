@@ -147,9 +147,9 @@ fn repeat_str(s: &str, n: usize) -> String {
 #[cfg(test)]
 mod test {
     use super::repeat_str;
-    use crate::parse::error::Formatter;
-    use crate::parse::span::{Position, Span};
-    use crate::parse::{error, parser, semantics};
+    use crate::syntax::error::Formatter;
+    use crate::syntax::span::{Position, Span};
+    use crate::syntax::{error, parser, semantics};
     use pretty_assertions::assert_eq;
 
     #[test]

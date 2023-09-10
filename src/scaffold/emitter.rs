@@ -1,7 +1,7 @@
 use indexmap::IndexMap;
 use std::result;
 
-use crate::parse::{
+use crate::syntax::{
     ast::{self, Ast},
     visitor::Visitor,
 };
@@ -315,11 +315,11 @@ impl<'a> Visitor for EmitterI<'a> {
 mod tests {
     use pretty_assertions::assert_eq;
 
-    use crate::parse::error::Result;
-    use crate::parse::parser::Parser;
-    use crate::parse::tokenizer::Tokenizer;
     use crate::scaffold::emitter;
     use crate::scaffold::modifiers;
+    use crate::syntax::error::Result;
+    use crate::syntax::parser::Parser;
+    use crate::syntax::tokenizer::Tokenizer;
 
     fn scaffold_with_flags(
         text: &str,

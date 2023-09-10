@@ -1,6 +1,6 @@
 use std::{borrow::Borrow, cell::Cell, fmt, result};
 
-use crate::parse::span::{Position, Span};
+use crate::syntax::span::{Position, Span};
 
 type Result<T> = result::Result<T, Error>;
 
@@ -398,8 +398,8 @@ fn is_valid_identifier_char(c: char) -> bool {
 mod tests {
     use pretty_assertions::assert_eq;
 
-    use crate::parse::error::Result;
-    use crate::parse::{
+    use crate::syntax::error::Result;
+    use crate::syntax::{
         span::{Position, Span},
         tokenizer::{self, ErrorKind::IdentifierCharInvalid, Token, TokenKind, Tokenizer},
     };

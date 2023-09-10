@@ -1,6 +1,6 @@
 use indexmap::IndexMap;
 
-use crate::parse::{
+use crate::syntax::{
     ast::{self, Ast},
     visitor::Visitor,
 };
@@ -85,10 +85,10 @@ mod tests {
 
     use pretty_assertions::assert_eq;
 
-    use crate::parse::error::Result;
-    use crate::parse::parser::Parser;
-    use crate::parse::tokenizer::Tokenizer;
     use crate::scaffold::modifiers::ModifierDiscoverer;
+    use crate::syntax::error::Result;
+    use crate::syntax::parser::Parser;
+    use crate::syntax::tokenizer::Tokenizer;
 
     fn discover(file_contents: &str) -> Result<IndexMap<String, String>> {
         let tokens = Tokenizer::new().tokenize(file_contents)?;

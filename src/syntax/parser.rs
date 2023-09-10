@@ -309,10 +309,10 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
 mod tests {
     use pretty_assertions::assert_eq;
 
-    use crate::parse::ast::{Action, Ast, Condition, Root};
-    use crate::parse::parser::{self, Parser};
-    use crate::parse::span::{Position, Span};
-    use crate::parse::tokenizer::Tokenizer;
+    use crate::syntax::ast::{Action, Ast, Condition, Root};
+    use crate::syntax::parser::{self, Parser};
+    use crate::syntax::span::{Position, Span};
+    use crate::syntax::tokenizer::Tokenizer;
 
     #[derive(Clone, Debug)]
     struct TestError {

@@ -62,7 +62,7 @@ pub enum ErrorKind {
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        crate::parse::error::Formatter::from(self).fmt(f)
+        crate::syntax::error::Formatter::from(self).fmt(f)
     }
 }
 
@@ -189,11 +189,11 @@ impl Visitor for SemanticAnalyzer<'_> {
 mod tests {
     use pretty_assertions::assert_eq;
 
-    use crate::parse::ast;
-    use crate::parse::parser::Parser;
-    use crate::parse::semantics::{self, ErrorKind::*};
-    use crate::parse::span::{Position, Span};
-    use crate::parse::tokenizer::Tokenizer;
+    use crate::syntax::ast;
+    use crate::syntax::parser::Parser;
+    use crate::syntax::semantics::{self, ErrorKind::*};
+    use crate::syntax::span::{Position, Span};
+    use crate::syntax::tokenizer::Tokenizer;
 
     fn analyze(text: &str) -> semantics::Result<()> {
         let tokens = Tokenizer::new().tokenize(text).unwrap();

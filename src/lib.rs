@@ -5,7 +5,7 @@
 pub mod check;
 #[doc(hidden)]
 pub mod cli;
-pub mod parse;
 pub mod scaffold;
+pub mod syntax;
 #[doc(hidden)]
 mod utils;
