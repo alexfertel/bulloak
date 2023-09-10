@@ -291,7 +291,7 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
     }
 
     /// Tokenize the text.
-    pub fn tokenize(&self) -> Result<Vec<Token>> {
+    pub(crate) fn tokenize(&self) -> Result<Vec<Token>> {
         let mut tokens = Vec::new();
         self.tokenizer().reset();
 

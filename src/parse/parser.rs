@@ -184,7 +184,7 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
     /// This is the entry point for the parser. Note that
     /// this method resets the parser state before parsing and
     /// that we defer the implementation of parsing to `_parse`.
-    pub fn parse(&self) -> Result<Ast> {
+    pub(crate) fn parse(&self) -> Result<Ast> {
         self.parser().reset();
         self._parse()
     }

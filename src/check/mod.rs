@@ -17,7 +17,7 @@ impl Check {
             // Get the path to the output file.
             sol_path.set_extension("t.sol");
 
-            let tree = fs::read_to_string(tree_path)?;
+            let _tree = fs::read_to_string(tree_path)?;
             let code = fs::read_to_string(sol_path)?;
 
             let (pt, _) = solang_parser::parse(&code, 0).expect("should parse the solidity file");
