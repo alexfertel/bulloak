@@ -1,5 +1,5 @@
 <p align="center">
-    <img src="https://github.com/alexfertel/bulloak/assets/22298999/adffdf7f-ae18-4db5-a276-449852c8dd0a" width="300"></a>
+    <img src="https://github.com/alexfertel/bulloak/assets/22298999/73969e04-1674-4805-b4a5-ff15582d52fc" width="300"></a>
     <br>
     <a href="https://crates.io/crates/bulloak/">
         <img src="https://img.shields.io/crates/v/bulloak?style=flat&labelColor=1C2C2E&color=C96329&logo=Rust&logoColor=white">
