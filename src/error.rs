@@ -2,13 +2,15 @@ use std::cmp;
 use std::fmt;
 use std::result;
 
-use super::parser;
-use super::semantics;
-use super::span;
-use super::tokenizer;
+use crate::check;
+use crate::span;
+use crate::syntax::parser;
+use crate::syntax::semantics;
+use crate::syntax::tokenizer;
+use crate::utils::repeat_str;
 
 /// A type alias for dealing with errors returned when parsing.
-pub type Result<T> = result::Result<T, Error>;
+pub(crate) type Result<T> = result::Result<T, Error>;
 
 /// This error type encompasses any error that can be returned when parsing.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -21,6 +23,8 @@ pub enum Error {
     /// An error that occurred while doing semantic analysis on the abstract
     /// syntax tree.
     Semantic(Vec<semantics::Error>),
+    /// An error that ocurred while checking specification rules.
+    Spec(Vec<check::violation::Violation>),
     /// Hints that destructuring should not be exhaustive.
     ///
     /// This enum may grow additional variants, so this makes sure clients
@@ -29,6 +33,8 @@ pub enum Error {
     #[doc(hidden)]
     __Nonexhaustive,
 }
+
+impl std::error::Error for Error {}
 
 impl From<parser::Error> for Error {
     fn from(err: parser::Error) -> Error {
@@ -48,12 +54,24 @@ impl From<Vec<semantics::Error>> for Error {
     }
 }
 
+impl From<Vec<check::violation::Violation>> for Error {
+    fn from(errors: Vec<check::violation::Violation>) -> Error {
+        Error::Spec(errors)
+    }
+}
+
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
             Error::Parse(ref x) => x.fmt(f),
             Error::Tokenize(ref x) => x.fmt(f),
             Error::Semantic(ref errors) => {
+                for x in errors {
+                    x.fmt(f)?;
+                }
+                Ok(())
+            }
+            Error::Spec(ref errors) => {
                 for x in errors {
                     x.fmt(f)?;
                 }
@@ -108,6 +126,16 @@ impl<'e> From<&'e semantics::Error> for Formatter<'e, semantics::ErrorKind> {
     }
 }
 
+impl<'e> From<&'e check::violation::Violation> for Formatter<'e, check::violation::ViolationKind> {
+    fn from(err: &'e check::violation::Violation) -> Self {
+        Formatter {
+            text: err.text(),
+            err: err.kind(),
+            span: err.span(),
+        }
+    }
+}
+
 impl<'e, E: fmt::Display> fmt::Display for Formatter<'e, E> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let divider = repeat_str("•", 79);
@@ -140,16 +168,12 @@ fn notate<E>(f: &Formatter<'_, E>) -> String {
     notated
 }
 
-fn repeat_str(s: &str, n: usize) -> String {
-    s.repeat(n)
-}
-
 #[cfg(test)]
 mod test {
     use super::repeat_str;
-    use crate::syntax::error::Formatter;
-    use crate::syntax::span::{Position, Span};
-    use crate::syntax::{error, parser, semantics};
+    use crate::error::Formatter;
+    use crate::span::{Position, Span};
+    use crate::syntax::{parser, semantics};
     use pretty_assertions::assert_eq;
 
     #[test]
@@ -186,7 +210,7 @@ mod test {
 └── when 2"
             .to_string();
 
-        let errors = error::Error::from(vec![
+        let errors = crate::error::Error::from(vec![
             semantics::Error::new(
                 semantics::ErrorKind::ConditionEmpty,
                 text.clone(),

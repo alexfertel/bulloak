@@ -1,7 +1,13 @@
 pub mod ast;
-pub mod error;
 pub mod parser;
 pub mod semantics;
-pub mod span;
 pub mod tokenizer;
-pub mod visitor;
+
+pub fn parse(text: &str) -> crate::error::Result<ast::Ast> {
+    let tokens = tokenizer::Tokenizer::new().tokenize(text)?;
+    let ast = parser::Parser::new().parse(text, &tokens)?;
+    let mut analyzer = semantics::SemanticAnalyzer::new(text);
+    analyzer.analyze(&ast)?;
+
+    Ok(ast)
+}

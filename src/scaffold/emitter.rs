@@ -1,11 +1,9 @@
 use indexmap::IndexMap;
 use std::result;
 
-use crate::syntax::{
-    ast::{self, Ast},
-    visitor::Visitor,
-};
+use crate::syntax::ast::{self, Ast};
 use crate::utils::{capitalize_first_letter, sanitize};
+use crate::visitor::TreeVisitor;
 
 /// Solidity code emitter.
 ///
@@ -204,7 +202,7 @@ impl<'a> EmitterI<'a> {
 /// Note that the visitor is infallible because previous
 /// passes ensure that the AST is valid. In case an error
 /// is found, it should be added to a previous pass.
-impl<'a> Visitor for EmitterI<'a> {
+impl<'a> TreeVisitor for EmitterI<'a> {
     type Output = String;
     type Error = ();
 
@@ -315,9 +313,9 @@ impl<'a> Visitor for EmitterI<'a> {
 mod tests {
     use pretty_assertions::assert_eq;
 
+    use crate::error::Result;
     use crate::scaffold::emitter;
     use crate::scaffold::modifiers;
-    use crate::syntax::error::Result;
     use crate::syntax::parser::Parser;
     use crate::syntax::tokenizer::Tokenizer;
 

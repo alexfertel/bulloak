@@ -7,5 +7,10 @@ pub mod check;
 pub mod cli;
 pub mod scaffold;
 pub mod syntax;
+
 #[doc(hidden)]
 mod utils;
+
+pub(crate) mod error;
+pub(crate) mod span;
+pub(crate) mod visitor;

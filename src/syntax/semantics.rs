@@ -1,10 +1,8 @@
 use std::{fmt, result};
 
-use super::{
-    ast::{self, Ast},
-    span::Span,
-    visitor::Visitor,
-};
+use super::ast::{self, Ast};
+use crate::span::Span;
+use crate::visitor::TreeVisitor;
 
 type Result<T> = result::Result<T, Vec<Error>>;
 
@@ -62,7 +60,7 @@ pub enum ErrorKind {
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        crate::syntax::error::Formatter::from(self).fmt(f)
+        crate::error::Formatter::from(self).fmt(f)
     }
 }
 
@@ -128,7 +126,7 @@ impl<'t> SemanticAnalyzer<'t> {
 }
 
 /// A visitor that performs semantic analysis on an AST.
-impl Visitor for SemanticAnalyzer<'_> {
+impl TreeVisitor for SemanticAnalyzer<'_> {
     type Output = ();
     type Error = ();
 
@@ -189,10 +187,10 @@ impl Visitor for SemanticAnalyzer<'_> {
 mod tests {
     use pretty_assertions::assert_eq;
 
+    use crate::span::{Position, Span};
     use crate::syntax::ast;
     use crate::syntax::parser::Parser;
     use crate::syntax::semantics::{self, ErrorKind::*};
-    use crate::syntax::span::{Position, Span};
     use crate::syntax::tokenizer::Tokenizer;
 
     fn analyze(text: &str) -> semantics::Result<()> {

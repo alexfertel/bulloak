@@ -1,10 +1,8 @@
 use indexmap::IndexMap;
 
-use crate::syntax::{
-    ast::{self, Ast},
-    visitor::Visitor,
-};
+use crate::syntax::ast::{self, Ast};
 use crate::utils::{lower_first_letter, to_pascal_case};
+use crate::visitor::TreeVisitor;
 
 /// AST visitor that discovers modifiers.
 ///
@@ -44,7 +42,7 @@ impl ModifierDiscoverer {
 
 /// A visitor that stores key-value pairs of condition titles and
 /// their corresponding modifiers.
-impl Visitor for ModifierDiscoverer {
+impl TreeVisitor for ModifierDiscoverer {
     type Output = ();
     type Error = ();
 
@@ -85,8 +83,8 @@ mod tests {
 
     use pretty_assertions::assert_eq;
 
+    use crate::error::Result;
     use crate::scaffold::modifiers::ModifierDiscoverer;
-    use crate::syntax::error::Result;
     use crate::syntax::parser::Parser;
     use crate::syntax::tokenizer::Tokenizer;
 

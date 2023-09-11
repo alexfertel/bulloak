@@ -1,5 +1,3 @@
-use std::io::Result;
-
 use clap::{Parser, Subcommand};
 
 /// The main `bulloak` cli interface.
@@ -20,7 +18,7 @@ enum Commands {
     Check(crate::check::Check),
 }
 
-pub fn run() -> Result<()> {
+pub fn run() -> anyhow::Result<()> {
     let config = Cli::parse();
     match config.command {
         Commands::Scaffold(command) => command.run(),

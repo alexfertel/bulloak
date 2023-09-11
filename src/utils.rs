@@ -34,6 +34,10 @@ pub(crate) fn to_pascal_case(sentence: &str) -> String {
         .collect::<String>()
 }
 
+pub(crate) fn repeat_str(s: &str, n: usize) -> String {
+    s.repeat(n)
+}
+
 #[cfg(test)]
 mod tests {
     use super::to_pascal_case;

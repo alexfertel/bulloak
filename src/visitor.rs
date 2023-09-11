@@ -1,6 +1,6 @@
-use super::ast;
+use crate::syntax::ast;
 
-pub trait Visitor {
+pub trait TreeVisitor {
     type Output;
     type Error;
 

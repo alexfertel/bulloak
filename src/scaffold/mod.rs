@@ -1,4 +1,4 @@
-use std::{fs, io::Result, path::PathBuf};
+use std::{fs, path::PathBuf};
 
 use clap::Parser;
 use owo_colors::OwoColorize;
@@ -44,7 +44,7 @@ pub struct Scaffold {
 }
 
 impl Scaffold {
-    pub fn run(self: Scaffold) -> Result<()> {
+    pub fn run(self: Scaffold) -> anyhow::Result<()> {
         let scaffolder = Scaffolder::new(
             self.with_actions_as_comments,
             self.indent,
@@ -65,11 +65,14 @@ impl Scaffold {
                         // Don't overwrite files unless `--force-write` was passed.
                         if output_path.exists() && !self.force_write {
                             eprintln!(
-                            "{}: Skipped emitting to {:?}.\n      The file {:?} already exists.",
-                            "WARN".yellow(),
-                            file.as_path().bright_blue(),
-                            output_path.as_path().bright_blue()
-                        );
+                                "{}: Skipped emitting to {:?}.",
+                                "WARN".yellow(),
+                                file.as_path().bright_blue()
+                            );
+                            eprintln!(
+                                "      The file {:?} already exists.",
+                                output_path.as_path().bright_blue()
+                            );
                             continue;
                         }
 
@@ -115,11 +118,8 @@ impl<'s> Scaffolder<'s> {
     }
 
     /// Generates Solidity code from a `.tree` file.
-    pub fn scaffold(&self, text: &str) -> syntax::error::Result<String> {
-        let tokens = syntax::tokenizer::Tokenizer::new().tokenize(text)?;
-        let ast = syntax::parser::Parser::new().parse(text, &tokens)?;
-        let mut analyzer = syntax::semantics::SemanticAnalyzer::new(text);
-        analyzer.analyze(&ast)?;
+    pub fn scaffold(&self, text: &str) -> crate::error::Result<String> {
+        let ast = syntax::parse(text)?;
         let mut discoverer = modifiers::ModifierDiscoverer::new();
         let modifiers = discoverer.discover(&ast);
         let emitted = emitter::Emitter::new(self.with_comments, self.indent, self.solidity_version)

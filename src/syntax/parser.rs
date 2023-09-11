@@ -2,8 +2,8 @@ use std::fmt;
 use std::{borrow::Borrow, cell::Cell, result};
 
 use super::ast::{Action, Ast, Condition, Root};
-use super::span::Span;
 use super::tokenizer::{Token, TokenKind};
+use crate::span::Span;
 use crate::utils::sanitize;
 
 type Result<T> = result::Result<T, Error>;
@@ -68,19 +68,19 @@ pub enum ErrorKind {
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        super::error::Formatter::from(self).fmt(f)
+        crate::error::Formatter::from(self).fmt(f)
     }
 }
 
 impl fmt::Display for ErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use self::ErrorKind::*;
-        match *self {
-            TokenUnexpected(ref lexeme) => write!(f, "unexpected token: {}", lexeme),
+        match self {
+            TokenUnexpected(lexeme) => write!(f, "unexpected token: {}", lexeme),
             WhenUnexpected => write!(f, "unexpected `when` keyword"),
             GivenUnexpected => write!(f, "unexpected `given` keyword"),
             ItUnexpected => write!(f, "unexpected `it` keyword"),
-            WordUnexpected(ref lexeme) => write!(f, "unexpected `word`: {}", lexeme),
+            WordUnexpected(lexeme) => write!(f, "unexpected `word`: {}", lexeme),
             EofUnexpected => write!(f, "unexpected end of file"),
             _ => unreachable!(),
         }
@@ -309,9 +309,9 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
 mod tests {
     use pretty_assertions::assert_eq;
 
+    use crate::span::{Position, Span};
     use crate::syntax::ast::{Action, Ast, Condition, Root};
     use crate::syntax::parser::{self, Parser};
-    use crate::syntax::span::{Position, Span};
     use crate::syntax::tokenizer::Tokenizer;
 
     #[derive(Clone, Debug)]

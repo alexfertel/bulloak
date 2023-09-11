@@ -1,6 +1,6 @@
 use std::{borrow::Borrow, cell::Cell, fmt, result};
 
-use crate::syntax::span::{Position, Span};
+use crate::span::{Position, Span};
 
 type Result<T> = result::Result<T, Error>;
 
@@ -50,14 +50,14 @@ pub enum ErrorKind {
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        super::error::Formatter::from(self).fmt(f)
+        crate::error::Formatter::from(self).fmt(f)
     }
 }
 
 impl fmt::Display for ErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use self::ErrorKind::*;
-        match *self {
+        match self {
             IdentifierCharInvalid(c) => write!(f, "invalid identifier: {:?}", c),
             _ => unreachable!(),
         }
@@ -398,10 +398,10 @@ fn is_valid_identifier_char(c: char) -> bool {
 mod tests {
     use pretty_assertions::assert_eq;
 
-    use crate::syntax::error::Result;
-    use crate::syntax::{
-        span::{Position, Span},
-        tokenizer::{self, ErrorKind::IdentifierCharInvalid, Token, TokenKind, Tokenizer},
+    use crate::error::Result;
+    use crate::span::{Position, Span};
+    use crate::syntax::tokenizer::{
+        self, ErrorKind::IdentifierCharInvalid, Token, TokenKind, Tokenizer,
     };
 
     #[derive(Clone, Debug)]
