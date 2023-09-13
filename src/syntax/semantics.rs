@@ -1,8 +1,10 @@
+//! Implementation of the semantic analysis of a bulloak tree.
+
 use std::{fmt, result};
 
 use super::ast::{self, Ast};
 use crate::span::Span;
-use crate::visitor::TreeVisitor;
+use crate::syntax::visitor::Visitor;
 
 type Result<T> = result::Result<T, Vec<Error>>;
 
@@ -126,16 +128,16 @@ impl<'t> SemanticAnalyzer<'t> {
 }
 
 /// A visitor that performs semantic analysis on an AST.
-impl TreeVisitor for SemanticAnalyzer<'_> {
+impl Visitor for SemanticAnalyzer<'_> {
     type Output = ();
     type Error = ();
 
     fn visit_root(&mut self, root: &ast::Root) -> result::Result<Self::Output, Self::Error> {
-        if root.asts.is_empty() {
+        if root.children.is_empty() {
             self.error(Span::splat(root.span.end), ErrorKind::TreeEmpty);
         }
 
-        for ast in &root.asts {
+        for ast in &root.children {
             match ast {
                 Ast::Condition(condition) => {
                     self.visit_condition(condition)?;
@@ -156,11 +158,11 @@ impl TreeVisitor for SemanticAnalyzer<'_> {
         &mut self,
         condition: &ast::Condition,
     ) -> result::Result<Self::Output, Self::Error> {
-        if condition.asts.is_empty() {
+        if condition.children.is_empty() {
             self.error(condition.span, ErrorKind::ConditionEmpty);
         }
 
-        for ast in &condition.asts {
+        for ast in &condition.children {
             match ast {
                 Ast::Condition(condition) => {
                     self.visit_condition(condition)?;
@@ -206,9 +208,9 @@ mod tests {
     fn test_unexpected_node() {
         let ast = ast::Ast::Root(ast::Root {
             contract_name: "Foo_Test".to_string(),
-            asts: vec![ast::Ast::Root(ast::Root {
+            children: vec![ast::Ast::Root(ast::Root {
                 contract_name: "Foo_Test".to_string(),
-                asts: vec![],
+                children: vec![],
                 span: Span::new(Position::new(0, 1, 1), Position::new(7, 1, 8)),
             })],
             span: Span::new(Position::new(0, 1, 1), Position::new(7, 1, 8)),

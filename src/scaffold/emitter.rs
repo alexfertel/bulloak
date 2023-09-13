@@ -2,8 +2,8 @@ use indexmap::IndexMap;
 use std::result;
 
 use crate::syntax::ast::{self, Ast};
+use crate::syntax::visitor::Visitor;
 use crate::utils::{capitalize_first_letter, sanitize};
-use crate::visitor::TreeVisitor;
 
 /// Solidity code emitter.
 ///
@@ -82,6 +82,7 @@ impl<'a> EmitterI<'a> {
     fn emit(&mut self, ast: &ast::Ast) -> String {
         match ast {
             Ast::Root(ref root) => self.visit_root(root).unwrap(),
+            // Emitting subtrees is not supported.
             _ => unreachable!(),
         }
     }
@@ -134,8 +135,12 @@ impl<'a> EmitterI<'a> {
         let mut emitted = String::new();
 
         // We count instead of collecting into a Vec to avoid allocating a Vec for each condition.
-        let action_count = condition.asts.iter().filter(|ast| ast.is_action()).count();
-        let mut actions = condition.asts.iter().filter(|ast| ast.is_action());
+        let action_count = condition
+            .children
+            .iter()
+            .filter(|ast| ast.is_action())
+            .count();
+        let mut actions = condition.children.iter().filter(|ast| ast.is_action());
 
         if action_count > 0 {
             let fn_indentation = self.emitter.indent();
@@ -202,7 +207,7 @@ impl<'a> EmitterI<'a> {
 /// Note that the visitor is infallible because previous
 /// passes ensure that the AST is valid. In case an error
 /// is found, it should be added to a previous pass.
-impl<'a> TreeVisitor for EmitterI<'a> {
+impl<'a> Visitor for EmitterI<'a> {
     type Output = String;
     type Error = ();
 
@@ -212,7 +217,7 @@ impl<'a> TreeVisitor for EmitterI<'a> {
         let contract_header = self.emit_contract_header(root);
         emitted.push_str(&contract_header);
 
-        for ast in &root.asts {
+        for ast in &root.children {
             if let Ast::Condition(condition) = ast {
                 emitted.push_str(&self.visit_condition(condition)?);
             } else if let Ast::Action(action) = ast {
@@ -233,7 +238,7 @@ impl<'a> TreeVisitor for EmitterI<'a> {
                         acc
                     });
 
-                // We need to sanitize here because and not in a previous compiler
+                // We need to sanitize here and not in a previous compiler
                 // phase because we want to emit the action as is in a comment.
                 let test_name = sanitize(&test_name);
                 let test_name = format!("test_{}", test_name);
@@ -271,14 +276,18 @@ impl<'a> TreeVisitor for EmitterI<'a> {
 
         // We first visit all actions in order to emit the functions
         // in the same order as they appear in the source .tree text.
-        for action in &condition.asts {
+        for action in &condition.children {
             if let Ast::Action(action) = action {
                 emitted.push_str(&self.visit_action(action)?);
             }
         }
 
         // We count instead of collecting into a Vec to avoid allocating a Vec for each condition.
-        let action_count = condition.asts.iter().filter(|ast| ast.is_action()).count();
+        let action_count = condition
+            .children
+            .iter()
+            .filter(|ast| ast.is_action())
+            .count();
         // We check that there is more than one action to avoid printing extra closing
         // braces when conditions are nested.
         if action_count > 0 {
@@ -286,7 +295,7 @@ impl<'a> TreeVisitor for EmitterI<'a> {
         }
 
         // Then we recursively emit all child conditions.
-        for condition in &condition.asts {
+        for condition in &condition.children {
             if let Ast::Condition(condition) = condition {
                 emitted.push_str(&self.visit_condition(condition)?);
             }

@@ -5,6 +5,7 @@
 pub mod check;
 #[doc(hidden)]
 pub mod cli;
+pub mod hir;
 pub mod scaffold;
 pub mod syntax;
 
@@ -13,4 +14,3 @@ mod utils;
 
 pub(crate) mod error;
 pub(crate) mod span;
-pub(crate) mod visitor;

@@ -1,6 +1,9 @@
 use std::{fs, path::PathBuf};
 
 use clap::Parser;
+use solang_parser::pt::ContractDefinition;
+use solang_parser::pt::ContractPart;
+use solang_parser::pt::SourceUnitPart;
 
 use crate::span::{Position, Span};
 use violation::Violation;
@@ -21,9 +24,8 @@ impl Check {
         let mut violations: Vec<Violation> = Vec::new();
 
         for tree_path in self.files.iter() {
-            let mut sol_path = tree_path.clone();
-
             // Get the path to the output file.
+            let mut sol_path = tree_path.clone();
             sol_path.set_extension("t.sol");
 
             if !sol_path.exists() {
@@ -52,6 +54,19 @@ impl Check {
             let tree_ast = crate::syntax::parse(&tree)?;
             let (sol_ast, _) =
                 solang_parser::parse(&code, 0).expect("should parse the solidity file");
+
+            for part in sol_ast.0 {
+                match part {
+                    SourceUnitPart::ContractDefinition(contract) => {
+                        for el in &contract.parts {
+                            if let ContractPart::FunctionDefinition(f) = el {
+                                println!("{f:?}");
+                            }
+                        }
+                    }
+                    _ => {}
+                }
+            }
         }
 
         for violation in violations {

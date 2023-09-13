@@ -1,8 +1,15 @@
+//! The syntax parser module.
+//!
+//! This module includes everything necessary to convert from a tree
+//! in string form to an AST. It also includes a semantic analyzer.
+
 pub mod ast;
 pub mod parser;
 pub mod semantics;
 pub mod tokenizer;
+pub mod visitor;
 
+/// Parses a tree file into an AST.
 pub fn parse(text: &str) -> crate::error::Result<ast::Ast> {
     let tokens = tokenizer::Tokenizer::new().tokenize(text)?;
     let ast = parser::Parser::new().parse(text, &tokens)?;

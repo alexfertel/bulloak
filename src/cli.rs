@@ -2,7 +2,7 @@ use clap::{Parser, Subcommand};
 
 /// The main `bulloak` cli interface.
 ///
-/// This is the entrypoint to the executable.
+/// This is the entry point to the executable.
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)] // Read from `Cargo.toml`
 pub(crate) struct Cli {

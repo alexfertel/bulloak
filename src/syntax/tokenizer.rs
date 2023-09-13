@@ -1,3 +1,5 @@
+//! Defines a scanner for bulloak trees that produces a token stream.
+
 use std::{borrow::Borrow, cell::Cell, fmt, result};
 
 use crate::span::{Position, Span};

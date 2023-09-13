@@ -1,3 +1,5 @@
+//! A parser implementation for a stream of tokens representing a bulloak tree.
+
 use std::fmt;
 use std::{borrow::Borrow, cell::Cell, result};
 
@@ -227,7 +229,7 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
                     TokenKind::When | TokenKind::Given => {
                         let title = self.parse_string(next_token);
 
-                        let mut asts = vec![];
+                        let mut children = vec![];
                         while self
                             .current()
                             // Only parse tokens that are indented more than the current token.
@@ -235,13 +237,13 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
                             .is_some_and(|t| t.span.start.column > current_token.span.start.column)
                         {
                             let ast = self._parse()?;
-                            asts.push(ast);
+                            children.push(ast);
                         }
 
                         let previous = self.previous().unwrap();
                         Ok(Ast::Condition(Condition {
                             title: sanitize(&title),
-                            asts,
+                            children,
                             span: Span::new(current_token.span.start, previous.span.end),
                         }))
                     }
@@ -265,21 +267,21 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
     fn parse_root(&self, current_token: &Token) -> Result<Ast> {
         self.consume();
         // A string at the start of the file is the root ast node.
-        let mut asts = vec![];
+        let mut children = vec![];
         while self.current().is_some() {
             let ast = self._parse()?;
-            asts.push(ast);
+            children.push(ast);
         }
 
-        let last_span = if !asts.is_empty() {
-            asts[asts.len() - 1].span()
+        let last_span = if !children.is_empty() {
+            children[children.len() - 1].span()
         } else {
             &current_token.span
         };
 
         Ok(Ast::Root(Root {
             span: Span::new(current_token.span.start, last_span.end),
-            asts,
+            children,
             contract_name: current_token.lexeme.clone(),
         }))
     }
@@ -343,7 +345,7 @@ mod tests {
             parse("FooTest").unwrap(),
             Ast::Root(Root {
                 span: Span::new(Position::new(0, 1, 1), Position::new(6, 1, 7)),
-                asts: vec![],
+                children: vec![],
                 contract_name: String::from("FooTest"),
             })
         );
@@ -355,10 +357,10 @@ mod tests {
             parse("Foo_Test\n└── when something bad happens\n   └── it should revert").unwrap(),
             Ast::Root(Root {
                 span: Span::new(Position::new(0, 1, 1), Position::new(74, 3, 23)),
-                asts: vec![Ast::Condition(Condition {
+                children: vec![Ast::Condition(Condition {
                     span: Span::new(Position::new(9, 2, 1), Position::new(74, 3, 23)),
                     title: String::from("when something bad happens"),
-                    asts: vec![Ast::Action(Action {
+                    children: vec![Ast::Action(Action {
                         span: Span::new(Position::new(49, 3, 4), Position::new(74, 3, 23)),
                         title: String::from("it should revert"),
                     })],
@@ -382,11 +384,11 @@ mod tests {
             Ast::Root(Root {
                 contract_name: String::from("FooBarTheBest_Test"),
                 span: Span::new(Position::new(0, 1, 1), Position::new(140, 5, 23)),
-                asts: vec![
+                children: vec![
                     Ast::Condition(Condition {
                         title: String::from("when stuff called"),
                         span: Span::new(Position::new(19, 2, 1), Position::new(77, 3, 23)),
-                        asts: vec![Ast::Action(Action {
+                        children: vec![Ast::Action(Action {
                             title: String::from("it should revert"),
                             span: Span::new(Position::new(52, 3, 4), Position::new(77, 3, 23)),
                         })],
@@ -394,7 +396,7 @@ mod tests {
                     Ast::Condition(Condition {
                         title: String::from("given not stuff called"),
                         span: Span::new(Position::new(79, 4, 1), Position::new(140, 5, 23)),
-                        asts: vec![Ast::Action(Action {
+                        children: vec![Ast::Action(Action {
                             title: String::from("it should revert"),
                             span: Span::new(Position::new(115, 5, 4), Position::new(140, 5, 23)),
                         })],
@@ -416,10 +418,10 @@ mod tests {
             Ast::Root(Root {
                 contract_name: String::from("FooB-rTheBestOf_Test"),
                 span: Span::new(Position::new(0, 1, 1), Position::new(77, 3, 23)),
-                asts: vec![Ast::Condition(Condition {
+                children: vec![Ast::Condition(Condition {
                     title: String::from("when st_ff alld"),
                     span: Span::new(Position::new(21, 2, 1), Position::new(77, 3, 23)),
-                    asts: vec![Ast::Action(Action {
+                    children: vec![Ast::Action(Action {
                         title: String::from("it should revert"),
                         span: Span::new(Position::new(52, 3, 4), Position::new(77, 3, 23)),
                     })],

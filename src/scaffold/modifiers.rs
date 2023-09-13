@@ -1,8 +1,8 @@
 use indexmap::IndexMap;
 
 use crate::syntax::ast::{self, Ast};
+use crate::syntax::visitor::Visitor;
 use crate::utils::{lower_first_letter, to_pascal_case};
-use crate::visitor::TreeVisitor;
 
 /// AST visitor that discovers modifiers.
 ///
@@ -15,7 +15,7 @@ use crate::visitor::TreeVisitor;
 /// we assume that duplicate titles translate to the same modifier.
 /// `IndexMap` was chosen since preserving the order of insertion
 /// to match the order of the modifiers in the source tree is helpful
-/// and the performance trade-off is dismissable.
+/// and the performance trade-off is negligible.
 pub struct ModifierDiscoverer {
     modifiers: IndexMap<String, String>,
 }
@@ -42,12 +42,12 @@ impl ModifierDiscoverer {
 
 /// A visitor that stores key-value pairs of condition titles and
 /// their corresponding modifiers.
-impl TreeVisitor for ModifierDiscoverer {
+impl Visitor for ModifierDiscoverer {
     type Output = ();
     type Error = ();
 
     fn visit_root(&mut self, root: &ast::Root) -> Result<Self::Output, Self::Error> {
-        for condition in &root.asts {
+        for condition in &root.children {
             if let Ast::Condition(condition) = condition {
                 self.visit_condition(condition)?;
             }
@@ -62,7 +62,7 @@ impl TreeVisitor for ModifierDiscoverer {
             lower_first_letter(&to_pascal_case(&condition.title)),
         );
 
-        for condition in &condition.asts {
+        for condition in &condition.children {
             if let Ast::Condition(condition) = condition {
                 self.visit_condition(condition)?;
             }
