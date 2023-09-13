@@ -80,13 +80,14 @@ impl<'a> Visitor for TranslatorI<'a> {
     type Error = ();
 
     fn visit_root(&mut self, root: &crate::syntax::ast::Root) -> Result<Self::Output, Self::Error> {
-        let mut children = Vec::new();
+        let mut root_children = Vec::new();
 
         // Add the pragma directive to the hir.
-        children.push(Hir::PragmaDirective(hir::PragmaDirective {
+        root_children.push(Hir::PragmaDirective(hir::PragmaDirective {
             version: self.translator.solidity_version.to_string(),
         }));
 
+        let mut contract_children = Vec::new();
         for ast in &root.children {
             match ast {
                 // A root node cannot be a child of a root node.
@@ -118,15 +119,23 @@ impl<'a> Visitor for TranslatorI<'a> {
                         modifiers: None,
                         children: Some(hirs),
                     });
-                    children.push(hir);
+                    contract_children.push(hir);
                 }
                 ast::Ast::Condition(condition) => {
-                    children.append(&mut self.visit_condition(condition)?);
+                    contract_children.append(&mut self.visit_condition(condition)?);
                 }
             }
         }
 
-        Ok(vec![Hir::Root(hir::Root { children })])
+        // Add the contract definition to the hir.
+        root_children.push(Hir::ContractDefinition(hir::ContractDefinition {
+            identifier: root.contract_name.clone(),
+            children: contract_children,
+        }));
+
+        Ok(vec![Hir::Root(hir::Root {
+            children: root_children,
+        })])
     }
 
     fn visit_condition(
@@ -228,5 +237,131 @@ impl<'a> Visitor for TranslatorI<'a> {
         Ok(vec![hir::Hir::Comment(hir::Comment {
             lexeme: action.title.clone(),
         })])
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use anyhow::Result;
+    use pretty_assertions::assert_eq;
+
+    use crate::hir::{self, Hir};
+    use crate::scaffold::modifiers;
+    use crate::syntax::parser::Parser;
+    use crate::syntax::tokenizer::Tokenizer;
+
+    fn translate(text: &str) -> Result<hir::Hir> {
+        let tokens = Tokenizer::new().tokenize(&text)?;
+        let ast = Parser::new().parse(&text, &tokens)?;
+        let mut discoverer = modifiers::ModifierDiscoverer::new();
+        let modifiers = discoverer.discover(&ast);
+
+        Ok(hir::translator::Translator::new("0.8.0").translate(&ast, modifiers))
+    }
+
+    fn root(children: Vec<Hir>) -> Hir {
+        Hir::Root(hir::Root { children })
+    }
+
+    fn pragma(version: String) -> Hir {
+        Hir::PragmaDirective(hir::PragmaDirective { version })
+    }
+
+    fn contract(identifier: String, children: Vec<Hir>) -> Hir {
+        Hir::ContractDefinition(hir::ContractDefinition {
+            identifier,
+            children,
+        })
+    }
+
+    fn function(
+        identifier: String,
+        ty: hir::FunctionTy,
+        modifiers: Option<Vec<String>>,
+        children: Option<Vec<Hir>>,
+    ) -> Hir {
+        Hir::FunctionDefinition(hir::FunctionDefinition {
+            identifier,
+            ty,
+            modifiers,
+            children,
+        })
+    }
+
+    fn comment(lexeme: String) -> Hir {
+        Hir::Comment(hir::Comment { lexeme })
+    }
+
+    #[test]
+    fn test_one_child() {
+        assert_eq!(
+            translate("Foo_Test\n└── when something bad happens\n   └── it should revert").unwrap(),
+            root(vec![
+                pragma("0.8.0".to_string()),
+                contract(
+                    "Foo_Test".to_string(),
+                    vec![
+                        function(
+                            "whenSomethingBadHappens".to_string(),
+                            hir::FunctionTy::Modifier,
+                            None,
+                            None
+                        ),
+                        function(
+                            "test_RevertWhen_SomethingBadHappens".to_string(),
+                            hir::FunctionTy::Function,
+                            Some(vec!["whenSomethingBadHappens".to_string()]),
+                            Some(vec![comment("it should revert".to_string())])
+                        ),
+                    ]
+                )
+            ])
+        );
+    }
+
+    #[test]
+    fn test_two_children() {
+        assert_eq!(
+            translate(
+                r"FooBarTheBest_Test
+├── when stuff called
+│  └── it should revert
+└── given not stuff called
+   └── it should revert"
+            )
+            .unwrap(),
+            root(vec![
+                pragma("0.8.0".to_string()),
+                contract(
+                    "FooBarTheBest_Test".to_string(),
+                    vec![
+                        function(
+                            "whenStuffCalled".to_string(),
+                            hir::FunctionTy::Modifier,
+                            None,
+                            None
+                        ),
+                        function(
+                            "test_RevertWhen_StuffCalled".to_string(),
+                            hir::FunctionTy::Function,
+                            Some(vec!["whenStuffCalled".to_string()]),
+                            Some(vec![comment("it should revert".to_string())])
+                        ),
+                        function(
+                            "givenNotStuffCalled".to_string(),
+                            hir::FunctionTy::Modifier,
+                            None,
+                            None
+                        ),
+                        function(
+                            "test_RevertGiven_NotStuffCalled".to_string(),
+                            hir::FunctionTy::Function,
+                            Some(vec!["givenNotStuffCalled".to_string()]),
+                            Some(vec![comment("it should revert".to_string())])
+                        ),
+                    ]
+                )
+            ])
+        );
     }
 }

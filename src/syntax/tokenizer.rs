@@ -19,6 +19,8 @@ pub struct Error {
     span: Span,
 }
 
+impl std::error::Error for Error {}
+
 impl Error {
     /// Return the type of this error.
     pub fn kind(&self) -> &ErrorKind {

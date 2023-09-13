@@ -43,6 +43,8 @@ impl Error {
     }
 }
 
+impl std::error::Error for Error {}
+
 /// The type of an error that occurred while building an AST.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ErrorKind {
