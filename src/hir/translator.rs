@@ -221,7 +221,7 @@ impl<'a> Visitor for TranslatorI<'a> {
         // Then we recursively visit all child conditions.
         for condition in &condition.children {
             if let ast::Ast::Condition(condition) = condition {
-                self.visit_condition(condition)?;
+                children.append(&mut self.visit_condition(condition)?);
             }
         }
 
@@ -363,5 +363,79 @@ mod tests {
                 )
             ])
         );
+    }
+
+    #[test]
+    fn test_action_with_sibling_condition() -> Result<()> {
+        let file_contents = String::from(
+            r"
+Foo_Test
+└── when stuff called
+    ├── It should do stuff.
+    ├── when a called
+    │   └── it should revert
+    ├── It should do more.
+    └── when b called
+        └── it should not revert",
+        );
+
+        assert_eq!(
+            translate(&file_contents)?,
+            root(vec![
+                pragma("0.8.0".to_string()),
+                contract(
+                    "Foo_Test".to_string(),
+                    vec![
+                        function(
+                            "whenStuffCalled".to_string(),
+                            hir::FunctionTy::Modifier,
+                            None,
+                            None
+                        ),
+                        function(
+                            "test_WhenStuffCalled".to_string(),
+                            hir::FunctionTy::Function,
+                            Some(vec!["whenStuffCalled".to_string()]),
+                            Some(vec![
+                                comment("It should do stuff.".to_string()),
+                                comment("It should do more.".to_string())
+                            ])
+                        ),
+                        function(
+                            "whenACalled".to_string(),
+                            hir::FunctionTy::Modifier,
+                            None,
+                            None
+                        ),
+                        function(
+                            "test_RevertWhen_ACalled".to_string(),
+                            hir::FunctionTy::Function,
+                            Some(vec![
+                                "whenStuffCalled".to_string(),
+                                "whenACalled".to_string()
+                            ]),
+                            Some(vec![comment("it should revert".to_string())])
+                        ),
+                        function(
+                            "whenBCalled".to_string(),
+                            hir::FunctionTy::Modifier,
+                            None,
+                            None
+                        ),
+                        function(
+                            "test_WhenBCalled".to_string(),
+                            hir::FunctionTy::Function,
+                            Some(vec![
+                                "whenStuffCalled".to_string(),
+                                "whenBCalled".to_string()
+                            ]),
+                            Some(vec![comment("it should not revert".to_string())])
+                        ),
+                    ]
+                )
+            ])
+        );
+
+        Ok(())
     }
 }

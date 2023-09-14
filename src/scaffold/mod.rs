@@ -3,7 +3,7 @@ use std::{fs, path::PathBuf};
 use clap::Parser;
 use owo_colors::OwoColorize;
 
-use crate::syntax;
+use crate::{hir::translator, syntax};
 
 pub mod emitter;
 pub mod modifiers;
@@ -122,8 +122,8 @@ impl<'s> Scaffolder<'s> {
         let ast = syntax::parse(text)?;
         let mut discoverer = modifiers::ModifierDiscoverer::new();
         let modifiers = discoverer.discover(&ast);
-        let emitted = emitter::Emitter::new(self.with_comments, self.indent, self.solidity_version)
-            .emit(&ast, modifiers);
+        let hir = translator::Translator::new(self.solidity_version).translate(&ast, modifiers);
+        let emitted = emitter::Emitter::new(self.with_comments, self.indent).emit(&hir);
 
         Ok(emitted)
     }

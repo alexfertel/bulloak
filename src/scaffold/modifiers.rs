@@ -1,3 +1,8 @@
+//! Defines a modifier discovering step in the compiler.
+//!
+//! It visits the AST in depth-first order, storing modifiers
+//! for use in later phases.
+
 use indexmap::IndexMap;
 
 use crate::syntax::ast::{self, Ast};

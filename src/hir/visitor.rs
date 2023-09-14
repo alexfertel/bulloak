@@ -10,6 +10,8 @@ pub trait Visitor {
     /// An error that might occur when visiting the HIR.
     type Error;
 
+    /// This method is called on the root node.
+    fn visit_root(&mut self, root: &hir::Root) -> Result<Self::Output, Self::Error>;
     /// This method is called on a pragma directive node.
     fn visit_pragma(&mut self, pragma: &hir::PragmaDirective) -> Result<Self::Output, Self::Error>;
     /// This method is called on a contract deifinition node.
@@ -22,4 +24,6 @@ pub trait Visitor {
         &mut self,
         function: &hir::FunctionDefinition,
     ) -> Result<Self::Output, Self::Error>;
+    /// This method is called on a comment node.
+    fn visit_comment(&mut self, comment: &hir::Comment) -> Result<Self::Output, Self::Error>;
 }
