@@ -325,7 +325,7 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
                 }
                 _ => {
                     let token = self.scan_word()?;
-                    if token.kind == TokenKind::When {
+                    if token.kind == TokenKind::When || token.kind == TokenKind::Given {
                         self.enter_identifier_mode()
                     }
                     tokens.push(token);
@@ -536,6 +536,26 @@ mod tests {
         assert_eq!(
             tokenize("foo\n└── when w,eird identifier").unwrap_err(),
             e(IdentifierCharInvalid(','), s(p(20, 2, 11), p(20, 2, 11)),)
+        );
+        assert_eq!(
+            tokenize("foo\n└── given |weird identifier").unwrap_err(),
+            e(IdentifierCharInvalid('|'), s(p(20, 2, 11), p(20, 2, 11)),)
+        );
+        assert_eq!(
+            tokenize("foo\n└── given w|eird identifier").unwrap_err(),
+            e(IdentifierCharInvalid('|'), s(p(21, 2, 12), p(21, 2, 12)),)
+        );
+        assert_eq!(
+            tokenize("foo\n└── given weird| identifier").unwrap_err(),
+            e(IdentifierCharInvalid('|'), s(p(25, 2, 16), p(25, 2, 16)),)
+        );
+        assert_eq!(
+            tokenize("foo\n└── given .weird identifier").unwrap_err(),
+            e(IdentifierCharInvalid('.'), s(p(20, 2, 11), p(20, 2, 11)),)
+        );
+        assert_eq!(
+            tokenize("foo\n└── given w,eird identifier").unwrap_err(),
+            e(IdentifierCharInvalid(','), s(p(21, 2, 12), p(21, 2, 12)),)
         );
     }
 
