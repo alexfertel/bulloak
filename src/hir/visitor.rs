@@ -12,8 +12,6 @@ pub trait Visitor {
 
     /// This method is called on the root node.
     fn visit_root(&mut self, root: &hir::Root) -> Result<Self::Output, Self::Error>;
-    /// This method is called on a pragma directive node.
-    fn visit_pragma(&mut self, pragma: &hir::PragmaDirective) -> Result<Self::Output, Self::Error>;
     /// This method is called on a contract deifinition node.
     fn visit_contract(
         &mut self,

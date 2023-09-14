@@ -1,37 +1,24 @@
-use std::fmt;
+//! Defines a rule-checking error object.
 
-use crate::span::Span;
+use std::fmt;
 
 /// An error that occurred while checking specification rules between
 /// a tree and a solidity contract.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Violation {
-    /// The kind of error.
+    /// The kind of violation.
     kind: ViolationKind,
-    /// The original text of the tree file.
-    text: String,
-    /// The span of this error.
-    span: Span,
 }
 
 impl Violation {
-    pub fn new(kind: ViolationKind, span: Span, text: String) -> Self {
-        Violation { kind, text, span }
+    /// Create a new violation.
+    pub fn new(kind: ViolationKind) -> Self {
+        Violation { kind }
     }
 
-    /// Return the type of this error.
+    /// Return the type of this violation.
     pub fn kind(&self) -> &ViolationKind {
         &self.kind
-    }
-
-    /// The original text string in which this error occurred.
-    pub fn text(&self) -> &str {
-        &self.text
-    }
-
-    /// Return the span at which this error occurred.
-    pub fn span(&self) -> &Span {
-        &self.span
     }
 }
 
@@ -43,8 +30,14 @@ pub enum ViolationKind {
     FileMissing(String),
     /// Couldn't read the corresponding solidity file.
     FileUnreadable(String),
+    /// Found no matching solidity contract.
+    ContractMissing(String),
+    /// Contract name doesn't match.
+    ContractNameNotMatches(String, String),
     /// Found a tree branch without a matching test.
-    MatchingTestMissing,
+    MatchingTestMissing(String),
+    /// Found an incorrectly ordered test.
+    TestOrderMismatch(String),
     /// This enum may grow additional variants, so this makes sure clients
     /// don't count on exhaustive matching. (Otherwise, adding a new variant
     /// could break existing code.)
@@ -54,7 +47,7 @@ pub enum ViolationKind {
 
 impl fmt::Display for Violation {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        crate::error::Formatter::from(self).fmt(f)
+        writeln!(f, "{}", self.kind)
     }
 }
 
@@ -62,9 +55,22 @@ impl fmt::Display for ViolationKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use self::ViolationKind::*;
         match self {
-            FileMissing(file) => write!(f, "{} is missing its matching solidity file", file),
-            FileUnreadable(file) => write!(f, "failed to read {}", file),
-            MatchingTestMissing => write!(f, "the corresponding test is missing"),
+            FileMissing(file) => write!(
+                f,
+                "The file {} is missing its matching solidity file.",
+                file
+            ),
+            FileUnreadable(file) => write!(f, "Bulloak couldn't read {}.", file),
+            ContractMissing(contract) => write!(
+                f,
+                "Couldn't find a corresponding contract for {} in the solidity file.",
+                contract
+            ),
+            MatchingTestMissing(test_name) => write!(
+                f,
+                "Couldn't find a corresponding test for {} in the solidity file.",
+                test_name
+            ),
             _ => unreachable!(),
         }
     }

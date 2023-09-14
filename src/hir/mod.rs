@@ -1,104 +1,19 @@
-//! Defines a high-level intermediate representation (HIR).
+//! Defines a high-level intermediate representation (HIR) and a translate fn
+//! that takes a tree and returns its corresponding HIR.
 
+pub mod hir;
 pub mod translator;
 pub mod visitor;
 
-/// An high-level intermediate representation (HIR) that describes
-/// the semantic structure of a solidity contract as emitted by `bulloak`.
-#[derive(Debug, PartialEq, Eq)]
-pub enum Hir {
-    /// An abstract root node that does not correspond
-    /// to any concrete solidity construct.
-    ///
-    /// This is used as a sort of "file" boundary since it
-    /// is easier to express file-level solidity constraints,
-    /// like the pragma directive.
-    ///
-    /// Note that this means that there can only be a single
-    /// root node in any HIR.
-    Root(Root),
-    /// A pragma directive of the form:
-    ///
-    /// `pragma solidty <VERSION>`
-    PragmaDirective(PragmaDirective),
-    /// A contract definition.
-    ContractDefinition(ContractDefinition),
-    /// A function definition.
-    FunctionDefinition(FunctionDefinition),
-    /// A comment.
-    Comment(Comment),
-}
+pub use hir::*;
 
-impl Default for Hir {
-    fn default() -> Self {
-        Hir::Root(Root::default())
-    }
-}
-
-type Identifier = String;
-
-/// The root HIR node.
+/// High-level function that returns a HIR given the contents of a `.tree` file.
 ///
-/// There can only be one root node in any HIR.
-#[derive(Debug, PartialEq, Eq, Default)]
-pub struct Root {
-    /// The children HIR nodes of this node.
-    pub children: Vec<Hir>,
-}
-
-/// A pragma directive HIR node.
-#[derive(Debug, PartialEq, Eq, Default)]
-pub struct PragmaDirective {
-    /// The solidity version.
-    pub version: Identifier,
-}
-
-/// A contract definition HIR node.
-#[derive(Debug, PartialEq, Eq, Default)]
-pub struct ContractDefinition {
-    /// The contract name.
-    pub identifier: Identifier,
-    /// The children HIR nodes of this node.
-    pub children: Vec<Hir>,
-}
-
-/// A function's type.
-///
-/// Currently, we only care about regular functions (tests)
-/// and modifier functions.
-#[derive(Debug, PartialEq, Eq)]
-pub enum FunctionTy {
-    /// `function`
-    Function,
-    /// `modifier`
-    Modifier,
-}
-
-impl Default for FunctionTy {
-    fn default() -> Self {
-        FunctionTy::Function
-    }
-}
-
-/// A function definition HIR node.
-#[derive(Debug, PartialEq, Eq, Default)]
-pub struct FunctionDefinition {
-    /// The contract name.
-    pub identifier: Identifier,
-    /// The type of this function.
-    pub ty: FunctionTy,
-    /// The set of modifiers applied to this function.
-    ///
-    /// This might be `None` if the function's type
-    /// is `FunctionTy::Modifier`.
-    pub modifiers: Option<Vec<Identifier>>,
-    /// The children HIR nodes of this node.
-    pub children: Option<Vec<Hir>>,
-}
-
-/// A comment node.
-#[derive(Debug, PartialEq, Eq, Default)]
-pub struct Comment {
-    /// The contract name.
-    pub lexeme: String,
+/// This function leverages `crate::syntax::parse` and `translator::Translator::translate`
+/// to hide away most of the complexity of `bulloak`'s internal compiler.
+pub fn translate(tree: &str) -> anyhow::Result<Hir> {
+    let ast = crate::syntax::parse(&tree)?;
+    let mut discoverer = crate::scaffold::modifiers::ModifierDiscoverer::new();
+    let modifiers = discoverer.discover(&ast);
+    Ok(translator::Translator::new().translate(&ast, modifiers))
 }

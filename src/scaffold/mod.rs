@@ -50,6 +50,7 @@ impl Scaffold {
             self.indent,
             &self.solidity_version,
         );
+
         // For each input file, compile it and print it or write it
         // to the filesystem.
         for file in self.files.iter() {
@@ -122,8 +123,9 @@ impl<'s> Scaffolder<'s> {
         let ast = syntax::parse(text)?;
         let mut discoverer = modifiers::ModifierDiscoverer::new();
         let modifiers = discoverer.discover(&ast);
-        let hir = translator::Translator::new(self.solidity_version).translate(&ast, modifiers);
-        let emitted = emitter::Emitter::new(self.with_comments, self.indent).emit(&hir);
+        let hir = translator::Translator::new().translate(&ast, modifiers);
+        let emitted = emitter::Emitter::new(self.with_comments, self.indent, self.solidity_version)
+            .emit(&hir);
 
         Ok(emitted)
     }

@@ -1,13 +1,12 @@
 use std::{fs, path::PathBuf};
 
 use clap::Parser;
-use solang_parser::pt::ContractDefinition;
-use solang_parser::pt::ContractPart;
-use solang_parser::pt::SourceUnitPart;
 
-use crate::span::{Position, Span};
 use violation::Violation;
 use violation::ViolationKind;
+
+use self::rules::Checker;
+use self::rules::Context;
 
 mod rules;
 pub(crate) mod violation;
@@ -20,6 +19,9 @@ pub struct Check {
 }
 
 impl Check {
+    /// Entrypoint for `bulloak check`.
+    ///
+    /// Note that we don't deal with solang_parser errors at all.
     pub fn run(self: Check) -> anyhow::Result<()> {
         let mut violations: Vec<Violation> = Vec::new();
 
@@ -28,12 +30,11 @@ impl Check {
             let mut sol_path = tree_path.clone();
             sol_path.set_extension("t.sol");
 
+            let tree_path_str = tree_path.to_string_lossy().into_owned();
             if !sol_path.exists() {
-                violations.push(Violation::new(
-                    ViolationKind::FileMissing(tree_path.to_string_lossy().into_owned()),
-                    Span::splat(Position::new(0, 1, 1)),
-                    "".to_string(),
-                ))
+                violations.push(Violation::new(ViolationKind::FileMissing(
+                    tree_path_str.clone(),
+                )))
             }
 
             let tree = match try_read_to_string(&tree_path) {
@@ -51,22 +52,20 @@ impl Check {
                 }
             };
 
-            let tree_ast = crate::syntax::parse(&tree)?;
+            let tree_hir = &crate::hir::translate(&tree)?;
             let (sol_ast, _) =
-                solang_parser::parse(&code, 0).expect("should parse the solidity file");
+                &solang_parser::parse(&code, 0).expect("should parse the solidity file");
 
-            for part in sol_ast.0 {
-                match part {
-                    SourceUnitPart::ContractDefinition(contract) => {
-                        for el in &contract.parts {
-                            if let ContractPart::FunctionDefinition(f) = el {
-                                println!("{f:?}");
-                            }
-                        }
-                    }
-                    _ => {}
-                }
-            }
+            let sol_path_str = sol_path.to_string_lossy().into_owned();
+            let ctx = Context {
+                tree_hir,
+                sol_ast,
+                tree_path: &tree_path_str,
+                sol_path: &sol_path_str,
+            };
+            violations.append(&mut rules::structural_match::StructuralMatcher::check(
+                &ctx,
+            )?);
         }
 
         for violation in violations {
@@ -79,10 +78,8 @@ impl Check {
 
 fn try_read_to_string(path: &PathBuf) -> Result<String, Violation> {
     fs::read_to_string(path).map_err(|_| {
-        Violation::new(
-            ViolationKind::FileUnreadable(path.to_string_lossy().into_owned()),
-            Span::splat(Position::new(0, 1, 1)),
-            "".to_string(),
-        )
+        Violation::new(ViolationKind::FileUnreadable(
+            path.to_string_lossy().into_owned(),
+        ))
     })
 }

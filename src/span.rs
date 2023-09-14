@@ -4,7 +4,7 @@ use std::{cmp::Ordering, fmt};
 ///
 /// All span positions are absolute char offsets that can be used on the
 /// original tree that was parsed.
-#[derive(Clone, Copy, Eq, PartialEq)]
+#[derive(Clone, Copy, Eq, PartialEq, Default)]
 pub struct Span {
     /// The start char offset.
     pub start: Position,
@@ -34,7 +34,7 @@ impl PartialOrd for Span {
 ///
 /// A position encodes one half of a span, and includes the char offset, line
 /// number and column number.
-#[derive(Clone, Copy, Eq, PartialEq)]
+#[derive(Clone, Copy, Eq, PartialEq, Default)]
 pub struct Position {
     /// The absolute offset of this position, starting at `0` from the
     /// beginning of the tree.

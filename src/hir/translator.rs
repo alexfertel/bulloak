@@ -13,15 +13,12 @@ use crate::utils::{capitalize_first_letter, sanitize};
 ///
 /// It visits an AST in depth-first order an generates a HIR
 /// as a result.
-pub struct Translator<'s> {
-    /// The solidity version to be used in the pragma directive.
-    pub solidity_version: &'s str,
-}
+pub struct Translator {}
 
-impl<'s> Translator<'s> {
+impl Translator {
     /// Create a new translator with the given solidity version.
-    pub fn new(solidity_version: &'s str) -> Self {
-        Self { solidity_version }
+    pub fn new() -> Self {
+        Self {}
     }
 
     /// Translate an AST to a HIR.
@@ -50,11 +47,11 @@ struct TranslatorI<'a> {
     /// to a modifier every time it is used.
     modifiers: &'a IndexMap<String, String>,
     /// The translator state.
-    translator: Translator<'a>,
+    translator: Translator,
 }
 
 impl<'a> TranslatorI<'a> {
-    fn new(translator: Translator<'a>, modifiers: &'a IndexMap<String, String>) -> Self {
+    fn new(translator: Translator, modifiers: &'a IndexMap<String, String>) -> Self {
         Self {
             modifier_stack: Vec::new(),
             modifiers,
@@ -81,11 +78,6 @@ impl<'a> Visitor for TranslatorI<'a> {
 
     fn visit_root(&mut self, root: &crate::syntax::ast::Root) -> Result<Self::Output, Self::Error> {
         let mut root_children = Vec::new();
-
-        // Add the pragma directive to the hir.
-        root_children.push(Hir::PragmaDirective(hir::PragmaDirective {
-            version: self.translator.solidity_version.to_string(),
-        }));
 
         let mut contract_children = Vec::new();
         for ast in &root.children {
@@ -256,15 +248,11 @@ mod tests {
         let mut discoverer = modifiers::ModifierDiscoverer::new();
         let modifiers = discoverer.discover(&ast);
 
-        Ok(hir::translator::Translator::new("0.8.0").translate(&ast, modifiers))
+        Ok(hir::translator::Translator::new().translate(&ast, modifiers))
     }
 
     fn root(children: Vec<Hir>) -> Hir {
         Hir::Root(hir::Root { children })
-    }
-
-    fn pragma(version: String) -> Hir {
-        Hir::PragmaDirective(hir::PragmaDirective { version })
     }
 
     fn contract(identifier: String, children: Vec<Hir>) -> Hir {
@@ -296,26 +284,23 @@ mod tests {
     fn test_one_child() {
         assert_eq!(
             translate("Foo_Test\n└── when something bad happens\n   └── it should revert").unwrap(),
-            root(vec![
-                pragma("0.8.0".to_string()),
-                contract(
-                    "Foo_Test".to_string(),
-                    vec![
-                        function(
-                            "whenSomethingBadHappens".to_string(),
-                            hir::FunctionTy::Modifier,
-                            None,
-                            None
-                        ),
-                        function(
-                            "test_RevertWhen_SomethingBadHappens".to_string(),
-                            hir::FunctionTy::Function,
-                            Some(vec!["whenSomethingBadHappens".to_string()]),
-                            Some(vec![comment("it should revert".to_string())])
-                        ),
-                    ]
-                )
-            ])
+            root(vec![contract(
+                "Foo_Test".to_string(),
+                vec![
+                    function(
+                        "whenSomethingBadHappens".to_string(),
+                        hir::FunctionTy::Modifier,
+                        None,
+                        None
+                    ),
+                    function(
+                        "test_RevertWhen_SomethingBadHappens".to_string(),
+                        hir::FunctionTy::Function,
+                        Some(vec!["whenSomethingBadHappens".to_string()]),
+                        Some(vec![comment("it should revert".to_string())])
+                    ),
+                ]
+            )])
         );
     }
 
@@ -330,38 +315,35 @@ mod tests {
    └── it should revert"
             )
             .unwrap(),
-            root(vec![
-                pragma("0.8.0".to_string()),
-                contract(
-                    "FooBarTheBest_Test".to_string(),
-                    vec![
-                        function(
-                            "whenStuffCalled".to_string(),
-                            hir::FunctionTy::Modifier,
-                            None,
-                            None
-                        ),
-                        function(
-                            "test_RevertWhen_StuffCalled".to_string(),
-                            hir::FunctionTy::Function,
-                            Some(vec!["whenStuffCalled".to_string()]),
-                            Some(vec![comment("it should revert".to_string())])
-                        ),
-                        function(
-                            "givenNotStuffCalled".to_string(),
-                            hir::FunctionTy::Modifier,
-                            None,
-                            None
-                        ),
-                        function(
-                            "test_RevertGiven_NotStuffCalled".to_string(),
-                            hir::FunctionTy::Function,
-                            Some(vec!["givenNotStuffCalled".to_string()]),
-                            Some(vec![comment("it should revert".to_string())])
-                        ),
-                    ]
-                )
-            ])
+            root(vec![contract(
+                "FooBarTheBest_Test".to_string(),
+                vec![
+                    function(
+                        "whenStuffCalled".to_string(),
+                        hir::FunctionTy::Modifier,
+                        None,
+                        None
+                    ),
+                    function(
+                        "test_RevertWhen_StuffCalled".to_string(),
+                        hir::FunctionTy::Function,
+                        Some(vec!["whenStuffCalled".to_string()]),
+                        Some(vec![comment("it should revert".to_string())])
+                    ),
+                    function(
+                        "givenNotStuffCalled".to_string(),
+                        hir::FunctionTy::Modifier,
+                        None,
+                        None
+                    ),
+                    function(
+                        "test_RevertGiven_NotStuffCalled".to_string(),
+                        hir::FunctionTy::Function,
+                        Some(vec!["givenNotStuffCalled".to_string()]),
+                        Some(vec![comment("it should revert".to_string())])
+                    ),
+                ]
+            )])
         );
     }
 
@@ -381,59 +363,56 @@ Foo_Test
 
         assert_eq!(
             translate(&file_contents)?,
-            root(vec![
-                pragma("0.8.0".to_string()),
-                contract(
-                    "Foo_Test".to_string(),
-                    vec![
-                        function(
+            root(vec![contract(
+                "Foo_Test".to_string(),
+                vec![
+                    function(
+                        "whenStuffCalled".to_string(),
+                        hir::FunctionTy::Modifier,
+                        None,
+                        None
+                    ),
+                    function(
+                        "test_WhenStuffCalled".to_string(),
+                        hir::FunctionTy::Function,
+                        Some(vec!["whenStuffCalled".to_string()]),
+                        Some(vec![
+                            comment("It should do stuff.".to_string()),
+                            comment("It should do more.".to_string())
+                        ])
+                    ),
+                    function(
+                        "whenACalled".to_string(),
+                        hir::FunctionTy::Modifier,
+                        None,
+                        None
+                    ),
+                    function(
+                        "test_RevertWhen_ACalled".to_string(),
+                        hir::FunctionTy::Function,
+                        Some(vec![
                             "whenStuffCalled".to_string(),
-                            hir::FunctionTy::Modifier,
-                            None,
-                            None
-                        ),
-                        function(
-                            "test_WhenStuffCalled".to_string(),
-                            hir::FunctionTy::Function,
-                            Some(vec!["whenStuffCalled".to_string()]),
-                            Some(vec![
-                                comment("It should do stuff.".to_string()),
-                                comment("It should do more.".to_string())
-                            ])
-                        ),
-                        function(
-                            "whenACalled".to_string(),
-                            hir::FunctionTy::Modifier,
-                            None,
-                            None
-                        ),
-                        function(
-                            "test_RevertWhen_ACalled".to_string(),
-                            hir::FunctionTy::Function,
-                            Some(vec![
-                                "whenStuffCalled".to_string(),
-                                "whenACalled".to_string()
-                            ]),
-                            Some(vec![comment("it should revert".to_string())])
-                        ),
-                        function(
-                            "whenBCalled".to_string(),
-                            hir::FunctionTy::Modifier,
-                            None,
-                            None
-                        ),
-                        function(
-                            "test_WhenBCalled".to_string(),
-                            hir::FunctionTy::Function,
-                            Some(vec![
-                                "whenStuffCalled".to_string(),
-                                "whenBCalled".to_string()
-                            ]),
-                            Some(vec![comment("it should not revert".to_string())])
-                        ),
-                    ]
-                )
-            ])
+                            "whenACalled".to_string()
+                        ]),
+                        Some(vec![comment("it should revert".to_string())])
+                    ),
+                    function(
+                        "whenBCalled".to_string(),
+                        hir::FunctionTy::Modifier,
+                        None,
+                        None
+                    ),
+                    function(
+                        "test_WhenBCalled".to_string(),
+                        hir::FunctionTy::Function,
+                        Some(vec![
+                            "whenStuffCalled".to_string(),
+                            "whenBCalled".to_string()
+                        ]),
+                        Some(vec![comment("it should not revert".to_string())])
+                    ),
+                ]
+            )])
         );
 
         Ok(())

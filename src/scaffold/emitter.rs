@@ -10,20 +10,23 @@ use crate::utils::sanitize;
 ///
 /// This struct holds the state of the emitter. It is not
 /// tied to a specific HIR.
-pub struct Emitter {
+pub struct Emitter<'s> {
     /// This flag determines whether actions are emitted as comments
     /// in the body of functions.
     with_actions_as_comments: bool,
     /// The indentation level of the emitted code.
     indent: usize,
+    /// The solidity version to be used in the pragma directive.
+    solidity_version: &'s str,
 }
 
-impl Emitter {
+impl<'s> Emitter<'s> {
     /// Create a new emitter with the given configuration.
-    pub fn new(with_actions_as_comments: bool, indent: usize) -> Self {
+    pub fn new(with_actions_as_comments: bool, indent: usize, solidity_version: &'s str) -> Self {
         Self {
             with_actions_as_comments,
             indent,
+            solidity_version,
         }
     }
 
@@ -43,14 +46,14 @@ impl Emitter {
 ///
 /// This emitter generates skeleton contracts and tests functions
 /// inside that contract described in the input .tree file.
-struct EmitterI {
+struct EmitterI<'s> {
     /// The emitter state.
-    emitter: Emitter,
+    emitter: Emitter<'s>,
 }
 
-impl EmitterI {
+impl<'s> EmitterI<'s> {
     /// Create a new emitter with the given emitter state and modifier map.
-    fn new(emitter: Emitter) -> Self {
+    fn new(emitter: Emitter<'s>) -> Self {
         Self { emitter }
     }
 
@@ -145,16 +148,20 @@ impl EmitterI {
 /// Note that the visitor is infallible because previous
 /// passes ensure that the HIR is valid. In case an error
 /// is found, it should be added to a previous pass.
-impl Visitor for EmitterI {
+impl<'s> Visitor for EmitterI<'s> {
     type Output = String;
     type Error = ();
 
     fn visit_root(&mut self, root: &hir::Root) -> result::Result<Self::Output, Self::Error> {
         let mut emitted = String::new();
 
+        emitted.push_str(&format!(
+            "pragma solidity {};\n\n",
+            self.emitter.solidity_version
+        ));
+
         for hir in &root.children {
             let result = match hir {
-                Hir::PragmaDirective(pragma_directive) => self.visit_pragma(pragma_directive)?,
                 Hir::ContractDefinition(contract) => self.visit_contract(contract)?,
                 _ => unreachable!(),
             };
@@ -163,13 +170,6 @@ impl Visitor for EmitterI {
         }
 
         Ok(emitted)
-    }
-
-    fn visit_pragma(
-        &mut self,
-        pragma_directive: &hir::PragmaDirective,
-    ) -> result::Result<Self::Output, Self::Error> {
-        Ok(format!("pragma solidity {};\n\n", pragma_directive.version))
     }
 
     fn visit_contract(
@@ -258,8 +258,8 @@ mod tests {
         let ast = Parser::new().parse(&text, &tokens)?;
         let mut discoverer = modifiers::ModifierDiscoverer::new();
         let modifiers = discoverer.discover(&ast);
-        let hir = Translator::new(version).translate(&ast, modifiers);
-        Ok(emitter::Emitter::new(with_comments, indent).emit(&hir))
+        let hir = Translator::new().translate(&ast, modifiers);
+        Ok(emitter::Emitter::new(with_comments, indent, version).emit(&hir))
     }
 
     fn scaffold(text: &str) -> Result<String> {
