@@ -5,19 +5,19 @@ use std::fmt;
 /// An error that occurred while checking specification rules between
 /// a tree and a solidity contract.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct Violation {
+pub(crate) struct Violation {
     /// The kind of violation.
     kind: ViolationKind,
 }
 
 impl Violation {
     /// Create a new violation.
-    pub fn new(kind: ViolationKind) -> Self {
+    pub(crate) fn new(kind: ViolationKind) -> Self {
         Violation { kind }
     }
 
     /// Return the type of this violation.
-    pub fn kind(&self) -> &ViolationKind {
+    pub(crate) fn kind(&self) -> &ViolationKind {
         &self.kind
     }
 }
@@ -25,7 +25,7 @@ impl Violation {
 /// The type of an error that occurred while checking specification rules between
 /// a tree and a solidity contract.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub enum ViolationKind {
+pub(crate) enum ViolationKind {
     /// The corresponding solidity file does not exist.
     FileMissing(String),
     /// Couldn't read the corresponding solidity file.
@@ -47,7 +47,7 @@ pub enum ViolationKind {
 
 impl fmt::Display for Violation {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        writeln!(f, "{}", self.kind)
+        write!(f, "{}", self.kind)
     }
 }
 

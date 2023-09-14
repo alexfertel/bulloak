@@ -22,7 +22,7 @@ impl Check {
     /// Entrypoint for `bulloak check`.
     ///
     /// Note that we don't deal with solang_parser errors at all.
-    pub fn run(self: Check) -> anyhow::Result<()> {
+    pub fn run(self: Self) -> anyhow::Result<()> {
         let mut violations: Vec<Violation> = Vec::new();
 
         for tree_path in self.files.iter() {

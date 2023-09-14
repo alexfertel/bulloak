@@ -167,7 +167,7 @@ fn fns_match(fn_hir: &hir::FunctionDefinition, fn_sol: &pt::FunctionDefinition) 
         .name
         .clone()
         .is_some_and(|pt::Identifier { ref name, .. }| {
-            name != &fn_hir.identifier || !fn_types_match(&fn_hir.ty, &fn_sol.ty)
+            name == &fn_hir.identifier && fn_types_match(&fn_hir.ty, &fn_sol.ty)
         })
 }
 
