@@ -151,7 +151,7 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
     fn error(&self, span: Span, kind: ErrorKind) -> Error {
         Error {
             kind,
-            text: self.text.to_string(),
+            text: self.text.to_owned(),
             span,
         }
     }

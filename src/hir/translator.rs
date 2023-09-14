@@ -13,7 +13,7 @@ use crate::utils::{capitalize_first_letter, sanitize};
 ///
 /// It visits an AST in depth-first order an generates a HIR
 /// as a result.
-pub struct Translator {}
+pub struct Translator;
 
 impl Translator {
     /// Create a new translator with the given solidity version.
@@ -29,6 +29,7 @@ impl Translator {
     }
 }
 
+/// The internal implementation of the Translator.
 struct TranslatorI<'a> {
     /// A stack of modifiers that will be applied to the
     /// currently visited function.
@@ -46,16 +47,14 @@ struct TranslatorI<'a> {
     /// to improve performance. Otherwise each title would be converted
     /// to a modifier every time it is used.
     modifiers: &'a IndexMap<String, String>,
-    /// The translator state.
-    translator: Translator,
 }
 
 impl<'a> TranslatorI<'a> {
-    fn new(translator: Translator, modifiers: &'a IndexMap<String, String>) -> Self {
+    /// Creates a new internal translator.
+    fn new(_translator: Translator, modifiers: &'a IndexMap<String, String>) -> Self {
         Self {
             modifier_stack: Vec::new(),
             modifiers,
-            translator,
         }
     }
 
@@ -204,7 +203,7 @@ impl<'a> Visitor for TranslatorI<'a> {
             let hir = Hir::FunctionDefinition(hir::FunctionDefinition {
                 identifier: function_name,
                 ty: hir::FunctionTy::Function,
-                modifiers: Some(self.modifier_stack.iter().map(|m| m.to_string()).collect()),
+                modifiers: Some(self.modifier_stack.iter().map(|&m| m.to_owned()).collect()),
                 children: Some(actions),
             });
             children.push(hir);
@@ -285,19 +284,19 @@ mod tests {
         assert_eq!(
             translate("Foo_Test\n└── when something bad happens\n   └── it should revert").unwrap(),
             root(vec![contract(
-                "Foo_Test".to_string(),
+                "Foo_Test".to_owned(),
                 vec![
                     function(
-                        "whenSomethingBadHappens".to_string(),
+                        "whenSomethingBadHappens".to_owned(),
                         hir::FunctionTy::Modifier,
                         None,
                         None
                     ),
                     function(
-                        "test_RevertWhen_SomethingBadHappens".to_string(),
+                        "test_RevertWhen_SomethingBadHappens".to_owned(),
                         hir::FunctionTy::Function,
-                        Some(vec!["whenSomethingBadHappens".to_string()]),
-                        Some(vec![comment("it should revert".to_string())])
+                        Some(vec!["whenSomethingBadHappens".to_owned()]),
+                        Some(vec![comment("it should revert".to_owned())])
                     ),
                 ]
             )])
@@ -316,31 +315,31 @@ mod tests {
             )
             .unwrap(),
             root(vec![contract(
-                "FooBarTheBest_Test".to_string(),
+                "FooBarTheBest_Test".to_owned(),
                 vec![
                     function(
-                        "whenStuffCalled".to_string(),
+                        "whenStuffCalled".to_owned(),
                         hir::FunctionTy::Modifier,
                         None,
                         None
                     ),
                     function(
-                        "test_RevertWhen_StuffCalled".to_string(),
+                        "test_RevertWhen_StuffCalled".to_owned(),
                         hir::FunctionTy::Function,
-                        Some(vec!["whenStuffCalled".to_string()]),
-                        Some(vec![comment("it should revert".to_string())])
+                        Some(vec!["whenStuffCalled".to_owned()]),
+                        Some(vec![comment("it should revert".to_owned())])
                     ),
                     function(
-                        "givenNotStuffCalled".to_string(),
+                        "givenNotStuffCalled".to_owned(),
                         hir::FunctionTy::Modifier,
                         None,
                         None
                     ),
                     function(
-                        "test_RevertGiven_NotStuffCalled".to_string(),
+                        "test_RevertGiven_NotStuffCalled".to_owned(),
                         hir::FunctionTy::Function,
-                        Some(vec!["givenNotStuffCalled".to_string()]),
-                        Some(vec![comment("it should revert".to_string())])
+                        Some(vec!["givenNotStuffCalled".to_owned()]),
+                        Some(vec![comment("it should revert".to_owned())])
                     ),
                 ]
             )])
@@ -364,52 +363,46 @@ Foo_Test
         assert_eq!(
             translate(&file_contents)?,
             root(vec![contract(
-                "Foo_Test".to_string(),
+                "Foo_Test".to_owned(),
                 vec![
                     function(
-                        "whenStuffCalled".to_string(),
+                        "whenStuffCalled".to_owned(),
                         hir::FunctionTy::Modifier,
                         None,
                         None
                     ),
                     function(
-                        "test_WhenStuffCalled".to_string(),
+                        "test_WhenStuffCalled".to_owned(),
                         hir::FunctionTy::Function,
-                        Some(vec!["whenStuffCalled".to_string()]),
+                        Some(vec!["whenStuffCalled".to_owned()]),
                         Some(vec![
-                            comment("It should do stuff.".to_string()),
-                            comment("It should do more.".to_string())
+                            comment("It should do stuff.".to_owned()),
+                            comment("It should do more.".to_owned())
                         ])
                     ),
                     function(
-                        "whenACalled".to_string(),
+                        "whenACalled".to_owned(),
                         hir::FunctionTy::Modifier,
                         None,
                         None
                     ),
                     function(
-                        "test_RevertWhen_ACalled".to_string(),
+                        "test_RevertWhen_ACalled".to_owned(),
                         hir::FunctionTy::Function,
-                        Some(vec![
-                            "whenStuffCalled".to_string(),
-                            "whenACalled".to_string()
-                        ]),
-                        Some(vec![comment("it should revert".to_string())])
+                        Some(vec!["whenStuffCalled".to_owned(), "whenACalled".to_owned()]),
+                        Some(vec![comment("it should revert".to_owned())])
                     ),
                     function(
-                        "whenBCalled".to_string(),
+                        "whenBCalled".to_owned(),
                         hir::FunctionTy::Modifier,
                         None,
                         None
                     ),
                     function(
-                        "test_WhenBCalled".to_string(),
+                        "test_WhenBCalled".to_owned(),
                         hir::FunctionTy::Function,
-                        Some(vec![
-                            "whenStuffCalled".to_string(),
-                            "whenBCalled".to_string()
-                        ]),
-                        Some(vec![comment("it should not revert".to_string())])
+                        Some(vec!["whenStuffCalled".to_owned(), "whenBCalled".to_owned()]),
+                        Some(vec![comment("it should not revert".to_owned())])
                     ),
                 ]
             )])

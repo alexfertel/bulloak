@@ -183,3 +183,115 @@ fn fn_types_match(ty_hir: &hir::FunctionTy, ty_sol: &pt::FunctionTy) -> bool {
         hir::FunctionTy::Modifier => matches!(ty_sol, pt::FunctionTy::Modifier),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use pretty_assertions::assert_eq;
+    use solang_parser::pt;
+
+    use crate::check::rules::structural_match::{find_matching_fn, fn_types_match, fns_match};
+    use crate::hir;
+
+    #[test]
+    fn test_fn_types_match() {
+        assert!(fn_types_match(
+            &hir::FunctionTy::Function,
+            &pt::FunctionTy::Function
+        ));
+        assert!(fn_types_match(
+            &hir::FunctionTy::Modifier,
+            &pt::FunctionTy::Modifier
+        ));
+    }
+
+    fn fn_hir(name: &str, ty: hir::FunctionTy) -> hir::FunctionDefinition {
+        hir::FunctionDefinition {
+            identifier: name.to_owned(),
+            ty,
+            modifiers: Default::default(),
+            children: Default::default(),
+        }
+    }
+
+    fn fn_sol(name: &str, ty: pt::FunctionTy) -> pt::FunctionDefinition {
+        pt::FunctionDefinition {
+            name: Some(pt::Identifier::new(name)),
+            ty,
+            loc: Default::default(),
+            name_loc: Default::default(),
+            params: Default::default(),
+            attributes: Default::default(),
+            return_not_returns: Default::default(),
+            returns: Default::default(),
+            body: Default::default(),
+        }
+    }
+
+    #[test]
+    fn test_fns_match() {
+        assert!(fns_match(
+            &fn_hir("my_fn", hir::FunctionTy::Function),
+            &fn_sol("my_fn", pt::FunctionTy::Function)
+        ));
+        assert!(!fns_match(
+            &fn_hir("my_fn", hir::FunctionTy::Function),
+            &fn_sol("not_my_fn", pt::FunctionTy::Function)
+        ));
+        assert!(!fns_match(
+            &fn_hir("not_my_fn", hir::FunctionTy::Function),
+            &fn_sol("my_fn", pt::FunctionTy::Function)
+        ));
+        assert!(fns_match(
+            &fn_hir("my_fn", hir::FunctionTy::Modifier),
+            &fn_sol("my_fn", pt::FunctionTy::Modifier)
+        ));
+        assert!(!fns_match(
+            &fn_hir("my_fn", hir::FunctionTy::Modifier),
+            &fn_sol("my_fn", pt::FunctionTy::Function)
+        ));
+        assert!(!fns_match(
+            &fn_hir("my_fn", hir::FunctionTy::Function),
+            &fn_sol("my_fn", pt::FunctionTy::Modifier)
+        ));
+    }
+
+    fn fn_sol_as_part(name: &str, ty: pt::FunctionTy) -> pt::ContractPart {
+        pt::ContractPart::FunctionDefinition(Box::new(fn_sol(name, ty)))
+    }
+
+    #[test]
+    fn test_find_matching_fn() {
+        let needle_sol = fn_sol("needle", pt::FunctionTy::Function);
+        let haystack = vec![
+            fn_sol_as_part("hay", pt::FunctionTy::Function),
+            fn_sol_as_part("more_hay", pt::FunctionTy::Function),
+            fn_sol_as_part("needle", pt::FunctionTy::Function),
+            fn_sol_as_part("hay_more", pt::FunctionTy::Function),
+        ];
+        let needle_hir = fn_hir("needle", hir::FunctionTy::Function);
+        let contract = pt::ContractDefinition {
+            loc: Default::default(),
+            ty: pt::ContractTy::Contract(Default::default()),
+            name: Default::default(),
+            base: Default::default(),
+            parts: haystack,
+        };
+
+        let expected = needle_sol;
+        let actual = find_matching_fn(&contract, &needle_hir).unwrap();
+        assert_eq!(&Box::new(expected), actual);
+
+        let haystack = vec![];
+        let needle_hir = fn_hir("needle", hir::FunctionTy::Function);
+        let contract = pt::ContractDefinition {
+            loc: Default::default(),
+            ty: pt::ContractTy::Contract(Default::default()),
+            name: Default::default(),
+            base: Default::default(),
+            parts: haystack,
+        };
+
+        let actual = find_matching_fn(&contract, &needle_hir);
+        assert_eq!(None, actual);
+    }
+}

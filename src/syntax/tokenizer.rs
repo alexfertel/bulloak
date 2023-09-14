@@ -180,7 +180,7 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
     fn error(&self, span: Span, kind: ErrorKind) -> Error {
         Error {
             kind,
-            text: self.text.to_string(),
+            text: self.text.to_owned(),
             span,
         }
     }
@@ -315,12 +315,12 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
                 '├' => tokens.push(Token {
                     kind: TokenKind::Tee,
                     span: self.span(),
-                    lexeme: "├".to_string(),
+                    lexeme: "├".to_owned(),
                 }),
                 '└' => tokens.push(Token {
                     kind: TokenKind::Corner,
                     span: self.span(),
-                    lexeme: "└".to_string(),
+                    lexeme: "└".to_owned(),
                 }),
                 // Comments start with `//`.
                 '/' if self.peek().is_some_and(|c| c == '/') => {
@@ -441,7 +441,7 @@ mod tests {
     fn t(kind: TokenKind, lexeme: &str, span: Span) -> Token {
         Token {
             kind,
-            lexeme: lexeme.to_string(),
+            lexeme: lexeme.to_owned(),
             span,
         }
     }

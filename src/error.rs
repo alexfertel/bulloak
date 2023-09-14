@@ -157,7 +157,7 @@ mod test {
         let span = Span::new(Position::new(0, 2, 1), Position::new(4, 2, 5));
         let formatter = Formatter {
             text,
-            err: &parser::ErrorKind::TokenUnexpected("world".to_string()),
+            err: &parser::ErrorKind::TokenUnexpected("world".to_owned()),
             span: &span,
         };
         let notated = format!("{}", formatter);
@@ -183,7 +183,7 @@ mod test {
         let text = r"test.sol
 ├── when 1
 └── when 2"
-            .to_string();
+            .to_owned();
 
         let errors = crate::error::Error::from(vec![
             semantics::Error::new(

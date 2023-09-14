@@ -102,7 +102,7 @@ impl<'t> SemanticAnalyzer<'t> {
     fn error(&mut self, span: Span, kind: ErrorKind) {
         self.errors.push(Error {
             kind,
-            text: self.text.to_string(),
+            text: self.text.to_owned(),
             span,
         });
     }
@@ -209,9 +209,9 @@ mod tests {
     #[test]
     fn test_unexpected_node() {
         let ast = ast::Ast::Root(ast::Root {
-            contract_name: "Foo_Test".to_string(),
+            contract_name: "Foo_Test".to_owned(),
             children: vec![ast::Ast::Root(ast::Root {
-                contract_name: "Foo_Test".to_string(),
+                contract_name: "Foo_Test".to_owned(),
                 children: vec![],
                 span: Span::new(Position::new(0, 1, 1), Position::new(7, 1, 8)),
             })],
@@ -224,7 +224,7 @@ mod tests {
             result.unwrap_err(),
             vec![semantics::Error {
                 kind: NodeUnexpected,
-                text: "Foo_Test".to_string(),
+                text: "Foo_Test".to_owned(),
                 span: Span::new(Position::new(0, 1, 1), Position::new(7, 1, 8)),
             }]
         );
@@ -236,7 +236,7 @@ mod tests {
             analyze("Foo_Test\n└── when something").unwrap_err(),
             vec![semantics::Error {
                 kind: ConditionEmpty,
-                text: "Foo_Test\n└── when something".to_string(),
+                text: "Foo_Test\n└── when something".to_owned(),
                 span: Span::new(Position::new(9, 2, 1), Position::new(32, 2, 18)),
             }]
         );

@@ -107,8 +107,8 @@ mod tests {
         assert_eq!(
             discover("file.sol\n└── when something bad happens\n   └── it should revert").unwrap(),
             IndexMap::from([(
-                "when something bad happens".to_string(),
-                "whenSomethingBadHappens".to_string()
+                "when something bad happens".to_owned(),
+                "whenSomethingBadHappens".to_owned()
             )])
         );
     }
@@ -125,13 +125,10 @@ mod tests {
             )
             .unwrap(),
             IndexMap::from([
+                ("when stuff called".to_owned(), "whenStuffCalled".to_owned()),
                 (
-                    "when stuff called".to_string(),
-                    "whenStuffCalled".to_string()
-                ),
-                (
-                    "when not stuff called".to_string(),
-                    "whenNotStuffCalled".to_string()
+                    "when not stuff called".to_owned(),
+                    "whenNotStuffCalled".to_owned()
                 )
             ])
         );
@@ -163,41 +160,38 @@ mod tests {
             )
             .unwrap(),
             IndexMap::from([
+                ("when stuff called".to_owned(), "whenStuffCalled".to_owned()),
                 (
-                    "when stuff called".to_string(),
-                    "whenStuffCalled".to_string()
+                    "when not stuff called".to_owned(),
+                    "whenNotStuffCalled".to_owned()
                 ),
                 (
-                    "when not stuff called".to_string(),
-                    "whenNotStuffCalled".to_string()
+                    "when the deposit amount is zero".to_owned(),
+                    "whenTheDepositAmountIsZero".to_owned()
                 ),
                 (
-                    "when the deposit amount is zero".to_string(),
-                    "whenTheDepositAmountIsZero".to_string()
+                    "when the deposit amount is not zero".to_owned(),
+                    "whenTheDepositAmountIsNotZero".to_owned()
                 ),
                 (
-                    "when the deposit amount is not zero".to_string(),
-                    "whenTheDepositAmountIsNotZero".to_string()
+                    "when the number count is zero".to_owned(),
+                    "whenTheNumberCountIsZero".to_owned()
                 ),
                 (
-                    "when the number count is zero".to_string(),
-                    "whenTheNumberCountIsZero".to_string()
+                    "when the asset is not a contract".to_owned(),
+                    "whenTheAssetIsNotAContract".to_owned()
                 ),
                 (
-                    "when the asset is not a contract".to_string(),
-                    "whenTheAssetIsNotAContract".to_string()
+                    "when the asset is a contract".to_owned(),
+                    "whenTheAssetIsAContract".to_owned()
                 ),
                 (
-                    "when the asset is a contract".to_string(),
-                    "whenTheAssetIsAContract".to_string()
+                    "when the asset misses the ERC_20 return value".to_owned(),
+                    "whenTheAssetMissesTheERC_20ReturnValue".to_owned()
                 ),
                 (
-                    "when the asset misses the ERC_20 return value".to_string(),
-                    "whenTheAssetMissesTheERC_20ReturnValue".to_string()
-                ),
-                (
-                    "when the asset does not miss the ERC_20 return value".to_string(),
-                    "whenTheAssetDoesNotMissTheERC_20ReturnValue".to_string()
+                    "when the asset does not miss the ERC_20 return value".to_owned(),
+                    "whenTheAssetDoesNotMissTheERC_20ReturnValue".to_owned()
                 ),
             ])
         );
