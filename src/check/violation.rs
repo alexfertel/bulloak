@@ -15,11 +15,6 @@ impl Violation {
     pub(crate) fn new(kind: ViolationKind) -> Self {
         Violation { kind }
     }
-
-    /// Return the type of this violation.
-    pub(crate) fn kind(&self) -> &ViolationKind {
-        &self.kind
-    }
 }
 
 /// The type of an error that occurred while checking specification rules between
@@ -34,10 +29,10 @@ pub(crate) enum ViolationKind {
     ContractMissing(String),
     /// Contract name doesn't match.
     ContractNameNotMatches(String, String),
-    /// Found a tree branch without a matching test.
-    MatchingTestMissing(String),
-    /// Found an incorrectly ordered test.
-    TestOrderMismatch(String),
+    /// Found a tree element without its matching codegen.
+    MatchingCodegenMissing(String),
+    /// Found an incorrectly ordered element.
+    CodegenOrderMismatch(String),
     /// This enum may grow additional variants, so this makes sure clients
     /// don't count on exhaustive matching. (Otherwise, adding a new variant
     /// could break existing code.)
@@ -57,19 +52,31 @@ impl fmt::Display for ViolationKind {
         match self {
             FileMissing(file) => write!(
                 f,
-                "The file {} is missing its matching solidity file.",
+                r#"File not found: The file "{}" is missing its matching solidity file."#,
                 file
             ),
-            FileUnreadable(file) => write!(f, "Bulloak couldn't read {}.", file),
+            FileUnreadable(file) => {
+                write!(f, r#"File unreadable: Bulloak couldn't read "{}"."#, file)
+            }
             ContractMissing(contract) => write!(
                 f,
-                "Couldn't find a corresponding contract for {} in the solidity file.",
+                r#"Contract not found: Couldn't find a corresponding contract for "{}" in the solidity file."#,
                 contract
             ),
-            MatchingTestMissing(test_name) => write!(
+            MatchingCodegenMissing(codegen_name) => write!(
                 f,
-                "Couldn't find a corresponding test for {} in the solidity file.",
-                test_name
+                r#"Codegen not found: Couldn't find a corresponding element for "{}" in the solidity file."#,
+                codegen_name
+            ),
+            ContractNameNotMatches(tree_name, sol_name) => write!(
+                f,
+                r#"Invalid contract name: Couldn't find a corresponding contract for "{}" in the solidity file. Found "{}"."#,
+                tree_name, sol_name
+            ),
+            CodegenOrderMismatch(codegen_name) => write!(
+                f,
+                r#"Invalid codegen order: Found a matching element for "{}", but the order is not correct."#,
+                codegen_name
             ),
             _ => unreachable!(),
         }

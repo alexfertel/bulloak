@@ -8,7 +8,8 @@ use owo_colors::OwoColorize;
 use pretty_assertions::assert_eq;
 
 fn get_trees(cwd: &PathBuf) -> Vec<PathBuf> {
-    let trees = fs::read_dir(cwd.join("tests/trees")).expect("should read the trees directory");
+    let trees =
+        fs::read_dir(cwd.join("tests/scaffold")).expect("should read the scaffold directory");
     let trees: Vec<PathBuf> = trees.filter_map(|entry| Some(entry.ok()?.path())).collect();
     trees
 }

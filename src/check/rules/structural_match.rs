@@ -10,6 +10,8 @@
 //! - Their function type is exactly the same. Currently, only regular functions
 //! and modifiers are supported.
 
+use std::collections::{BTreeSet, HashSet};
+
 use solang_parser::pt;
 
 use crate::{
@@ -100,41 +102,49 @@ fn check_fns_structure(
 ) -> anyhow::Result<Vec<Violation>> {
     let mut violations = Vec::new();
 
-    let mut present_fns = Vec::with_capacity(contract_hir.children.len());
-    for fn_hir in &contract_hir.children {
+    let mut present_fn_indices = Vec::with_capacity(contract_hir.children.len());
+    for (hir_idx, fn_hir) in contract_hir.children.iter().enumerate() {
         if let Hir::FunctionDefinition(fn_hir) = fn_hir {
             let fn_sol = find_matching_fn(contract_sol, fn_hir);
 
             match fn_sol {
                 // Store the matched function to check its at the
                 // appropriate place later.
-                Some(fn_sol) => present_fns.push(fn_sol),
+                Some((sol_idx, _)) => present_fn_indices.push((hir_idx, sol_idx)),
                 // We didn't find a matching function, so this is a
                 // violation.
-                None => violations.push(Violation::new(ViolationKind::MatchingTestMissing(
+                None => violations.push(Violation::new(ViolationKind::MatchingCodegenMissing(
                     fn_hir.identifier.clone(),
                 ))),
             }
         };
     }
 
-    for (fn_hir, fn_sol) in contract_hir
-        .children
-        .iter()
-        .filter_map(|fn_hir| {
-            if let Hir::FunctionDefinition(fn_hir) = fn_hir {
-                Some(fn_hir)
-            } else {
-                None
+    // We need to check for inversions in order to know
+    // if the order is wrong.
+    let mut unsorted_set: BTreeSet<String> = BTreeSet::new();
+    for i in 0..present_fn_indices.len() - 1 {
+        let (i_hir_idx, i_sol_idx) = present_fn_indices[i];
+        // Everything that's less than the current item is unsorted.
+        // If there is at least one element that is less than the
+        // current item, then, this element is also unsorted.
+        for j in i + 1..present_fn_indices.len() {
+            let (j_hir_idx, j_sol_idx) = present_fn_indices[j];
+            // An inversion.
+            if i_sol_idx > j_sol_idx {
+                if let Hir::FunctionDefinition(ref function) = contract_hir.children[i_hir_idx] {
+                    unsorted_set.insert(function.identifier.clone());
+                }
+                if let Hir::FunctionDefinition(ref function) = contract_hir.children[j_hir_idx] {
+                    unsorted_set.insert(function.identifier.clone());
+                }
             }
-        })
-        .zip(present_fns.iter())
-    {
-        if !fns_match(fn_hir, fn_sol) {
-            violations.push(Violation::new(ViolationKind::TestOrderMismatch(
-                fn_hir.identifier.clone(),
-            )));
         }
+    }
+
+    // Emit a violation per unsorted item.
+    for name in unsorted_set {
+        violations.push(Violation::new(ViolationKind::CodegenOrderMismatch(name)));
     }
 
     Ok(violations)
@@ -147,16 +157,20 @@ fn check_fns_structure(
 fn find_matching_fn<'a>(
     contract_sol: &'a pt::ContractDefinition,
     fn_hir: &'a hir::FunctionDefinition,
-) -> Option<&'a Box<pt::FunctionDefinition>> {
-    contract_sol.parts.iter().find_map(|part| {
-        if let pt::ContractPart::FunctionDefinition(fn_sol) = part {
-            if fns_match(fn_hir, fn_sol) {
-                return Some(fn_sol);
-            }
-        };
+) -> Option<(usize, &'a Box<pt::FunctionDefinition>)> {
+    contract_sol
+        .parts
+        .iter()
+        .enumerate()
+        .find_map(|(idx, part)| {
+            if let pt::ContractPart::FunctionDefinition(fn_sol) = part {
+                if fns_match(fn_hir, fn_sol) {
+                    return Some((idx, fn_sol));
+                }
+            };
 
-        None
-    })
+            None
+        })
 }
 
 /// Check whether a solidity function matches its bulloak counterpart.
@@ -279,7 +293,7 @@ mod tests {
 
         let expected = needle_sol;
         let actual = find_matching_fn(&contract, &needle_hir).unwrap();
-        assert_eq!(&Box::new(expected), actual);
+        assert_eq!((2, &Box::new(expected)), actual);
 
         let haystack = vec![];
         let needle_hir = fn_hir("needle", hir::FunctionTy::Function);
