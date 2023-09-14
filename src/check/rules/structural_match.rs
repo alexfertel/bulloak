@@ -10,8 +10,6 @@
 //! - Their function type is exactly the same. Currently, only regular functions
 //! and modifiers are supported.
 
-use std::collections::VecDeque;
-
 use solang_parser::pt;
 
 use crate::{
@@ -26,7 +24,7 @@ use super::{Checker, Context};
 /// Read more at the module-level documentation.
 ///
 /// TODO: Add link to module-level documentation.
-pub struct StructuralMatcher;
+pub(crate) struct StructuralMatcher;
 
 impl Checker for StructuralMatcher {
     fn check(ctx: &Context) -> anyhow::Result<Vec<Violation>> {
@@ -69,10 +67,8 @@ impl Checker for StructuralMatcher {
         let contract_hir = contract_hir.unwrap();
         let contract_sol = contract_sol.unwrap();
 
-        // Check that all the functions are present in the
-        // output file.
+        // Check that contract names match.
         if let Hir::ContractDefinition(contract_hir) = contract_hir {
-            // Check that contract names match.
             if let pt::SourceUnitPart::ContractDefinition(contract_sol) = contract_sol {
                 // We won't deal right now with a parsing error from solang_parser.
                 if let Some(ref identifier) = contract_sol.name {
@@ -85,7 +81,9 @@ impl Checker for StructuralMatcher {
                     }
                 };
 
-                violations.append(&mut check_function_structure(contract_hir, contract_sol)?);
+                // Check that all the functions are present in the
+                // output file with the right order.
+                violations.append(&mut check_fns_structure(contract_hir, contract_sol)?);
             };
         };
 
@@ -93,35 +91,84 @@ impl Checker for StructuralMatcher {
     }
 }
 
-// Checks that function structures match between the HIR and the solidity AST.
-fn check_function_structure(
+/// Checks that function structures match between the HIR and the solidity AST.
+///
+/// This could be better, currently it is O(N^2).
+fn check_fns_structure(
     contract_hir: &hir::ContractDefinition,
     contract_sol: &pt::ContractDefinition,
 ) -> anyhow::Result<Vec<Violation>> {
     let mut violations = Vec::new();
 
-    let mut cursor = 0;
-    let mut functions_sol = contract_sol.parts.clone();
+    let mut present_fns = Vec::with_capacity(contract_hir.children.len());
     for fn_hir in &contract_hir.children {
         if let Hir::FunctionDefinition(fn_hir) = fn_hir {
-            let fn_sol = functions_sol.get(cursor);
+            let fn_sol = find_matching_fn(contract_sol, fn_hir);
 
-            if let Some(pt::ContractPart::FunctionDefinition(fn_sol)) = fn_sol {
-                if let Some(pt::Identifier { ref name, .. }) = fn_sol.name {
-                    if name != &fn_hir.identifier || !fn_types_match(&fn_hir.ty, &fn_sol.ty) {
-                        let violation = Violation::new(ViolationKind::TestOrderMismatch(
-                            fn_hir.identifier.clone(),
-                        ));
-                        violations.push(violation);
-                    }
-                }
+            match fn_sol {
+                // Store the matched function to check its at the
+                // appropriate place later.
+                Some(fn_sol) => present_fns.push(fn_sol),
+                // We didn't find a matching function, so this is a
+                // violation.
+                None => violations.push(Violation::new(ViolationKind::MatchingTestMissing(
+                    fn_hir.identifier.clone(),
+                ))),
             }
+        };
+    }
 
-            cursor = cursor + 1;
+    for (fn_hir, fn_sol) in contract_hir
+        .children
+        .iter()
+        .filter_map(|fn_hir| {
+            if let Hir::FunctionDefinition(fn_hir) = fn_hir {
+                Some(fn_hir)
+            } else {
+                None
+            }
+        })
+        .zip(present_fns.iter())
+    {
+        if !fns_match(fn_hir, fn_sol) {
+            violations.push(Violation::new(ViolationKind::TestOrderMismatch(
+                fn_hir.identifier.clone(),
+            )));
         }
     }
 
     Ok(violations)
+}
+
+/// Performs a search over the sol contract parts trying to find
+/// the matching bulloak function.
+///
+/// Two functions match if they have the same name and their types match.
+fn find_matching_fn<'a>(
+    contract_sol: &'a pt::ContractDefinition,
+    fn_hir: &'a hir::FunctionDefinition,
+) -> Option<&'a Box<pt::FunctionDefinition>> {
+    contract_sol.parts.iter().find_map(|part| {
+        if let pt::ContractPart::FunctionDefinition(fn_sol) = part {
+            if fns_match(fn_hir, fn_sol) {
+                return Some(fn_sol);
+            }
+        };
+
+        None
+    })
+}
+
+/// Check whether a solidity function matches its bulloak counterpart.
+///
+/// Two functions match if they have the same name and their types match.
+fn fns_match(fn_hir: &hir::FunctionDefinition, fn_sol: &pt::FunctionDefinition) -> bool {
+    fn_sol
+        .name
+        .clone()
+        .is_some_and(|pt::Identifier { ref name, .. }| {
+            name != &fn_hir.identifier || !fn_types_match(&fn_hir.ty, &fn_sol.ty)
+        })
 }
 
 /// Checks that the function types between a HIR function

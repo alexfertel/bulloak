@@ -68,8 +68,11 @@ impl Check {
             )?);
         }
 
-        for violation in violations {
-            eprintln!("{violation}");
+        if violations.len() > 0 {
+            for violation in violations {
+                eprintln!("{violation}");
+            }
+            std::process::exit(1);
         }
 
         Ok(())
