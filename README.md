@@ -17,7 +17,7 @@ A simple, fast, and easy-to-use Solidity test generator based on the
 - [Installation](#installation)
 - [Usage](#usage)
   - [`bulloak scaffold`](#scaffold-solidity-files)
-  - [`bulloak check`](#check-that-your-code-&-spec-match)
+  - [`bulloak check`](#check-that-your-code-and-spec-match)
     - [Rules](#rules)
   - [Compiler Errors](#compiler-errors)
 - [Trees](#trees)
