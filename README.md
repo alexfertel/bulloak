@@ -96,7 +96,9 @@ $ bulloak scaffold -wf ./**/*.tree
 
 You can use `bulloak check` to make sure that your solidity files
 match your spec. For example, any missing tests will be reported
-to you. Say you have the following spec:
+to you.
+
+Say you have the following spec:
 
 ```tree
 HashPairTest
