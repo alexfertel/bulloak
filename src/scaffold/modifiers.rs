@@ -21,12 +21,14 @@ use crate::utils::{lower_first_letter, to_pascal_case};
 /// `IndexMap` was chosen since preserving the order of insertion
 /// to match the order of the modifiers in the source tree is helpful
 /// and the performance trade-off is negligible.
+#[derive(Clone, Default)]
 pub struct ModifierDiscoverer {
     modifiers: IndexMap<String, String>,
 }
 
 impl ModifierDiscoverer {
     /// Create a new discoverer.
+    #[must_use]
     pub fn new() -> Self {
         Self {
             modifiers: IndexMap::new(),

@@ -26,11 +26,11 @@ pub struct Check {
 impl Check {
     /// Entrypoint for `bulloak check`.
     ///
-    /// Note that we don't deal with solang_parser errors at all.
-    pub fn run(self: Self) -> anyhow::Result<()> {
+    /// Note that we don't deal with `solang_parser` errors at all.
+    pub fn run(self) -> anyhow::Result<()> {
         let mut violations: Vec<Violation> = Vec::new();
 
-        for tree_path in self.files.iter() {
+        for tree_path in &self.files {
             // Get the path to the output file.
             let mut sol_path = tree_path.clone();
             sol_path.set_extension("t.sol");
@@ -39,10 +39,10 @@ impl Check {
             if !sol_path.exists() {
                 violations.push(Violation::new(ViolationKind::FileMissing(
                     tree_path_str.clone(),
-                )))
+                )));
             }
 
-            let tree = match try_read_to_string(&tree_path) {
+            let tree = match try_read_to_string(tree_path) {
                 Ok(code) => code,
                 Err(violation) => {
                     violations.push(violation);
@@ -73,7 +73,7 @@ impl Check {
             )?);
         }
 
-        if violations.len() > 0 {
+        if !violations.is_empty() {
             for violation in violations {
                 eprintln!("{violation}");
             }

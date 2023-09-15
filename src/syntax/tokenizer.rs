@@ -23,19 +23,22 @@ impl std::error::Error for Error {}
 
 impl Error {
     /// Return the type of this error.
-    pub fn kind(&self) -> &ErrorKind {
+    #[must_use]
+    pub const fn kind(&self) -> &ErrorKind {
         &self.kind
     }
 
     /// The original text string in which this error occurred.
     ///
     /// Every span reported by this error is reported in terms of this string.
+    #[must_use]
     pub fn text(&self) -> &str {
         &self.text
     }
 
     /// Return the span at which this error occurred.
-    pub fn span(&self) -> &Span {
+    #[must_use]
+    pub const fn span(&self) -> &Span {
         &self.span
     }
 }
@@ -60,9 +63,9 @@ impl fmt::Display for Error {
 
 impl fmt::Display for ErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        use self::ErrorKind::*;
+        use self::ErrorKind::IdentifierCharInvalid;
         match self {
-            IdentifierCharInvalid(c) => write!(f, "invalid identifier: {:?}", c),
+            IdentifierCharInvalid(c) => write!(f, "invalid identifier: {c:?}"),
             _ => unreachable!(),
         }
     }
@@ -137,7 +140,8 @@ pub struct Tokenizer {
 
 impl Tokenizer {
     /// Create a new tokenizer.
-    pub fn new() -> Self {
+    #[must_use]
+    pub const fn new() -> Self {
         Self {
             pos: Cell::new(Position::new(0, 1, 1)),
             // Starts as `true` because the first token must always be a contract name.
@@ -160,7 +164,7 @@ impl Tokenizer {
     }
 }
 
-/// TokenizerI is the internal tokenizer implementation.
+/// `TokenizerI` is the internal tokenizer implementation.
 struct TokenizerI<'s, T> {
     /// The text being tokenized.
     text: &'s str,
@@ -208,7 +212,7 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
         self.text()[i..]
             .chars()
             .next()
-            .unwrap_or_else(|| panic!("expected char at offset {}", i))
+            .unwrap_or_else(|| panic!("expected char at offset {i}"))
     }
 
     /// Return the current offset of the tokenizer.
@@ -335,7 +339,7 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
                     let token = self.scan_word()?;
                     if token.kind == TokenKind::When || token.kind == TokenKind::Given {
                         self.enter_identifier_mode()
-                    }
+                    };
                     tokens.push(token);
                 }
             }
@@ -352,11 +356,10 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
     fn scan_comments(&self) {
         loop {
             match self.peek() {
-                Some('\n') => break,
+                Some('\n') | None => break,
                 Some(_) => {
                     self.scan();
                 }
-                None => break,
             }
         }
     }
@@ -373,7 +376,7 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
         loop {
             if self.is_identifier_mode() && !is_valid_identifier_char(self.char()) {
                 return Err(self.error(self.span(), ErrorKind::IdentifierCharInvalid(self.char())));
-            } else if self.peek().is_none() || self.peek().is_some_and(|c| c.is_whitespace()) {
+            } else if self.peek().is_none() || self.peek().is_some_and(char::is_whitespace) {
                 lexeme.push(self.char());
                 let kind = match lexeme.to_lowercase().as_str() {
                     "when" => TokenKind::When,
@@ -386,10 +389,10 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
                     span: self.span().with_start(span_start),
                     lexeme,
                 });
-            } else {
-                lexeme.push(self.char());
-                self.scan();
             }
+
+            lexeme.push(self.char());
+            self.scan();
         }
     }
 }

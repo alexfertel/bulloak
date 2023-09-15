@@ -13,19 +13,22 @@ use crate::utils::{capitalize_first_letter, sanitize};
 ///
 /// It visits an AST in depth-first order an generates a HIR
 /// as a result.
+#[derive(Default)]
 pub struct Translator;
 
 impl Translator {
     /// Create a new translator with the given solidity version.
-    pub fn new() -> Self {
+    #[must_use]
+    pub const fn new() -> Self {
         Self {}
     }
 
     /// Translate an AST to a HIR.
     ///
     /// This function is the entry point of the translator.
+    #[must_use]
     pub fn translate(self, ast: &ast::Ast, modifiers: &IndexMap<String, String>) -> Hir {
-        TranslatorI::new(self, modifiers).translate(ast)
+        TranslatorI::new(modifiers).translate(ast)
     }
 }
 
@@ -51,7 +54,7 @@ struct TranslatorI<'a> {
 
 impl<'a> TranslatorI<'a> {
     /// Creates a new internal translator.
-    fn new(_translator: Translator, modifiers: &'a IndexMap<String, String>) -> Self {
+    fn new(modifiers: &'a IndexMap<String, String>) -> Self {
         Self {
             modifier_stack: Vec::new(),
             modifiers,
@@ -101,7 +104,7 @@ impl<'a> Visitor for TranslatorI<'a> {
                     // We need to sanitize here and not in a previous compiler
                     // phase because we want to emit the action as is in a comment.
                     let test_name = sanitize(&test_name);
-                    let test_name = format!("test_{}", test_name);
+                    let test_name = format!("test_{test_name}");
 
                     let hirs = self.visit_action(action)?;
                     let hir = Hir::FunctionDefinition(hir::FunctionDefinition {
@@ -158,7 +161,7 @@ impl<'a> Visitor for TranslatorI<'a> {
         }
 
         // Add this condition's function definition if it has children actions.
-        if actions.len() > 0 {
+        if !actions.is_empty() {
             // If the only action is `it should revert`, we slightly change the function name
             // to reflect this.
             let is_revert = actions.len() == 1
@@ -194,10 +197,10 @@ impl<'a> Visitor for TranslatorI<'a> {
                 // test_Revert[KEYWORD]_Description
                 //
                 // where `KEYWORD` is the starting word of the condition.
-                format!("test_Revert{}_{}", keyword, test_name)
+                format!("test_Revert{keyword}_{test_name}")
             } else {
                 let test_name = capitalize_first_letter(last_modifier);
-                format!("test_{}", test_name)
+                format!("test_{test_name}")
             };
 
             let hir = Hir::FunctionDefinition(hir::FunctionDefinition {

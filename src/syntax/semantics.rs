@@ -23,16 +23,19 @@ pub struct Error {
 
 impl Error {
     /// Return the type of this error.
+    #[must_use]
     pub fn kind(&self) -> &ErrorKind {
         &self.kind
     }
 
     /// The original text string in which this error occurred.
+    #[must_use]
     pub fn text(&self) -> &str {
         &self.text
     }
 
     /// Return the span at which this error occurred.
+    #[must_use]
     pub fn span(&self) -> &Span {
         &self.span
     }
@@ -70,7 +73,7 @@ impl fmt::Display for Error {
 
 impl fmt::Display for ErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        use self::ErrorKind::*;
+        use self::ErrorKind::{ConditionEmpty, NodeUnexpected, TreeEmpty};
         match *self {
             NodeUnexpected => write!(f, "unexpected child node"),
             TreeEmpty => write!(f, "no rules where defined"),
@@ -91,6 +94,7 @@ pub struct SemanticAnalyzer<'t> {
 
 impl<'t> SemanticAnalyzer<'t> {
     /// Create a new semantic analyzer.
+    #[must_use]
     pub fn new(text: &'t str) -> SemanticAnalyzer {
         SemanticAnalyzer {
             errors: Vec::new(),

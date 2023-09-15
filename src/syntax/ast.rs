@@ -20,17 +20,19 @@ pub enum Ast {
 
 impl Ast {
     /// Return the span of this abstract syntax tree.
+    #[must_use]
     pub fn span(&self) -> &Span {
         match *self {
-            Ast::Root(ref x) => &x.span,
-            Ast::Condition(ref x) => &x.span,
-            Ast::Action(ref x) => &x.span,
+            Self::Root(ref x) => &x.span,
+            Self::Condition(ref x) => &x.span,
+            Self::Action(ref x) => &x.span,
         }
     }
 
     /// Whether the current node is an `Action` node.
+    #[must_use]
     pub fn is_action(&self) -> bool {
-        matches!(self, Ast::Action(_))
+        matches!(self, Self::Action(_))
     }
 }
 

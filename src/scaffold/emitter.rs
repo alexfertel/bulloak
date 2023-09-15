@@ -22,6 +22,7 @@ pub struct Emitter<'s> {
 
 impl<'s> Emitter<'s> {
     /// Create a new emitter with the given configuration.
+    #[must_use]
     pub fn new(with_actions_as_comments: bool, indent: usize, solidity_version: &'s str) -> Self {
         Self {
             with_actions_as_comments,
@@ -31,6 +32,7 @@ impl<'s> Emitter<'s> {
     }
 
     /// Emit Solidity code from the given HIR.
+    #[must_use]
     pub fn emit(self, hir: &hir::Hir) -> String {
         EmitterI::new(self).emit(hir)
     }
@@ -78,7 +80,7 @@ impl<'s> EmitterI<'s> {
 
         // It's fine to unwrap here because we check that the filename always has an extension.
         let contract_name = sanitize(&contract.identifier);
-        emitted.push_str(format!("contract {} {{\n", contract_name).as_str());
+        emitted.push_str(format!("contract {contract_name} {{\n").as_str());
 
         emitted
     }
@@ -94,9 +96,9 @@ impl<'s> EmitterI<'s> {
     fn emit_modifier(&self, modifier: &str) -> String {
         let mut emitted = String::new();
         let indentation = self.emitter.indent();
-        emitted.push_str(&format!("{}modifier {}() {{\n", indentation, modifier));
+        emitted.push_str(&format!("{indentation}modifier {modifier}() {{\n"));
         emitted.push_str(&format!("{}_;\n", indentation.repeat(2)));
-        emitted.push_str(&format!("{}}}\n", indentation));
+        emitted.push_str(&format!("{indentation}}}\n"));
         emitted.push('\n');
 
         emitted
@@ -119,7 +121,7 @@ impl<'s> EmitterI<'s> {
             emitted.push_str(
                 format!("{}function {}()\n", fn_indentation, function.identifier).as_str(),
             );
-            emitted.push_str(format!("{}external\n", fn_body_indentation).as_str());
+            emitted.push_str(format!("{fn_body_indentation}external\n").as_str());
         } else {
             emitted
                 .push_str(format!("{}function {}()", fn_indentation, function.identifier).as_str());
@@ -129,12 +131,12 @@ impl<'s> EmitterI<'s> {
         // Emit the modifiers that should be applied to this function.
         if let Some(ref modifiers) = function.modifiers {
             for modifier in modifiers {
-                emitted.push_str(format!("{}{}\n", fn_body_indentation, modifier).as_str());
+                emitted.push_str(format!("{fn_body_indentation}{modifier}\n").as_str());
             }
         }
 
         if has_modifiers {
-            emitted.push_str(format!("{}{{\n", fn_indentation).as_str());
+            emitted.push_str(format!("{fn_indentation}{{\n").as_str());
         } else {
             emitted.push_str(" {\n");
         }
@@ -166,7 +168,7 @@ impl<'s> Visitor for EmitterI<'s> {
                 _ => unreachable!(),
             };
 
-            emitted.push_str(&result)
+            emitted.push_str(&result);
         }
 
         Ok(emitted)
@@ -183,7 +185,7 @@ impl<'s> Visitor for EmitterI<'s> {
 
         for hir in &contract.children {
             if let Hir::FunctionDefinition(function) = hir {
-                emitted.push_str(&self.visit_function(function)?)
+                emitted.push_str(&self.visit_function(function)?);
             }
         }
 
@@ -216,7 +218,7 @@ impl<'s> Visitor for EmitterI<'s> {
             }
 
             let indentation = self.emitter.indent();
-            emitted.push_str(format!("{}}}\n\n", indentation).as_str());
+            emitted.push_str(format!("{indentation}}}\n\n").as_str());
         }
 
         Ok(emitted)

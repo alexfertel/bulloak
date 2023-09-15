@@ -34,29 +34,29 @@ pub enum Error {
 impl std::error::Error for Error {}
 
 impl From<parser::Error> for Error {
-    fn from(err: parser::Error) -> Error {
-        Error::Parse(err)
+    fn from(err: parser::Error) -> Self {
+        Self::Parse(err)
     }
 }
 
 impl From<tokenizer::Error> for Error {
-    fn from(err: tokenizer::Error) -> Error {
-        Error::Tokenize(err)
+    fn from(err: tokenizer::Error) -> Self {
+        Self::Tokenize(err)
     }
 }
 
 impl From<Vec<semantics::Error>> for Error {
-    fn from(errors: Vec<semantics::Error>) -> Error {
-        Error::Semantic(errors)
+    fn from(errors: Vec<semantics::Error>) -> Self {
+        Self::Semantic(errors)
     }
 }
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
-            Error::Parse(ref x) => x.fmt(f),
-            Error::Tokenize(ref x) => x.fmt(f),
-            Error::Semantic(ref errors) => {
+            Self::Parse(ref x) => x.fmt(f),
+            Self::Tokenize(ref x) => x.fmt(f),
+            Self::Semantic(ref errors) => {
                 for x in errors {
                     x.fmt(f)?;
                 }

@@ -12,7 +12,7 @@ pub use hir::*;
 /// This function leverages `crate::syntax::parse` and `translator::Translator::translate`
 /// to hide away most of the complexity of `bulloak`'s internal compiler.
 pub fn translate(tree: &str) -> anyhow::Result<Hir> {
-    let ast = crate::syntax::parse(&tree)?;
+    let ast = crate::syntax::parse(tree)?;
     let mut discoverer = crate::scaffold::modifiers::ModifierDiscoverer::new();
     let modifiers = discoverer.discover(&ast);
     Ok(translator::Translator::new().translate(&ast, modifiers))

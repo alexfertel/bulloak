@@ -13,7 +13,7 @@ pub(crate) struct Violation {
 impl Violation {
     /// Create a new violation.
     pub(crate) fn new(kind: ViolationKind) -> Self {
-        Violation { kind }
+        Self { kind }
     }
 }
 
@@ -48,35 +48,33 @@ impl fmt::Display for Violation {
 
 impl fmt::Display for ViolationKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        use self::ViolationKind::*;
+        use self::ViolationKind::{
+            CodegenOrderMismatch, ContractMissing, ContractNameNotMatches, FileMissing,
+            FileUnreadable, MatchingCodegenMissing,
+        };
         match self {
             FileMissing(file) => write!(
                 f,
-                r#"File not found: The file "{}" is missing its matching solidity file."#,
-                file
+                r#"File not found: The file "{file}" is missing its matching solidity file."#
             ),
             FileUnreadable(file) => {
-                write!(f, r#"File unreadable: Bulloak couldn't read "{}"."#, file)
+                write!(f, r#"File unreadable: Bulloak couldn't read "{file}"."#)
             }
             ContractMissing(contract) => write!(
                 f,
-                r#"Contract not found: Couldn't find a corresponding contract for "{}" in the solidity file."#,
-                contract
+                r#"Contract not found: Couldn't find a corresponding contract for "{contract}" in the solidity file."#
             ),
             MatchingCodegenMissing(codegen_name) => write!(
                 f,
-                r#"Codegen not found: Couldn't find a corresponding element for "{}" in the solidity file."#,
-                codegen_name
+                r#"Codegen not found: Couldn't find a corresponding element for "{codegen_name}" in the solidity file."#
             ),
             ContractNameNotMatches(tree_name, sol_name) => write!(
                 f,
-                r#"Invalid contract name: Couldn't find a corresponding contract for "{}" in the solidity file. Found "{}"."#,
-                tree_name, sol_name
+                r#"Invalid contract name: Couldn't find a corresponding contract for "{tree_name}" in the solidity file. Found "{sol_name}"."#
             ),
             CodegenOrderMismatch(codegen_name) => write!(
                 f,
-                r#"Invalid codegen order: Found a matching element for "{}", but the order is not correct."#,
-                codegen_name
+                r#"Invalid codegen order: Found a matching element for "{codegen_name}", but the order is not correct."#
             ),
             _ => unreachable!(),
         }

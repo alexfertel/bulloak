@@ -27,16 +27,19 @@ impl std::error::Error for Error {}
 
 impl Error {
     /// Return the type of this error.
+    #[must_use]
     pub fn kind(&self) -> &ErrorKind {
         &self.kind
     }
 
     /// The original text string in which this error occurred.
+    #[must_use]
     pub fn text(&self) -> &str {
         &self.text
     }
 
     /// Return the span at which this error occurred.
+    #[must_use]
     pub fn span(&self) -> &Span {
         &self.span
     }
@@ -78,13 +81,16 @@ impl fmt::Display for Error {
 
 impl fmt::Display for ErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        use self::ErrorKind::*;
+        use self::ErrorKind::{
+            EofUnexpected, GivenUnexpected, ItUnexpected, TokenUnexpected, WhenUnexpected,
+            WordUnexpected,
+        };
         match self {
-            TokenUnexpected(lexeme) => write!(f, "unexpected token: {}", lexeme),
+            TokenUnexpected(lexeme) => write!(f, "unexpected token: {lexeme}"),
             WhenUnexpected => write!(f, "unexpected `when` keyword"),
             GivenUnexpected => write!(f, "unexpected `given` keyword"),
             ItUnexpected => write!(f, "unexpected `it` keyword"),
-            WordUnexpected(lexeme) => write!(f, "unexpected `word`: {}", lexeme),
+            WordUnexpected(lexeme) => write!(f, "unexpected `word`: {lexeme}"),
             EofUnexpected => write!(f, "unexpected end of file"),
             _ => unreachable!(),
         }
@@ -95,6 +101,7 @@ impl fmt::Display for ErrorKind {
 ///
 /// This struct represents the state of the parser. It is not
 /// tied to any particular input, while `ParserI` is.
+#[derive(Clone, Default)]
 pub struct Parser {
     /// The index of the current token.
     current: Cell<usize>,
@@ -102,7 +109,8 @@ pub struct Parser {
 
 impl Parser {
     /// Create a new parser.
-    pub fn new() -> Self {
+    #[must_use]
+    pub const fn new() -> Self {
         Self {
             current: Cell::new(0),
         }
@@ -134,7 +142,7 @@ struct ParserI<'t, P> {
 
 impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
     /// Create a new parser given the parser state, input text, and tokens.
-    fn new(parser: P, text: &'t str, tokens: &'t [Token]) -> Self {
+    const fn new(parser: P, text: &'t str, tokens: &'t [Token]) -> Self {
         Self {
             text,
             tokens,
@@ -200,23 +208,17 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
     /// - The parser is always at the start of a production when entering
     /// this function.
     fn _parse(&self) -> Result<Ast> {
-        let current_token = match self.current() {
-            Some(current) => current,
-            None => {
-                return Err(self.error(self.tokens.last().unwrap().span, ErrorKind::EofUnexpected))
-            }
+        let Some(current_token) = self.current() else {
+            return Err(self.error(self.tokens.last().unwrap().span, ErrorKind::EofUnexpected));
         };
 
         match current_token.kind {
             TokenKind::Word if self.parser().current.get() == 0 => self.parse_root(current_token),
             TokenKind::Tee | TokenKind::Corner => {
-                let next_token = match self.consume() {
-                    Some(next) => next,
-                    None => {
-                        return Err(
-                            self.error(self.tokens.last().unwrap().span, ErrorKind::EofUnexpected)
-                        )
-                    }
+                let Some(next_token) = self.consume() else {
+                    return Err(
+                        self.error(self.tokens.last().unwrap().span, ErrorKind::EofUnexpected)
+                    );
                 };
 
                 match next_token.kind {
@@ -275,10 +277,10 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
             children.push(ast);
         }
 
-        let last_span = if !children.is_empty() {
-            children[children.len() - 1].span()
-        } else {
+        let last_span = if children.is_empty() {
             &current_token.span
+        } else {
+            children[children.len() - 1].span()
         };
 
         Ok(Ast::Root(Root {

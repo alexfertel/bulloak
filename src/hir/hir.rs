@@ -24,7 +24,7 @@ pub enum Hir {
 
 impl Default for Hir {
     fn default() -> Self {
-        Hir::Root(Root::default())
+        Self::Root(Root::default())
     }
 }
 
@@ -62,7 +62,7 @@ pub enum FunctionTy {
 
 impl Default for FunctionTy {
     fn default() -> Self {
-        FunctionTy::Function
+        Self::Function
     }
 }
 

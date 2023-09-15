@@ -48,7 +48,7 @@ pub struct Scaffold {
 }
 
 impl Scaffold {
-    pub fn run(self: Scaffold) -> anyhow::Result<()> {
+    pub fn run(self) -> anyhow::Result<()> {
         let scaffolder = Scaffolder::new(
             self.with_actions_as_comments,
             self.indent,
@@ -57,7 +57,7 @@ impl Scaffold {
 
         // For each input file, compile it and print it or write it
         // to the filesystem.
-        for file in self.files.iter() {
+        for file in &self.files {
             let text = fs::read_to_string(file)?;
             match scaffolder.scaffold(&text) {
                 Ok(emitted) => {
@@ -85,11 +85,11 @@ impl Scaffold {
                             eprintln!("{}: {}", "ERROR".red(), e);
                         };
                     } else {
-                        println!("{}", emitted);
+                        println!("{emitted}");
                     }
                 }
                 Err(err) => {
-                    eprintln!("{}", err);
+                    eprintln!("{err}");
                     eprintln!("file: {}", file.display());
                     std::process::exit(1);
                 }
@@ -114,6 +114,7 @@ pub struct Scaffolder<'s> {
 
 impl<'s> Scaffolder<'s> {
     /// Creates a new scaffolder with the provided configuration.
+    #[must_use]
     pub fn new(with_comments: bool, indent: usize, solidity_version: &'s str) -> Self {
         Scaffolder {
             with_comments,

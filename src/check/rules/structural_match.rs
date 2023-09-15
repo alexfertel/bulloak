@@ -85,7 +85,7 @@ impl Checker for StructuralMatcher {
 
                 // Check that all the functions are present in the
                 // output file with the right order.
-                violations.append(&mut check_fns_structure(contract_hir, contract_sol)?);
+                violations.append(&mut check_fns_structure(contract_hir, contract_sol));
             };
         };
 
@@ -99,7 +99,7 @@ impl Checker for StructuralMatcher {
 fn check_fns_structure(
     contract_hir: &hir::ContractDefinition,
     contract_sol: &pt::ContractDefinition,
-) -> anyhow::Result<Vec<Violation>> {
+) -> Vec<Violation> {
     let mut violations = Vec::new();
 
     let mut present_fn_indices = Vec::with_capacity(contract_hir.children.len());
@@ -147,7 +147,7 @@ fn check_fns_structure(
         violations.push(Violation::new(ViolationKind::CodegenOrderMismatch(name)));
     }
 
-    Ok(violations)
+    violations
 }
 
 /// Performs a search over the sol contract parts trying to find
@@ -186,12 +186,12 @@ fn fns_match(fn_hir: &hir::FunctionDefinition, fn_sol: &pt::FunctionDefinition) 
 }
 
 /// Checks that the function types between a HIR function
-/// and a solang_parser function match.
+/// and a `solang_parser` function match.
 ///
 /// We check that the function types match, even though we know that the
 /// name not matching is enough, since a modifier will never be
 /// named the same as a function per Foundry's best practices.
-fn fn_types_match(ty_hir: &hir::FunctionTy, ty_sol: &pt::FunctionTy) -> bool {
+const fn fn_types_match(ty_hir: &hir::FunctionTy, ty_sol: &pt::FunctionTy) -> bool {
     match ty_hir {
         hir::FunctionTy::Function => matches!(ty_sol, pt::FunctionTy::Function),
         hir::FunctionTy::Modifier => matches!(ty_sol, pt::FunctionTy::Modifier),
