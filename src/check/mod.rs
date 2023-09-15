@@ -40,6 +40,8 @@ impl Check {
                 violations.push(Violation::new(ViolationKind::FileMissing(
                     tree_path_str.clone(),
                 )));
+
+                continue;
             }
 
             let tree = match try_read_to_string(tree_path) {
