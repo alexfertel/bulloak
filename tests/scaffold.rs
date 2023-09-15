@@ -8,8 +8,8 @@ use owo_colors::OwoColorize;
 use pretty_assertions::assert_eq;
 
 fn get_trees(cwd: &PathBuf) -> Vec<PathBuf> {
-    let trees =
-        fs::read_dir(cwd.join("tests/scaffold")).expect("should read the scaffold directory");
+    let trees = fs::read_dir(cwd.join("tests").join("scaffold"))
+        .expect("should read the scaffold directory");
     let trees: Vec<PathBuf> = trees.filter_map(|entry| Some(entry.ok()?.path())).collect();
     trees
 }
@@ -27,7 +27,7 @@ fn scaffold(binary_path: &PathBuf, tree_path: &PathBuf, args: &[&str]) -> Output
 fn scaffolds_trees() {
     let cwd = env::current_dir().unwrap();
     let trees = get_trees(&cwd);
-    let binary_path = cwd.join("target/debug/bulloak");
+    let binary_path = cwd.join("target").join("debug").join("bulloak");
 
     for tree_path in trees {
         if tree_path.extension().unwrap() == "tree" {
@@ -48,7 +48,7 @@ fn scaffolds_trees() {
 fn skips_trees_when_file_exists() {
     let cwd = env::current_dir().unwrap();
     let trees = get_trees(&cwd);
-    let binary_path = cwd.join("target/debug/bulloak");
+    let binary_path = cwd.join("target").join("debug").join("bulloak");
 
     for tree_path in trees {
         if tree_path.extension().unwrap() == "tree" {

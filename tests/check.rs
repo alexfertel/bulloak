@@ -25,7 +25,7 @@ fn check(binary_path: &PathBuf, tree_path: &PathBuf, args: &[&str]) -> Output {
 fn checks_structural_match() {
     let cwd = env::current_dir().unwrap();
     let trees = get_trees(&cwd);
-    let binary_path = cwd.join("target/debug/bulloak");
+    let binary_path = cwd.join("target").join("debug").join("bulloak");
 
     for tree_path in trees {
         if tree_path.extension().unwrap() == "tree" {
