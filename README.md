@@ -27,6 +27,9 @@ A simple, fast, and easy-to-use Solidity test generator based on the
 - [Contributing](#contributing)
 - [License](#license)
 
+> [!WARNING]
+> `bulloak` is still `0.*.*`, so breaking changes [may occur at any time](https://semver.org/#spec-item-4). If you must depend on `bulloak`, we recommend pinning to a specific version, i.e., `=0.y.z`.
+
 ## Installation
 
 ```bash
