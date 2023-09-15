@@ -16,10 +16,12 @@ use self::rules::Context;
 mod rules;
 pub(crate) mod violation;
 
-/// The cli interface for the `bulloak check` command.
+/// Check that the tests match the spec.
 #[derive(Debug, Parser)]
 pub struct Check {
-    /// .tree files to process.
+    /// The set of tree files to use as spec.
+    ///
+    /// Solidity file names are inferred from the specs.
     files: Vec<PathBuf>,
 }
 

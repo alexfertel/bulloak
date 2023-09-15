@@ -19,6 +19,10 @@ impl Violation {
 
 /// The type of an error that occurred while checking specification rules between
 /// a tree and a solidity contract.
+///
+/// NOTE: Adding a variant to this enum most certainly will mean adding a variant to the
+/// `Rules` section of `bulloak`'s README. Please, do not forget to add it if you are
+/// implementing a rule.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) enum ViolationKind {
     /// The corresponding solidity file does not exist.

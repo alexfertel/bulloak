@@ -12,11 +12,14 @@ use crate::{hir::translator, syntax};
 pub mod emitter;
 pub mod modifiers;
 
-/// The cli interface for the `bulloak scaffold` command.
+/// Generate solidity tests based on your spec.
 #[doc(hidden)]
 #[derive(Parser, Debug)]
 pub struct Scaffold {
-    /// .tree files to process.
+    /// The set of tree files to generate from.
+    ///
+    /// Each solidity file will be named after its matching
+    /// tree spec.
     files: Vec<PathBuf>,
 
     /// Whether to print `it` branches as comments
