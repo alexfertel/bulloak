@@ -1,10 +1,12 @@
+//! A parser implementation for a stream of tokens representing a bulloak tree.
+
 use std::fmt;
 use std::{borrow::Borrow, cell::Cell, result};
 
 use super::ast::{Action, Ast, Condition, Root};
-use super::span::Span;
 use super::tokenizer::{Token, TokenKind};
-use super::utils::sanitize;
+use crate::span::Span;
+use crate::utils::sanitize;
 
 type Result<T> = result::Result<T, Error>;
 
@@ -21,18 +23,23 @@ pub struct Error {
     span: Span,
 }
 
+impl std::error::Error for Error {}
+
 impl Error {
     /// Return the type of this error.
+    #[must_use]
     pub fn kind(&self) -> &ErrorKind {
         &self.kind
     }
 
     /// The original text string in which this error occurred.
+    #[must_use]
     pub fn text(&self) -> &str {
         &self.text
     }
 
     /// Return the span at which this error occurred.
+    #[must_use]
     pub fn span(&self) -> &Span {
         &self.span
     }
@@ -68,19 +75,22 @@ pub enum ErrorKind {
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        super::error::Formatter::from(self).fmt(f)
+        crate::error::Formatter::from(self).fmt(f)
     }
 }
 
 impl fmt::Display for ErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        use self::ErrorKind::*;
-        match *self {
-            TokenUnexpected(ref lexeme) => write!(f, "unexpected token: {}", lexeme),
+        use self::ErrorKind::{
+            EofUnexpected, GivenUnexpected, ItUnexpected, TokenUnexpected, WhenUnexpected,
+            WordUnexpected,
+        };
+        match self {
+            TokenUnexpected(lexeme) => write!(f, "unexpected token: {lexeme}"),
             WhenUnexpected => write!(f, "unexpected `when` keyword"),
             GivenUnexpected => write!(f, "unexpected `given` keyword"),
             ItUnexpected => write!(f, "unexpected `it` keyword"),
-            WordUnexpected(ref lexeme) => write!(f, "unexpected `word`: {}", lexeme),
+            WordUnexpected(lexeme) => write!(f, "unexpected `word`: {lexeme}"),
             EofUnexpected => write!(f, "unexpected end of file"),
             _ => unreachable!(),
         }
@@ -91,6 +101,7 @@ impl fmt::Display for ErrorKind {
 ///
 /// This struct represents the state of the parser. It is not
 /// tied to any particular input, while `ParserI` is.
+#[derive(Clone, Default)]
 pub struct Parser {
     /// The index of the current token.
     current: Cell<usize>,
@@ -98,7 +109,8 @@ pub struct Parser {
 
 impl Parser {
     /// Create a new parser.
-    pub fn new() -> Self {
+    #[must_use]
+    pub const fn new() -> Self {
         Self {
             current: Cell::new(0),
         }
@@ -130,7 +142,7 @@ struct ParserI<'t, P> {
 
 impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
     /// Create a new parser given the parser state, input text, and tokens.
-    fn new(parser: P, text: &'t str, tokens: &'t [Token]) -> Self {
+    const fn new(parser: P, text: &'t str, tokens: &'t [Token]) -> Self {
         Self {
             text,
             tokens,
@@ -147,7 +159,7 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
     fn error(&self, span: Span, kind: ErrorKind) -> Error {
         Error {
             kind,
-            text: self.text.to_string(),
+            text: self.text.to_owned(),
             span,
         }
     }
@@ -184,7 +196,7 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
     /// This is the entry point for the parser. Note that
     /// this method resets the parser state before parsing and
     /// that we defer the implementation of parsing to `_parse`.
-    pub fn parse(&self) -> Result<Ast> {
+    pub(crate) fn parse(&self) -> Result<Ast> {
         self.parser().reset();
         self._parse()
     }
@@ -196,23 +208,17 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
     /// - The parser is always at the start of a production when entering
     /// this function.
     fn _parse(&self) -> Result<Ast> {
-        let current_token = match self.current() {
-            Some(current) => current,
-            None => {
-                return Err(self.error(self.tokens.last().unwrap().span, ErrorKind::EofUnexpected))
-            }
+        let Some(current_token) = self.current() else {
+            return Err(self.error(self.tokens.last().unwrap().span, ErrorKind::EofUnexpected));
         };
 
         match current_token.kind {
             TokenKind::Word if self.parser().current.get() == 0 => self.parse_root(current_token),
             TokenKind::Tee | TokenKind::Corner => {
-                let next_token = match self.consume() {
-                    Some(next) => next,
-                    None => {
-                        return Err(
-                            self.error(self.tokens.last().unwrap().span, ErrorKind::EofUnexpected)
-                        )
-                    }
+                let Some(next_token) = self.consume() else {
+                    return Err(
+                        self.error(self.tokens.last().unwrap().span, ErrorKind::EofUnexpected)
+                    );
                 };
 
                 match next_token.kind {
@@ -227,7 +233,7 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
                     TokenKind::When | TokenKind::Given => {
                         let title = self.parse_string(next_token);
 
-                        let mut asts = vec![];
+                        let mut children = vec![];
                         while self
                             .current()
                             // Only parse tokens that are indented more than the current token.
@@ -235,13 +241,13 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
                             .is_some_and(|t| t.span.start.column > current_token.span.start.column)
                         {
                             let ast = self._parse()?;
-                            asts.push(ast);
+                            children.push(ast);
                         }
 
                         let previous = self.previous().unwrap();
                         Ok(Ast::Condition(Condition {
                             title: sanitize(&title),
-                            asts,
+                            children,
                             span: Span::new(current_token.span.start, previous.span.end),
                         }))
                     }
@@ -265,21 +271,21 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
     fn parse_root(&self, current_token: &Token) -> Result<Ast> {
         self.consume();
         // A string at the start of the file is the root ast node.
-        let mut asts = vec![];
+        let mut children = vec![];
         while self.current().is_some() {
             let ast = self._parse()?;
-            asts.push(ast);
+            children.push(ast);
         }
 
-        let last_span = if !asts.is_empty() {
-            asts[asts.len() - 1].span()
-        } else {
+        let last_span = if children.is_empty() {
             &current_token.span
+        } else {
+            children[children.len() - 1].span()
         };
 
         Ok(Ast::Root(Root {
             span: Span::new(current_token.span.start, last_span.end),
-            asts,
+            children,
             contract_name: current_token.lexeme.clone(),
         }))
     }
@@ -309,10 +315,10 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
 mod tests {
     use pretty_assertions::assert_eq;
 
-    use crate::scaffold::ast::{Action, Ast, Condition, Root};
-    use crate::scaffold::parser::{self, Parser};
-    use crate::scaffold::span::{Position, Span};
-    use crate::scaffold::tokenizer::Tokenizer;
+    use crate::span::{Position, Span};
+    use crate::syntax::ast::{Action, Ast, Condition, Root};
+    use crate::syntax::parser::{self, Parser};
+    use crate::syntax::tokenizer::Tokenizer;
 
     #[derive(Clone, Debug)]
     struct TestError {
@@ -343,7 +349,7 @@ mod tests {
             parse("FooTest").unwrap(),
             Ast::Root(Root {
                 span: Span::new(Position::new(0, 1, 1), Position::new(6, 1, 7)),
-                asts: vec![],
+                children: vec![],
                 contract_name: String::from("FooTest"),
             })
         );
@@ -355,10 +361,10 @@ mod tests {
             parse("Foo_Test\n└── when something bad happens\n   └── it should revert").unwrap(),
             Ast::Root(Root {
                 span: Span::new(Position::new(0, 1, 1), Position::new(74, 3, 23)),
-                asts: vec![Ast::Condition(Condition {
+                children: vec![Ast::Condition(Condition {
                     span: Span::new(Position::new(9, 2, 1), Position::new(74, 3, 23)),
                     title: String::from("when something bad happens"),
-                    asts: vec![Ast::Action(Action {
+                    children: vec![Ast::Action(Action {
                         span: Span::new(Position::new(49, 3, 4), Position::new(74, 3, 23)),
                         title: String::from("it should revert"),
                     })],
@@ -382,11 +388,11 @@ mod tests {
             Ast::Root(Root {
                 contract_name: String::from("FooBarTheBest_Test"),
                 span: Span::new(Position::new(0, 1, 1), Position::new(140, 5, 23)),
-                asts: vec![
+                children: vec![
                     Ast::Condition(Condition {
                         title: String::from("when stuff called"),
                         span: Span::new(Position::new(19, 2, 1), Position::new(77, 3, 23)),
-                        asts: vec![Ast::Action(Action {
+                        children: vec![Ast::Action(Action {
                             title: String::from("it should revert"),
                             span: Span::new(Position::new(52, 3, 4), Position::new(77, 3, 23)),
                         })],
@@ -394,7 +400,7 @@ mod tests {
                     Ast::Condition(Condition {
                         title: String::from("given not stuff called"),
                         span: Span::new(Position::new(79, 4, 1), Position::new(140, 5, 23)),
-                        asts: vec![Ast::Action(Action {
+                        children: vec![Ast::Action(Action {
                             title: String::from("it should revert"),
                             span: Span::new(Position::new(115, 5, 4), Position::new(140, 5, 23)),
                         })],
@@ -416,10 +422,10 @@ mod tests {
             Ast::Root(Root {
                 contract_name: String::from("FooB-rTheBestOf_Test"),
                 span: Span::new(Position::new(0, 1, 1), Position::new(77, 3, 23)),
-                asts: vec![Ast::Condition(Condition {
+                children: vec![Ast::Condition(Condition {
                     title: String::from("when st_ff alld"),
                     span: Span::new(Position::new(21, 2, 1), Position::new(77, 3, 23)),
-                    asts: vec![Ast::Action(Action {
+                    children: vec![Ast::Action(Action {
                         title: String::from("it should revert"),
                         span: Span::new(Position::new(52, 3, 4), Position::new(77, 3, 23)),
                     })],

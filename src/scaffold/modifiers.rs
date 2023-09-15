@@ -1,10 +1,13 @@
+//! Defines a modifier discovering step in the compiler.
+//!
+//! It visits the AST in depth-first order, storing modifiers
+//! for use in later phases.
+
 use indexmap::IndexMap;
 
-use super::{
-    ast::{self, Ast},
-    utils::{lower_first_letter, to_pascal_case},
-    visitor::Visitor,
-};
+use crate::syntax::ast::{self, Ast};
+use crate::syntax::visitor::Visitor;
+use crate::utils::{lower_first_letter, to_pascal_case};
 
 /// AST visitor that discovers modifiers.
 ///
@@ -17,13 +20,15 @@ use super::{
 /// we assume that duplicate titles translate to the same modifier.
 /// `IndexMap` was chosen since preserving the order of insertion
 /// to match the order of the modifiers in the source tree is helpful
-/// and the performance trade-off is dismissable.
+/// and the performance trade-off is negligible.
+#[derive(Clone, Default)]
 pub struct ModifierDiscoverer {
     modifiers: IndexMap<String, String>,
 }
 
 impl ModifierDiscoverer {
     /// Create a new discoverer.
+    #[must_use]
     pub fn new() -> Self {
         Self {
             modifiers: IndexMap::new(),
@@ -49,7 +54,7 @@ impl Visitor for ModifierDiscoverer {
     type Error = ();
 
     fn visit_root(&mut self, root: &ast::Root) -> Result<Self::Output, Self::Error> {
-        for condition in &root.asts {
+        for condition in &root.children {
             if let Ast::Condition(condition) = condition {
                 self.visit_condition(condition)?;
             }
@@ -64,7 +69,7 @@ impl Visitor for ModifierDiscoverer {
             lower_first_letter(&to_pascal_case(&condition.title)),
         );
 
-        for condition in &condition.asts {
+        for condition in &condition.children {
             if let Ast::Condition(condition) = condition {
                 self.visit_condition(condition)?;
             }
@@ -85,9 +90,10 @@ mod tests {
 
     use pretty_assertions::assert_eq;
 
-    use crate::scaffold::{
-        error::Result, modifiers::ModifierDiscoverer, parser::Parser, tokenizer::Tokenizer,
-    };
+    use crate::error::Result;
+    use crate::scaffold::modifiers::ModifierDiscoverer;
+    use crate::syntax::parser::Parser;
+    use crate::syntax::tokenizer::Tokenizer;
 
     fn discover(file_contents: &str) -> Result<IndexMap<String, String>> {
         let tokens = Tokenizer::new().tokenize(file_contents)?;
@@ -103,8 +109,8 @@ mod tests {
         assert_eq!(
             discover("file.sol\n└── when something bad happens\n   └── it should revert").unwrap(),
             IndexMap::from([(
-                "when something bad happens".to_string(),
-                "whenSomethingBadHappens".to_string()
+                "when something bad happens".to_owned(),
+                "whenSomethingBadHappens".to_owned()
             )])
         );
     }
@@ -121,13 +127,10 @@ mod tests {
             )
             .unwrap(),
             IndexMap::from([
+                ("when stuff called".to_owned(), "whenStuffCalled".to_owned()),
                 (
-                    "when stuff called".to_string(),
-                    "whenStuffCalled".to_string()
-                ),
-                (
-                    "when not stuff called".to_string(),
-                    "whenNotStuffCalled".to_string()
+                    "when not stuff called".to_owned(),
+                    "whenNotStuffCalled".to_owned()
                 )
             ])
         );
@@ -159,41 +162,38 @@ mod tests {
             )
             .unwrap(),
             IndexMap::from([
+                ("when stuff called".to_owned(), "whenStuffCalled".to_owned()),
                 (
-                    "when stuff called".to_string(),
-                    "whenStuffCalled".to_string()
+                    "when not stuff called".to_owned(),
+                    "whenNotStuffCalled".to_owned()
                 ),
                 (
-                    "when not stuff called".to_string(),
-                    "whenNotStuffCalled".to_string()
+                    "when the deposit amount is zero".to_owned(),
+                    "whenTheDepositAmountIsZero".to_owned()
                 ),
                 (
-                    "when the deposit amount is zero".to_string(),
-                    "whenTheDepositAmountIsZero".to_string()
+                    "when the deposit amount is not zero".to_owned(),
+                    "whenTheDepositAmountIsNotZero".to_owned()
                 ),
                 (
-                    "when the deposit amount is not zero".to_string(),
-                    "whenTheDepositAmountIsNotZero".to_string()
+                    "when the number count is zero".to_owned(),
+                    "whenTheNumberCountIsZero".to_owned()
                 ),
                 (
-                    "when the number count is zero".to_string(),
-                    "whenTheNumberCountIsZero".to_string()
+                    "when the asset is not a contract".to_owned(),
+                    "whenTheAssetIsNotAContract".to_owned()
                 ),
                 (
-                    "when the asset is not a contract".to_string(),
-                    "whenTheAssetIsNotAContract".to_string()
+                    "when the asset is a contract".to_owned(),
+                    "whenTheAssetIsAContract".to_owned()
                 ),
                 (
-                    "when the asset is a contract".to_string(),
-                    "whenTheAssetIsAContract".to_string()
+                    "when the asset misses the ERC_20 return value".to_owned(),
+                    "whenTheAssetMissesTheERC_20ReturnValue".to_owned()
                 ),
                 (
-                    "when the asset misses the ERC_20 return value".to_string(),
-                    "whenTheAssetMissesTheERC_20ReturnValue".to_string()
-                ),
-                (
-                    "when the asset does not miss the ERC_20 return value".to_string(),
-                    "whenTheAssetDoesNotMissTheERC_20ReturnValue".to_string()
+                    "when the asset does not miss the ERC_20 return value".to_owned(),
+                    "whenTheAssetDoesNotMissTheERC_20ReturnValue".to_owned()
                 ),
             ])
         );

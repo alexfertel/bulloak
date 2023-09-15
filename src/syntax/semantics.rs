@@ -1,10 +1,10 @@
+//! Implementation of the semantic analysis of a bulloak tree.
+
 use std::{fmt, result};
 
-use super::{
-    ast::{self, Ast},
-    span::Span,
-    visitor::Visitor,
-};
+use super::ast::{self, Ast};
+use crate::span::Span;
+use crate::syntax::visitor::Visitor;
 
 type Result<T> = result::Result<T, Vec<Error>>;
 
@@ -23,16 +23,19 @@ pub struct Error {
 
 impl Error {
     /// Return the type of this error.
+    #[must_use]
     pub fn kind(&self) -> &ErrorKind {
         &self.kind
     }
 
     /// The original text string in which this error occurred.
+    #[must_use]
     pub fn text(&self) -> &str {
         &self.text
     }
 
     /// Return the span at which this error occurred.
+    #[must_use]
     pub fn span(&self) -> &Span {
         &self.span
     }
@@ -42,6 +45,8 @@ impl Error {
         Error { kind, text, span }
     }
 }
+
+impl std::error::Error for Error {}
 
 /// The type of an error that occurred while building an AST.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -62,13 +67,13 @@ pub enum ErrorKind {
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        crate::scaffold::error::Formatter::from(self).fmt(f)
+        crate::error::Formatter::from(self).fmt(f)
     }
 }
 
 impl fmt::Display for ErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        use self::ErrorKind::*;
+        use self::ErrorKind::{ConditionEmpty, NodeUnexpected, TreeEmpty};
         match *self {
             NodeUnexpected => write!(f, "unexpected child node"),
             TreeEmpty => write!(f, "no rules where defined"),
@@ -89,6 +94,7 @@ pub struct SemanticAnalyzer<'t> {
 
 impl<'t> SemanticAnalyzer<'t> {
     /// Create a new semantic analyzer.
+    #[must_use]
     pub fn new(text: &'t str) -> SemanticAnalyzer {
         SemanticAnalyzer {
             errors: Vec::new(),
@@ -100,7 +106,7 @@ impl<'t> SemanticAnalyzer<'t> {
     fn error(&mut self, span: Span, kind: ErrorKind) {
         self.errors.push(Error {
             kind,
-            text: self.text.to_string(),
+            text: self.text.to_owned(),
             span,
         });
     }
@@ -133,11 +139,11 @@ impl Visitor for SemanticAnalyzer<'_> {
     type Error = ();
 
     fn visit_root(&mut self, root: &ast::Root) -> result::Result<Self::Output, Self::Error> {
-        if root.asts.is_empty() {
+        if root.children.is_empty() {
             self.error(Span::splat(root.span.end), ErrorKind::TreeEmpty);
         }
 
-        for ast in &root.asts {
+        for ast in &root.children {
             match ast {
                 Ast::Condition(condition) => {
                     self.visit_condition(condition)?;
@@ -158,11 +164,11 @@ impl Visitor for SemanticAnalyzer<'_> {
         &mut self,
         condition: &ast::Condition,
     ) -> result::Result<Self::Output, Self::Error> {
-        if condition.asts.is_empty() {
+        if condition.children.is_empty() {
             self.error(condition.span, ErrorKind::ConditionEmpty);
         }
 
-        for ast in &condition.asts {
+        for ast in &condition.children {
             match ast {
                 Ast::Condition(condition) => {
                     self.visit_condition(condition)?;
@@ -189,11 +195,11 @@ impl Visitor for SemanticAnalyzer<'_> {
 mod tests {
     use pretty_assertions::assert_eq;
 
-    use crate::scaffold::ast;
-    use crate::scaffold::parser::Parser;
-    use crate::scaffold::semantics::{self, ErrorKind::*};
-    use crate::scaffold::span::{Position, Span};
-    use crate::scaffold::tokenizer::Tokenizer;
+    use crate::span::{Position, Span};
+    use crate::syntax::ast;
+    use crate::syntax::parser::Parser;
+    use crate::syntax::semantics::{self, ErrorKind::*};
+    use crate::syntax::tokenizer::Tokenizer;
 
     fn analyze(text: &str) -> semantics::Result<()> {
         let tokens = Tokenizer::new().tokenize(text).unwrap();
@@ -207,10 +213,10 @@ mod tests {
     #[test]
     fn test_unexpected_node() {
         let ast = ast::Ast::Root(ast::Root {
-            contract_name: "Foo_Test".to_string(),
-            asts: vec![ast::Ast::Root(ast::Root {
-                contract_name: "Foo_Test".to_string(),
-                asts: vec![],
+            contract_name: "Foo_Test".to_owned(),
+            children: vec![ast::Ast::Root(ast::Root {
+                contract_name: "Foo_Test".to_owned(),
+                children: vec![],
                 span: Span::new(Position::new(0, 1, 1), Position::new(7, 1, 8)),
             })],
             span: Span::new(Position::new(0, 1, 1), Position::new(7, 1, 8)),
@@ -222,7 +228,7 @@ mod tests {
             result.unwrap_err(),
             vec![semantics::Error {
                 kind: NodeUnexpected,
-                text: "Foo_Test".to_string(),
+                text: "Foo_Test".to_owned(),
                 span: Span::new(Position::new(0, 1, 1), Position::new(7, 1, 8)),
             }]
         );
@@ -234,7 +240,7 @@ mod tests {
             analyze("Foo_Test\n└── when something").unwrap_err(),
             vec![semantics::Error {
                 kind: ConditionEmpty,
-                text: "Foo_Test\n└── when something".to_string(),
+                text: "Foo_Test\n└── when something".to_owned(),
                 span: Span::new(Position::new(9, 2, 1), Position::new(32, 2, 18)),
             }]
         );

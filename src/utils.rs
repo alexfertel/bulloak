@@ -1,4 +1,4 @@
-pub fn capitalize_first_letter(s: &str) -> String {
+pub(crate) fn capitalize_first_letter(s: &str) -> String {
     let mut c = s.chars();
     match c.next() {
         None => String::new(),
@@ -6,7 +6,7 @@ pub fn capitalize_first_letter(s: &str) -> String {
     }
 }
 
-pub fn lower_first_letter(s: &str) -> String {
+pub(crate) fn lower_first_letter(s: &str) -> String {
     let mut c = s.chars();
     match c.next() {
         None => String::new(),
@@ -16,7 +16,7 @@ pub fn lower_first_letter(s: &str) -> String {
 
 /// This functions makes the appropriate changes to a string to
 /// make it a valid identifier.
-pub fn sanitize(identifier: &str) -> String {
+pub(crate) fn sanitize(identifier: &str) -> String {
     identifier
         .replace('-', "_")
         .replace(['\'', '"', '.', '{', '}'], "")
@@ -27,11 +27,15 @@ pub fn sanitize(identifier: &str) -> String {
 /// The conversion is done by capitalizing the first letter of each word
 /// in the title and removing the spaces. For example, the sentence
 /// `when only owner` is converted to the `WhenOnlyOwner` string.
-pub fn to_pascal_case(sentence: &str) -> String {
+pub(crate) fn to_pascal_case(sentence: &str) -> String {
     sentence
         .split_whitespace()
         .map(capitalize_first_letter)
         .collect::<String>()
+}
+
+pub(crate) fn repeat_str(s: &str, n: usize) -> String {
+    s.repeat(n)
 }
 
 #[cfg(test)]

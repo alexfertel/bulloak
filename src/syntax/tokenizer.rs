@@ -1,6 +1,8 @@
+//! Defines a scanner for bulloak trees that produces a token stream.
+
 use std::{borrow::Borrow, cell::Cell, fmt, result};
 
-use crate::scaffold::span::{Position, Span};
+use crate::span::{Position, Span};
 
 type Result<T> = result::Result<T, Error>;
 
@@ -17,21 +19,26 @@ pub struct Error {
     span: Span,
 }
 
+impl std::error::Error for Error {}
+
 impl Error {
     /// Return the type of this error.
-    pub fn kind(&self) -> &ErrorKind {
+    #[must_use]
+    pub const fn kind(&self) -> &ErrorKind {
         &self.kind
     }
 
     /// The original text string in which this error occurred.
     ///
     /// Every span reported by this error is reported in terms of this string.
+    #[must_use]
     pub fn text(&self) -> &str {
         &self.text
     }
 
     /// Return the span at which this error occurred.
-    pub fn span(&self) -> &Span {
+    #[must_use]
+    pub const fn span(&self) -> &Span {
         &self.span
     }
 }
@@ -50,15 +57,15 @@ pub enum ErrorKind {
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        super::error::Formatter::from(self).fmt(f)
+        crate::error::Formatter::from(self).fmt(f)
     }
 }
 
 impl fmt::Display for ErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        use self::ErrorKind::*;
-        match *self {
-            IdentifierCharInvalid(c) => write!(f, "invalid identifier: {:?}", c),
+        use self::ErrorKind::IdentifierCharInvalid;
+        match self {
+            IdentifierCharInvalid(c) => write!(f, "invalid identifier: {c:?}"),
             _ => unreachable!(),
         }
     }
@@ -72,8 +79,12 @@ impl fmt::Display for ErrorKind {
 /// text that the token represents.
 #[derive(PartialEq, Eq)]
 pub struct Token {
+    /// The type of the token.
     pub kind: TokenKind,
+    /// The range in which a token appears in the original
+    /// text.
     pub span: Span,
+    /// The literal characters that make up the token.
     pub lexeme: String,
 }
 
@@ -129,7 +140,8 @@ pub struct Tokenizer {
 
 impl Tokenizer {
     /// Create a new tokenizer.
-    pub fn new() -> Self {
+    #[must_use]
+    pub const fn new() -> Self {
         Self {
             pos: Cell::new(Position::new(0, 1, 1)),
             // Starts as `true` because the first token must always be a contract name.
@@ -152,7 +164,7 @@ impl Tokenizer {
     }
 }
 
-/// TokenizerI is the internal tokenizer implementation.
+/// `TokenizerI` is the internal tokenizer implementation.
 struct TokenizerI<'s, T> {
     /// The text being tokenized.
     text: &'s str,
@@ -176,7 +188,7 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
     fn error(&self, span: Span, kind: ErrorKind) -> Error {
         Error {
             kind,
-            text: self.text.to_string(),
+            text: self.text.to_owned(),
             span,
         }
     }
@@ -200,7 +212,7 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
         self.text()[i..]
             .chars()
             .next()
-            .unwrap_or_else(|| panic!("expected char at offset {}", i))
+            .unwrap_or_else(|| panic!("expected char at offset {i}"))
     }
 
     /// Return the current offset of the tokenizer.
@@ -291,7 +303,7 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
     }
 
     /// Tokenize the text.
-    pub fn tokenize(&self) -> Result<Vec<Token>> {
+    pub(crate) fn tokenize(&self) -> Result<Vec<Token>> {
         let mut tokens = Vec::new();
         self.tokenizer().reset();
 
@@ -311,12 +323,12 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
                 '├' => tokens.push(Token {
                     kind: TokenKind::Tee,
                     span: self.span(),
-                    lexeme: "├".to_string(),
+                    lexeme: "├".to_owned(),
                 }),
                 '└' => tokens.push(Token {
                     kind: TokenKind::Corner,
                     span: self.span(),
-                    lexeme: "└".to_string(),
+                    lexeme: "└".to_owned(),
                 }),
                 // Comments start with `//`.
                 '/' if self.peek().is_some_and(|c| c == '/') => {
@@ -327,7 +339,7 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
                     let token = self.scan_word()?;
                     if token.kind == TokenKind::When || token.kind == TokenKind::Given {
                         self.enter_identifier_mode()
-                    }
+                    };
                     tokens.push(token);
                 }
             }
@@ -344,11 +356,10 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
     fn scan_comments(&self) {
         loop {
             match self.peek() {
-                Some('\n') => break,
+                Some('\n') | None => break,
                 Some(_) => {
                     self.scan();
                 }
-                None => break,
             }
         }
     }
@@ -365,7 +376,7 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
         loop {
             if self.is_identifier_mode() && !is_valid_identifier_char(self.char()) {
                 return Err(self.error(self.span(), ErrorKind::IdentifierCharInvalid(self.char())));
-            } else if self.peek().is_none() || self.peek().is_some_and(|c| c.is_whitespace()) {
+            } else if self.peek().is_none() || self.peek().is_some_and(char::is_whitespace) {
                 lexeme.push(self.char());
                 let kind = match lexeme.to_lowercase().as_str() {
                     "when" => TokenKind::When,
@@ -378,10 +389,10 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
                     span: self.span().with_start(span_start),
                     lexeme,
                 });
-            } else {
-                lexeme.push(self.char());
-                self.scan();
             }
+
+            lexeme.push(self.char());
+            self.scan();
         }
     }
 }
@@ -398,10 +409,10 @@ fn is_valid_identifier_char(c: char) -> bool {
 mod tests {
     use pretty_assertions::assert_eq;
 
-    use crate::scaffold::error::Result;
-    use crate::scaffold::{
-        span::{Position, Span},
-        tokenizer::{self, ErrorKind::IdentifierCharInvalid, Token, TokenKind, Tokenizer},
+    use crate::error::Result;
+    use crate::span::{Position, Span};
+    use crate::syntax::tokenizer::{
+        self, ErrorKind::IdentifierCharInvalid, Token, TokenKind, Tokenizer,
     };
 
     #[derive(Clone, Debug)]
@@ -437,7 +448,7 @@ mod tests {
     fn t(kind: TokenKind, lexeme: &str, span: Span) -> Token {
         Token {
             kind,
-            lexeme: lexeme.to_string(),
+            lexeme: lexeme.to_owned(),
             span,
         }
     }

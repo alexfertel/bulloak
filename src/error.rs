@@ -2,19 +2,19 @@ use std::cmp;
 use std::fmt;
 use std::result;
 
-use super::parser;
-use super::semantics;
-use super::span;
-use super::tokenizer;
+use crate::span;
+use crate::syntax::parser;
+use crate::syntax::semantics;
+use crate::syntax::tokenizer;
+use crate::utils::repeat_str;
 
-/// A type alias for dealing with errors returned by this crate.
-pub type Result<T> = result::Result<T, Error>;
+/// A type alias for dealing with errors returned when parsing.
+pub(crate) type Result<T> = result::Result<T, Error>;
 
-/// This error type encompasses any error that can be returned by this crate.
+/// This error type encompasses any error that can be returned when parsing.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Error {
-    /// An error that occurred while translating abstract syntax into a high
-    /// level intermediate representation.
+    /// An error that occurred while tokenizing the input text.
     Tokenize(tokenizer::Error),
     /// An error that occurred while translating concrete syntax into abstract
     /// syntax.
@@ -31,30 +31,32 @@ pub enum Error {
     __Nonexhaustive,
 }
 
+impl std::error::Error for Error {}
+
 impl From<parser::Error> for Error {
-    fn from(err: parser::Error) -> Error {
-        Error::Parse(err)
+    fn from(err: parser::Error) -> Self {
+        Self::Parse(err)
     }
 }
 
 impl From<tokenizer::Error> for Error {
-    fn from(err: tokenizer::Error) -> Error {
-        Error::Tokenize(err)
+    fn from(err: tokenizer::Error) -> Self {
+        Self::Tokenize(err)
     }
 }
 
 impl From<Vec<semantics::Error>> for Error {
-    fn from(errors: Vec<semantics::Error>) -> Error {
-        Error::Semantic(errors)
+    fn from(errors: Vec<semantics::Error>) -> Self {
+        Self::Semantic(errors)
     }
 }
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
-            Error::Parse(ref x) => x.fmt(f),
-            Error::Tokenize(ref x) => x.fmt(f),
-            Error::Semantic(ref errors) => {
+            Self::Parse(ref x) => x.fmt(f),
+            Self::Tokenize(ref x) => x.fmt(f),
+            Self::Semantic(ref errors) => {
                 for x in errors {
                     x.fmt(f)?;
                 }
@@ -70,7 +72,7 @@ impl fmt::Display for Error {
 /// This type is responsible for reporting errors in a nice human readable
 /// format.
 #[derive(Debug)]
-pub struct Formatter<'e, E> {
+pub(crate) struct Formatter<'e, E> {
     /// The original .tree text in which the error occurred.
     text: &'e str,
     /// The error kind. It must impl fmt::Display.
@@ -112,10 +114,10 @@ impl<'e> From<&'e semantics::Error> for Formatter<'e, semantics::ErrorKind> {
 impl<'e, E: fmt::Display> fmt::Display for Formatter<'e, E> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let divider = repeat_str("•", 79);
-        writeln!(f, "{}", divider)?;
+        writeln!(f, "{divider}")?;
         writeln!(f, "bulloak error: {}\n", self.err)?;
         let notated = notate(self);
-        writeln!(f, "{}", notated)?;
+        writeln!(f, "{notated}")?;
         writeln!(
             f,
             "--- (line {}, column {}) ---",
@@ -141,16 +143,12 @@ fn notate<E>(f: &Formatter<'_, E>) -> String {
     notated
 }
 
-fn repeat_str(s: &str, n: usize) -> String {
-    s.repeat(n)
-}
-
 #[cfg(test)]
 mod test {
     use super::repeat_str;
-    use crate::scaffold::error::Formatter;
-    use crate::scaffold::span::{Position, Span};
-    use crate::scaffold::{error, parser, semantics};
+    use crate::error::Formatter;
+    use crate::span::{Position, Span};
+    use crate::syntax::{parser, semantics};
     use pretty_assertions::assert_eq;
 
     #[test]
@@ -159,7 +157,7 @@ mod test {
         let span = Span::new(Position::new(0, 2, 1), Position::new(4, 2, 5));
         let formatter = Formatter {
             text,
-            err: &parser::ErrorKind::TokenUnexpected("world".to_string()),
+            err: &parser::ErrorKind::TokenUnexpected("world".to_owned()),
             span: &span,
         };
         let notated = format!("{}", formatter);
@@ -185,9 +183,9 @@ mod test {
         let text = r"test.sol
 ├── when 1
 └── when 2"
-            .to_string();
+            .to_owned();
 
-        let errors = error::Error::from(vec![
+        let errors = crate::error::Error::from(vec![
             semantics::Error::new(
                 semantics::ErrorKind::ConditionEmpty,
                 text.clone(),

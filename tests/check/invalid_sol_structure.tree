@@ -1,0 +1,48 @@
+CancelTest
+├── when delegate called
+│  └── it should revert
+└── when not delegate called
+   ├── given the id references a null stream
+   │  └── it should revert
+   └── given the id does not reference a null stream
+      ├── given the stream is cold
+      │  ├── given the stream's status is "DEPLETED"
+      │  │  └── it should revert
+      │  ├── given the stream's status is "CANCELED"
+      │  │  └── it should revert
+      │  └── given the stream's status is "SETTLED"
+      │     └── it should revert
+      └── given the stream is warm
+         └── when the caller is authorized
+            ├── given the stream is not cancelable
+            │  └── it should revert
+            ├── given the sender is not a contract
+            │  ├── it should cancel the stream
+            │  └── it should mark the stream as canceled
+            └── given the sender is a contract
+               ├── given the sender does not implement the hook
+               │  ├── it should cancel the stream
+               │  ├── it should mark the stream as canceled
+               │  ├── it should call the sender hook
+               │  └── it should ignore the revert
+               └── given the sender implements the hook
+                     ├── when the sender reverts
+                     │  ├── it should cancel the stream
+                     │  ├── it should mark the stream as canceled
+                     │  ├── it should call the sender hook
+                     │  └── it should ignore the revert
+                     └── when the sender does not revert
+                        ├── when there is reentrancy
+                        │  ├── it should cancel the stream
+                        │  ├── it should mark the stream as canceled
+                        │  ├── it should call the sender hook
+                        │  └── it should ignore the revert
+                        └── when there is no reentrancy
+                           ├── it should cancel the stream
+                           ├── it should mark the stream as canceled
+                           ├── it should make the stream not cancelable
+                           ├── it should update the refunded amount
+                           ├── it should refund the sender
+                           ├── it should call the sender hook
+                           ├── it should emit a {MetadataUpdate} event
+                           └── it should emit a {CancelLockupStream} event

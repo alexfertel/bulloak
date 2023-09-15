@@ -1,28 +1,28 @@
-use indexmap::IndexMap;
+//! Defines a solidity code emitter from a HIR.
+
 use std::result;
 
-use super::{
-    ast::{self, Ast},
-    utils::{capitalize_first_letter, sanitize},
-    visitor::Visitor,
-};
+use crate::hir::visitor::Visitor;
+use crate::hir::{self, Hir};
+use crate::utils::sanitize;
 
 /// Solidity code emitter.
 ///
 /// This struct holds the state of the emitter. It is not
-/// tied to a specific AST.
+/// tied to a specific HIR.
 pub struct Emitter<'s> {
     /// This flag determines whether actions are emitted as comments
     /// in the body of functions.
     with_actions_as_comments: bool,
     /// The indentation level of the emitted code.
     indent: usize,
-    /// The solidity version to use in the emitted code.
+    /// The solidity version to be used in the pragma directive.
     solidity_version: &'s str,
 }
 
 impl<'s> Emitter<'s> {
     /// Create a new emitter with the given configuration.
+    #[must_use]
     pub fn new(with_actions_as_comments: bool, indent: usize, solidity_version: &'s str) -> Self {
         Self {
             with_actions_as_comments,
@@ -31,9 +31,10 @@ impl<'s> Emitter<'s> {
         }
     }
 
-    /// Emit Solidity code from the given AST.
-    pub fn emit(self, ast: &ast::Ast, modifiers: &IndexMap<String, String>) -> String {
-        EmitterI::new(self, modifiers).emit(ast)
+    /// Emit Solidity code from the given HIR.
+    #[must_use]
+    pub fn emit(self, hir: &hir::Hir) -> String {
+        EmitterI::new(self).emit(hir)
     }
 
     /// Return the indentation string. i.e. the string that is used
@@ -47,43 +48,24 @@ impl<'s> Emitter<'s> {
 ///
 /// This emitter generates skeleton contracts and tests functions
 /// inside that contract described in the input .tree file.
-struct EmitterI<'a> {
-    /// A stack of modifiers that will be applied to the
-    /// currently emitted function.
-    ///
-    /// This stack is updated as the emitter traverses the AST.
-    /// When the emitter finishes traversing a condition, it
-    /// pops the last modifier from the stack, since it won't
-    /// be applied to the next function. The rest of the modifiers
-    /// might be applied in case there are more sibling actions or
-    /// conditions.
-    modifier_stack: Vec<&'a str>,
-    /// A map of condition titles to their corresponding modifiers.
-    ///
-    /// This map is used to retrieve a modifier given a condition title
-    /// to improve performance. Otherwise each title would be converted
-    /// to a modifier every time it is used.
-    modifiers: &'a IndexMap<String, String>,
+struct EmitterI<'s> {
     /// The emitter state.
-    emitter: Emitter<'a>,
+    emitter: Emitter<'s>,
 }
 
-impl<'a> EmitterI<'a> {
+impl<'s> EmitterI<'s> {
     /// Create a new emitter with the given emitter state and modifier map.
-    fn new(emitter: Emitter<'a>, modifiers: &'a IndexMap<String, String>) -> Self {
-        Self {
-            modifier_stack: Vec::new(),
-            modifiers,
-            emitter,
-        }
+    fn new(emitter: Emitter<'s>) -> Self {
+        Self { emitter }
     }
 
-    /// Emit Solidity code from the given AST.
+    /// Emit Solidity code from the given HIR.
     ///
     /// This function is the entry point of the emitter.
-    fn emit(&mut self, ast: &ast::Ast) -> String {
-        match ast {
-            Ast::Root(ref root) => self.visit_root(root).unwrap(),
+    fn emit(&mut self, hir: &hir::Hir) -> String {
+        match hir {
+            Hir::Root(ref root) => self.visit_root(root).unwrap(),
+            // Emitting subtrees is not supported.
             _ => unreachable!(),
         }
     }
@@ -93,23 +75,19 @@ impl<'a> EmitterI<'a> {
     /// This includes:
     /// - The Solidity version pragma.
     /// - The contract's name.
-    fn emit_contract_header(&self, root: &ast::Root) -> String {
+    fn emit_contract_header(&self, contract: &hir::ContractDefinition) -> String {
         let mut emitted = String::new();
-        emitted.push_str(&format!(
-            "pragma solidity {};\n\n",
-            self.emitter.solidity_version
-        ));
 
         // It's fine to unwrap here because we check that the filename always has an extension.
-        let contract_name = sanitize(&root.contract_name);
-        emitted.push_str(format!("contract {} {{\n", contract_name).as_str());
+        let contract_name = sanitize(&contract.identifier);
+        emitted.push_str(format!("contract {contract_name} {{\n").as_str());
 
         emitted
     }
 
     /// Emit a modifier.
     ///
-    /// A modifier follows the following structure:
+    /// A modifier follows the structure:
     /// ```solidity
     /// modifier [MODIFIER_NAME]() {
     ///    _;
@@ -118,9 +96,9 @@ impl<'a> EmitterI<'a> {
     fn emit_modifier(&self, modifier: &str) -> String {
         let mut emitted = String::new();
         let indentation = self.emitter.indent();
-        emitted.push_str(&format!("{}modifier {}() {{\n", indentation, modifier));
+        emitted.push_str(&format!("{indentation}modifier {modifier}() {{\n"));
         emitted.push_str(&format!("{}_;\n", indentation.repeat(2)));
-        emitted.push_str(&format!("{}}}\n", indentation));
+        emitted.push_str(&format!("{indentation}}}\n"));
         emitted.push('\n');
 
         emitted
@@ -132,67 +110,35 @@ impl<'a> EmitterI<'a> {
     /// - The function's name.
     /// - The function's visibility.
     /// - Any modifiers that should be applied to the function.
-    fn emit_fn_header(&self, condition: &ast::Condition) -> String {
+    fn emit_fn_header(&self, function: &hir::FunctionDefinition) -> String {
         let mut emitted = String::new();
 
-        // We count instead of collecting into a Vec to avoid allocating a Vec for each condition.
-        let action_count = condition.asts.iter().filter(|ast| ast.is_action()).count();
-        let mut actions = condition.asts.iter().filter(|ast| ast.is_action());
+        let fn_indentation = self.emitter.indent();
+        let fn_body_indentation = fn_indentation.repeat(2);
 
-        if action_count > 0 {
-            let fn_indentation = self.emitter.indent();
-            let fn_body_indentation = fn_indentation.repeat(2);
+        let has_modifiers = function.modifiers.is_some();
+        if has_modifiers {
+            emitted.push_str(
+                format!("{}function {}()\n", fn_indentation, function.identifier).as_str(),
+            );
+            emitted.push_str(format!("{fn_body_indentation}external\n").as_str());
+        } else {
+            emitted
+                .push_str(format!("{}function {}()", fn_indentation, function.identifier).as_str());
+            emitted.push_str(" external");
+        }
 
-            // If the only action is `it should revert`, we slightly change the function name
-            // to reflect this.
-            let is_revert = action_count == 1
-                && actions.next().is_some_and(|action| {
-                    if let Ast::Action(action) = action {
-                        action.title == "it should revert"
-                    } else {
-                        false
-                    }
-                });
-
-            // It's fine to unwrap here because we check that no action appears outside of a condition.
-            let last_modifier = self.modifier_stack.last().unwrap();
-            let function_name = if is_revert {
-                let mut words = condition.title.split_whitespace();
-                // It is fine to unwrap because conditions have at least one word in them.
-                let keyword = capitalize_first_letter(words.next().unwrap());
-
-                // Map an iterator over the words of a condition to the test name.
-                //
-                // Example: [when, something, happens] -> WhenSomethingHappens
-                let test_name = words.fold(
-                    String::with_capacity(condition.title.len() - keyword.len()),
-                    |mut acc, w| {
-                        acc.reserve(w.len() + 1);
-                        acc.push_str(&capitalize_first_letter(w));
-                        acc
-                    },
-                );
-
-                // The structure for a function name when it is a revert is:
-                //
-                // test_Revert[KEYWORD]_Description
-                //
-                // where `KEYWORD` is the starting word of the condition.
-                format!("test_Revert{}_{}", keyword, test_name)
-            } else {
-                let test_name = capitalize_first_letter(last_modifier);
-                format!("test_{}", test_name)
-            };
-
-            emitted.push_str(format!("{}function {}()\n", fn_indentation, function_name).as_str());
-            emitted.push_str(format!("{}external\n", fn_body_indentation).as_str());
-
-            // Emit the modifiers that should be applied to this function.
-            for modifier in &self.modifier_stack {
-                emitted.push_str(format!("{}{}\n", fn_body_indentation, modifier).as_str());
+        // Emit the modifiers that should be applied to this function.
+        if let Some(ref modifiers) = function.modifiers {
+            for modifier in modifiers {
+                emitted.push_str(format!("{fn_body_indentation}{modifier}\n").as_str());
             }
+        }
 
-            emitted.push_str(format!("{}{{\n", fn_indentation).as_str());
+        if has_modifiers {
+            emitted.push_str(format!("{fn_indentation}{{\n").as_str());
+        } else {
+            emitted.push_str(" {\n");
         }
 
         emitted
@@ -202,49 +148,44 @@ impl<'a> EmitterI<'a> {
 /// The visitor implementation for the emitter.
 ///
 /// Note that the visitor is infallible because previous
-/// passes ensure that the AST is valid. In case an error
+/// passes ensure that the HIR is valid. In case an error
 /// is found, it should be added to a previous pass.
-impl<'a> Visitor for EmitterI<'a> {
+impl<'s> Visitor for EmitterI<'s> {
     type Output = String;
     type Error = ();
 
-    fn visit_root(&mut self, root: &ast::Root) -> result::Result<Self::Output, Self::Error> {
+    fn visit_root(&mut self, root: &hir::Root) -> result::Result<Self::Output, Self::Error> {
         let mut emitted = String::new();
 
-        let contract_header = self.emit_contract_header(root);
+        emitted.push_str(&format!(
+            "pragma solidity {};\n\n",
+            self.emitter.solidity_version
+        ));
+
+        for hir in &root.children {
+            let result = match hir {
+                Hir::ContractDefinition(contract) => self.visit_contract(contract)?,
+                _ => unreachable!(),
+            };
+
+            emitted.push_str(&result);
+        }
+
+        Ok(emitted)
+    }
+
+    fn visit_contract(
+        &mut self,
+        contract: &hir::ContractDefinition,
+    ) -> result::Result<Self::Output, Self::Error> {
+        let mut emitted = String::new();
+
+        let contract_header = self.emit_contract_header(contract);
         emitted.push_str(&contract_header);
 
-        for ast in &root.asts {
-            if let Ast::Condition(condition) = ast {
-                emitted.push_str(&self.visit_condition(condition)?);
-            } else if let Ast::Action(action) = ast {
-                // We found a top-level action. These don't have parent conditions,
-                // so we emit a test without modifiers.
-                let fn_indentation = self.emitter.indent();
-
-                let words = action.title.split_whitespace();
-                let words = words.skip(1); // Removes "it" from the test name.
-
-                // Map an iterator over the words of an action to the test name.
-                //
-                // Example: [do, stuff] -> DoStuff
-                let test_name =
-                    words.fold(String::with_capacity(action.title.len()), |mut acc, w| {
-                        acc.reserve(w.len() + 1);
-                        acc.push_str(&capitalize_first_letter(w));
-                        acc
-                    });
-
-                // We need to sanitize here because and not in a previous compiler
-                // phase because we want to emit the action as is in a comment.
-                let test_name = sanitize(&test_name);
-                let test_name = format!("test_{}", test_name);
-                let fn_header = format!("{}function {}() external {{\n", fn_indentation, test_name);
-
-                emitted.push_str(&fn_header);
-                emitted.push_str(&self.visit_action(action)?);
-                emitted.push_str(format!("{}}}\n", fn_indentation).as_str());
-                emitted.push('\n');
+        for hir in &contract.children {
+            if let Hir::FunctionDefinition(function) = hir {
+                emitted.push_str(&self.visit_function(function)?);
             }
         }
 
@@ -256,55 +197,42 @@ impl<'a> Visitor for EmitterI<'a> {
         Ok(emitted)
     }
 
-    fn visit_condition(
+    fn visit_function(
         &mut self,
-        condition: &ast::Condition,
+        function: &hir::FunctionDefinition,
     ) -> result::Result<Self::Output, Self::Error> {
         let mut emitted = String::new();
 
-        // It's fine to unwrap here because we discover all modifiers in a previous pass.
-        let modifier = self.modifiers.get(&condition.title).unwrap();
-        self.modifier_stack.push(modifier);
+        if matches!(function.ty, hir::FunctionTy::Modifier) {
+            emitted.push_str(&self.emit_modifier(&function.identifier));
+        } else {
+            let fn_header = self.emit_fn_header(function);
+            emitted.push_str(&fn_header);
 
-        emitted.push_str(&self.emit_modifier(modifier));
-
-        let fn_header = self.emit_fn_header(condition);
-        emitted.push_str(&fn_header);
-
-        // We first visit all actions in order to emit the functions
-        // in the same order as they appear in the source .tree text.
-        for action in &condition.asts {
-            if let Ast::Action(action) = action {
-                emitted.push_str(&self.visit_action(action)?);
+            if let Some(ref children) = function.children {
+                for child in children {
+                    if let Hir::Comment(comment) = child {
+                        emitted.push_str(&self.visit_comment(comment)?);
+                    }
+                }
             }
-        }
 
-        // We count instead of collecting into a Vec to avoid allocating a Vec for each condition.
-        let action_count = condition.asts.iter().filter(|ast| ast.is_action()).count();
-        // We check that there is more than one action to avoid printing extra closing
-        // braces when conditions are nested.
-        if action_count > 0 {
-            emitted.push_str(format!("{}}}\n\n", self.emitter.indent()).as_str());
+            let indentation = self.emitter.indent();
+            emitted.push_str(format!("{indentation}}}\n\n").as_str());
         }
-
-        // Then we recursively emit all child conditions.
-        for condition in &condition.asts {
-            if let Ast::Condition(condition) = condition {
-                emitted.push_str(&self.visit_condition(condition)?);
-            }
-        }
-
-        self.modifier_stack.pop();
 
         Ok(emitted)
     }
 
-    fn visit_action(&mut self, action: &ast::Action) -> result::Result<Self::Output, Self::Error> {
+    fn visit_comment(
+        &mut self,
+        comment: &hir::Comment,
+    ) -> result::Result<Self::Output, Self::Error> {
         let mut emitted = String::new();
 
         if self.emitter.with_actions_as_comments {
             let indentation = self.emitter.indent().repeat(2);
-            emitted.push_str(format!("{}// {}\n", indentation, action.title).as_str());
+            emitted.push_str(format!("{}// {}\n", indentation, comment.lexeme).as_str());
         }
 
         Ok(emitted)
@@ -315,11 +243,12 @@ impl<'a> Visitor for EmitterI<'a> {
 mod tests {
     use pretty_assertions::assert_eq;
 
+    use crate::error::Result;
+    use crate::hir::translator::Translator;
     use crate::scaffold::emitter;
-    use crate::scaffold::error::Result;
     use crate::scaffold::modifiers;
-    use crate::scaffold::parser::Parser;
-    use crate::scaffold::tokenizer::Tokenizer;
+    use crate::syntax::parser::Parser;
+    use crate::syntax::tokenizer::Tokenizer;
 
     fn scaffold_with_flags(
         text: &str,
@@ -331,7 +260,8 @@ mod tests {
         let ast = Parser::new().parse(&text, &tokens)?;
         let mut discoverer = modifiers::ModifierDiscoverer::new();
         let modifiers = discoverer.discover(&ast);
-        Ok(emitter::Emitter::new(with_comments, indent, version).emit(&ast, &modifiers))
+        let hir = Translator::new().translate(&ast, modifiers);
+        Ok(emitter::Emitter::new(with_comments, indent, version).emit(&hir))
     }
 
     fn scaffold(text: &str) -> Result<String> {
