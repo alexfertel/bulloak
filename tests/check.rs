@@ -54,8 +54,7 @@ fn checks_missing_sol_file() {
     let output = cmd(&binary_path, "check", &tree_path, &[]);
     let actual = String::from_utf8(output.stderr).unwrap();
 
-    let expected = r#"File not found: The file "/Users/alexfertel/code/rust/bulloak/tests/check/no_matching_sol.tree" is missing its matching solidity file."#;
-
     // We trim here because we don't care about ending newlines.
-    assert_eq!(expected.trim(), actual.trim());
+    assert!(actual.contains("File not found"));
+    assert!(actual.contains("no_matching_sol.tree"));
 }
