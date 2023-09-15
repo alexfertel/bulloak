@@ -58,3 +58,19 @@ fn checks_missing_sol_file() {
     assert!(actual.contains("File not found"));
     assert!(actual.contains("no_matching_sol.tree"));
 }
+
+#[test]
+fn checks_empty_contract() {
+    let cwd = env::current_dir().unwrap();
+    let binary_path = get_binary_path();
+    let tree_path = cwd.join("tests").join("check").join("empty_contract.tree");
+
+    let output = cmd(&binary_path, "check", &tree_path, &[]);
+    let actual = String::from_utf8(output.stderr).unwrap();
+
+    println!("{actual}");
+    // We trim here because we don't care about ending newlines.
+    assert!(actual.contains("Codegen not found"));
+    assert!(actual.contains("test_ShouldNeverRevert"));
+    assert!(actual.contains("test_ShouldNotFindTheSolidityFile"));
+}

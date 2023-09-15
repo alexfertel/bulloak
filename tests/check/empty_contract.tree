@@ -1,0 +1,3 @@
+EmptyContract
+├── It should never revert.
+└── It should not find the solidity file.

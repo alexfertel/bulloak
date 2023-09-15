@@ -120,9 +120,14 @@ fn check_fns_structure(
         };
     }
 
-    // We need to check for inversions in order to know
-    // if the order is wrong.
+    // We need to check for inversions in order to know if the order is wrong.
     let mut unsorted_set: BTreeSet<String> = BTreeSet::new();
+    // No matching constructs were found. We can just return, since
+    // we already processed violations in the prev step.
+    if present_fn_indices.is_empty() {
+        return violations;
+    }
+
     for i in 0..present_fn_indices.len() - 1 {
         let (i_hir_idx, i_sol_idx) = present_fn_indices[i];
         // Everything that's less than the current item is unsorted.
