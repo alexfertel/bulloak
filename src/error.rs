@@ -115,6 +115,14 @@ impl<'e, E: fmt::Display> fmt::Display for Formatter<'e, E> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let divider = repeat_str("•", 79);
         writeln!(f, "{divider}")?;
+
+        let start_offset = self.span.start.offset;
+        let end_offset = self.span.end.offset;
+        if start_offset == end_offset && start_offset == 0 {
+            write!(f, "bulloak error: {}", self.err)?;
+            return Ok(());
+        }
+
         writeln!(f, "bulloak error: {}\n", self.err)?;
         let notated = notate(self);
         writeln!(f, "{notated}")?;

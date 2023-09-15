@@ -34,7 +34,7 @@ impl PartialOrd for Span {
 ///
 /// A position encodes one half of a span, and includes the char offset, line
 /// number and column number.
-#[derive(Clone, Copy, Eq, PartialEq, Default)]
+#[derive(Clone, Copy, Eq, PartialEq)]
 pub struct Position {
     /// The absolute offset of this position, starting at `0` from the
     /// beginning of the tree.
@@ -46,6 +46,16 @@ pub struct Position {
     pub line: usize,
     /// The approximate column number, starting at `1`.
     pub column: usize,
+}
+
+impl Default for Position {
+    fn default() -> Self {
+        Self {
+            offset: Default::default(),
+            line: 1,
+            column: 1,
+        }
+    }
 }
 
 impl fmt::Debug for Position {
