@@ -66,6 +66,8 @@ pub enum ErrorKind {
     WordUnexpected(Lexeme),
     /// Did not expect an end of file.
     EofUnexpected,
+    /// The token stream was empty, so the tree was empty.
+    EmptyTree,
     /// This enum may grow additional variants, so this makes sure clients
     /// don't count on exhaustive matching. (Otherwise, adding a new variant
     /// could break existing code.)
@@ -82,8 +84,8 @@ impl fmt::Display for Error {
 impl fmt::Display for ErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use self::ErrorKind::{
-            EofUnexpected, GivenUnexpected, ItUnexpected, TokenUnexpected, WhenUnexpected,
-            WordUnexpected,
+            EmptyTree, EofUnexpected, GivenUnexpected, ItUnexpected, TokenUnexpected,
+            WhenUnexpected, WordUnexpected,
         };
         match self {
             TokenUnexpected(lexeme) => write!(f, "unexpected token: {lexeme}"),
@@ -92,6 +94,7 @@ impl fmt::Display for ErrorKind {
             ItUnexpected => write!(f, "unexpected `it` keyword"),
             WordUnexpected(lexeme) => write!(f, "unexpected `word`: {lexeme}"),
             EofUnexpected => write!(f, "unexpected end of file"),
+            EmptyTree => write!(f, "found an empty tree"),
             _ => unreachable!(),
         }
     }
@@ -198,6 +201,11 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
     /// that we defer the implementation of parsing to `_parse`.
     pub(crate) fn parse(&self) -> Result<Ast> {
         self.parser().reset();
+
+        if self.tokens.is_empty() {
+            return Err(self.error(Span::default(), ErrorKind::EmptyTree));
+        }
+
         self._parse()
     }
 
