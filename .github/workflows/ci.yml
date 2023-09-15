@@ -48,6 +48,7 @@ jobs:
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         args: --all-features
+
   coverage:
     runs-on: ubuntu-latest
     name: ubuntu / stable / coverage
