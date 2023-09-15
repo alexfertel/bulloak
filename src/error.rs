@@ -72,7 +72,7 @@ impl fmt::Display for Error {
 /// This type is responsible for reporting errors in a nice human readable
 /// format.
 #[derive(Debug)]
-pub struct Formatter<'e, E> {
+pub(crate) struct Formatter<'e, E> {
     /// The original .tree text in which the error occurred.
     text: &'e str,
     /// The error kind. It must impl fmt::Display.
@@ -114,10 +114,10 @@ impl<'e> From<&'e semantics::Error> for Formatter<'e, semantics::ErrorKind> {
 impl<'e, E: fmt::Display> fmt::Display for Formatter<'e, E> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let divider = repeat_str("•", 79);
-        writeln!(f, "{}", divider)?;
+        writeln!(f, "{divider}")?;
         writeln!(f, "bulloak error: {}\n", self.err)?;
         let notated = notate(self);
-        writeln!(f, "{}", notated)?;
+        writeln!(f, "{notated}")?;
         writeln!(
             f,
             "--- (line {}, column {}) ---",

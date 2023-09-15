@@ -1,3 +1,7 @@
+//! Defines the `bulloak scaffold` command.
+//!
+//! This command scaffolds a solidity file from a spec `.tree` file.
+
 use std::{fs, path::PathBuf};
 
 use clap::Parser;

@@ -10,7 +10,7 @@
 //! - Their function type is exactly the same. Currently, only regular functions
 //! and modifiers are supported.
 
-use std::collections::{BTreeSet, HashSet};
+use std::collections::BTreeSet;
 
 use solang_parser::pt;
 

@@ -76,8 +76,12 @@ impl fmt::Display for ErrorKind {
 /// text that the token represents.
 #[derive(PartialEq, Eq)]
 pub struct Token {
+    /// The type of the token.
     pub kind: TokenKind,
+    /// The range in which a token appears in the original
+    /// text.
     pub span: Span,
+    /// The literal characters that make up the token.
     pub lexeme: String,
 }
 

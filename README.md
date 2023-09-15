@@ -45,7 +45,7 @@ FooTest
 If you pass it to `bulloak` like so, you will get the skeleton
 of a test contract printed to `stdout`:
 
-```
+```text
 $ bulloak foo.tree
 pragma solidity 0.8.0;
 
@@ -68,7 +68,7 @@ contract FooTest {
 If you are working in a solidity project and you have
 multiple trees you want to scaffold, you can use the `-w` option.
 
-```
+```text
 $ bulloak -w ./**/*.tree
 ```
 
@@ -78,9 +78,9 @@ files with the result of scaffolding each tree.
 If there exists a file with a title that matches the name at the
 root node of the `.tree`, then `bulloak` will skip writing that file.
 However, you may override this behaviour with the `-f` flag. This
-will write to the filesystem overwriting any files that exist.
+will write to the file system overwriting any files that exist.
 
-```
+```text
 $ bulloak -wf ./**/*.tree
 ```
 
@@ -91,7 +91,7 @@ Another feature of `bulloak` is reporting errors in your input trees.
 For example, say you have a buggy `foo.tree` file, which is missing a
 `└` character. Running `bulloak foo.tree` would report the error like this:
 
-```
+```text
 •••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••
 bulloak error: unexpected `when` keyword
 
@@ -104,7 +104,7 @@ file: foo.tree
 
 ### CLI Options
 
-```
+```text
 Usage: bulloak [OPTIONS] [FILES]...
 
 Arguments:
@@ -159,7 +159,7 @@ function hashPair(bytes32 a, bytes32 b) private pure returns (bytes32) {
 }
 ```
 A reasonable spec for the above function would be:
-```
+```text
 HashPairTest
 ├── It should never revert.
 ├── When first arg is smaller than second arg

@@ -19,13 +19,13 @@ impl fmt::Debug for Span {
 }
 
 impl Ord for Span {
-    fn cmp(&self, other: &Span) -> Ordering {
+    fn cmp(&self, other: &Self) -> Ordering {
         (&self.start, &self.end).cmp(&(&other.start, &other.end))
     }
 }
 
 impl PartialOrd for Span {
-    fn partial_cmp(&self, other: &Span) -> Option<Ordering> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
@@ -59,38 +59,38 @@ impl fmt::Debug for Position {
 }
 
 impl Ord for Position {
-    fn cmp(&self, other: &Position) -> Ordering {
+    fn cmp(&self, other: &Self) -> Ordering {
         self.offset.cmp(&other.offset)
     }
 }
 
 impl PartialOrd for Position {
-    fn partial_cmp(&self, other: &Position) -> Option<Ordering> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
 impl Span {
     /// Create a new span with the given positions.
-    pub fn new(start: Position, end: Position) -> Span {
-        Span { start, end }
+    pub const fn new(start: Position, end: Position) -> Self {
+        Self { start, end }
     }
 
     /// Create a new span using the given position as the start and end.
-    pub fn splat(pos: Position) -> Span {
-        Span::new(pos, pos)
+    pub const fn splat(pos: Position) -> Self {
+        Self::new(pos, pos)
     }
 
     /// Create a new span by replacing the starting position with the one
     /// given.
-    pub fn with_start(self, pos: Position) -> Span {
-        Span { start: pos, ..self }
+    pub const fn with_start(self, pos: Position) -> Self {
+        Self { start: pos, ..self }
     }
 
     /// Create a new span by replacing the ending position with the one
     /// given.
-    pub fn with_end(self, pos: Position) -> Span {
-        Span { end: pos, ..self }
+    pub const fn with_end(self, pos: Position) -> Self {
+        Self { end: pos, ..self }
     }
 }
 
@@ -103,8 +103,8 @@ impl Position {
     /// `line` is the line number, starting at `1`.
     ///
     /// `column` is the approximate column number, starting at `1`.
-    pub fn new(offset: usize, line: usize, column: usize) -> Position {
-        Position {
+    pub const fn new(offset: usize, line: usize, column: usize) -> Self {
+        Self {
             offset,
             line,
             column,

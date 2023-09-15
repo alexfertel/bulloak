@@ -1,5 +1,7 @@
 //! Defines rules that solidity contracts must follow in order to
 //! be considered spec compliant.
+//!
+//! These rules are checked with the `bulloak check` command.
 
 use solang_parser::pt::SourceUnit;
 
@@ -16,11 +18,13 @@ pub(crate) mod structural_match;
 /// for your rule, feel free to add it here.
 pub(crate) struct Context<'h> {
     /// The path to the tree file.
+    #[allow(dead_code)]
     pub(crate) tree_path: &'h str,
     /// The high-level intermediate representation
     /// of the bulloak tree.
     pub(crate) tree_hir: &'h Hir,
     /// The path to the solidity file.
+    #[allow(dead_code)]
     pub(crate) sol_path: &'h str,
     /// The abstract syntax tree of the solidity file.
     pub(crate) sol_ast: &'h SourceUnit,
