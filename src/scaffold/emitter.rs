@@ -278,14 +278,7 @@ mod tests {
             r"pragma solidity 0.8.0;
 
 contract FileTest {
-  modifier whenSomethingBadHappens() {
-    _;
-  }
-
-  function test_WhenSomethingBadHappens()
-    external
-    whenSomethingBadHappens
-  {
+  function test_WhenSomethingBadHappens() external {
     // it should not revert
   }
 }"
@@ -300,14 +293,7 @@ contract FileTest {
             r"pragma solidity 0.8.0;
 
 contract FileTest {
-  modifier whenSomethingBadHappens() {
-    _;
-  }
-
-  function test_RevertWhen_SomethingBadHappens()
-    external
-    whenSomethingBadHappens
-  {
+  function test_RevertWhen_SomethingBadHappens() external {
     // it should revert
   }
 }"
@@ -326,14 +312,7 @@ contract FileTest {
             r"pragma solidity 0.8.0;
 
 contract FileTest {
-  modifier whenSomethingBadHappens() {
-    _;
-  }
-
-  function test_WhenSomethingBadHappens()
-    external
-    whenSomethingBadHappens
-  {
+  function test_WhenSomethingBadHappens() external {
   }
 }"
         );
@@ -377,14 +356,7 @@ contract FileTest {
     // it should do stuff
   }
 
-  modifier whenSomethingHappens() {
-    _;
-  }
-
-  function test_RevertWhen_SomethingHappens()
-    external
-    whenSomethingHappens
-  {
+  function test_RevertWhen_SomethingHappens() external {
     // it should revert
   }
 }"
@@ -407,14 +379,7 @@ contract FileTest {
     // it should do stuff
   }
 
-  modifier whenSomethingHappens() {
-    _;
-  }
-
-  function test_RevertWhen_SomethingHappens()
-    external
-    whenSomethingHappens
-  {
+  function test_RevertWhen_SomethingHappens() external {
     // it should revert
   }
 
@@ -437,14 +402,7 @@ contract FileTest {
             r"pragma solidity 0.8.0;
 
 contract Fi_eTest {
-  modifier whenSomethingBadHappens() {
-    _;
-  }
-
-  function test_WhenSomethingBadHappens()
-    external
-    whenSomethingBadHappens
-  {
+  function test_WhenSomethingBadHappens() external {
   }
 }"
         );
@@ -462,14 +420,7 @@ contract Fi_eTest {
             r"pragma solidity 0.8.0;
 
 contract FileTest {
-    modifier whenSomethingBadHappens() {
-        _;
-    }
-
-    function test_WhenSomethingBadHappens()
-        external
-        whenSomethingBadHappens
-    {
+    function test_WhenSomethingBadHappens() external {
     }
 }"
         );
@@ -492,25 +443,11 @@ contract FileTest {
             r"pragma solidity 0.8.0;
 
 contract TwoChildren_Test {
-  modifier whenStuffCalled() {
-    _;
-  }
-
-  function test_RevertWhen_StuffCalled()
-    external
-    whenStuffCalled
-  {
+  function test_RevertWhen_StuffCalled() external {
     // it should revert
   }
 
-  modifier whenNotStuffCalled() {
-    _;
-  }
-
-  function test_RevertWhen_NotStuffCalled()
-    external
-    whenNotStuffCalled
-  {
+  function test_RevertWhen_NotStuffCalled() external {
     // it should revert
   }
 }"
@@ -550,26 +487,16 @@ contract Foo_Test {
     // It should do more.
   }
 
-  modifier whenACalled() {
-    _;
-  }
-
   function test_RevertWhen_ACalled()
     external
     whenStuffCalled
-    whenACalled
   {
     // it should revert
-  }
-
-  modifier whenBCalled() {
-    _;
   }
 
   function test_WhenBCalled()
     external
     whenStuffCalled
-    whenBCalled
   {
     // it should not revert
   }
@@ -595,14 +522,7 @@ contract Foo_Test {
             r"pragma solidity 0.8.0;
 
 contract ActionsTest {
-  modifier whenStuffCalled() {
-    _;
-  }
-
-  function test_WhenStuffCalled()
-    external
-    whenStuffCalled
-  {
+  function test_WhenStuffCalled() external {
     // it should revert
     // it should be cool
     // it might break
@@ -642,14 +562,7 @@ contract ActionsTest {
             r"pragma solidity 0.8.0;
 
 contract DeepTest {
-  modifier whenStuffCalled() {
-    _;
-  }
-
-  function test_RevertWhen_StuffCalled()
-    external
-    whenStuffCalled
-  {
+  function test_RevertWhen_StuffCalled() external {
     // it should revert
   }
 
@@ -657,14 +570,9 @@ contract DeepTest {
     _;
   }
 
-  modifier whenTheDepositAmountIsZero() {
-    _;
-  }
-
   function test_RevertWhen_TheDepositAmountIsZero()
     external
     whenNotStuffCalled
-    whenTheDepositAmountIsZero
   {
     // it should revert
   }
@@ -673,28 +581,18 @@ contract DeepTest {
     _;
   }
 
-  modifier whenTheNumberCountIsZero() {
-    _;
-  }
-
   function test_RevertWhen_TheNumberCountIsZero()
     external
     whenNotStuffCalled
     whenTheDepositAmountIsNotZero
-    whenTheNumberCountIsZero
   {
     // it should revert
-  }
-
-  modifier whenTheAssetIsNotAContract() {
-    _;
   }
 
   function test_RevertWhen_TheAssetIsNotAContract()
     external
     whenNotStuffCalled
     whenTheDepositAmountIsNotZero
-    whenTheAssetIsNotAContract
   {
     // it should revert
   }
@@ -703,24 +601,15 @@ contract DeepTest {
     _;
   }
 
-  modifier whenTheAssetMissesTheERC_20ReturnValue() {
-    _;
-  }
-
   function test_WhenTheAssetMissesTheERC_20ReturnValue()
     external
     whenNotStuffCalled
     whenTheDepositAmountIsNotZero
     givenTheAssetIsAContract
-    whenTheAssetMissesTheERC_20ReturnValue
   {
     // it should create the child
     // it should perform the ERC-20 transfers
     // it should emit a {MultipleChildren} event
-  }
-
-  modifier whenTheAssetDoesNotMissTheERC_20ReturnValue() {
-    _;
   }
 
   function test_WhenTheAssetDoesNotMissTheERC_20ReturnValue()
@@ -728,7 +617,6 @@ contract DeepTest {
     whenNotStuffCalled
     whenTheDepositAmountIsNotZero
     givenTheAssetIsAContract
-    whenTheAssetDoesNotMissTheERC_20ReturnValue
   {
     // it should create the child
     // it should emit a {MultipleChildren} event

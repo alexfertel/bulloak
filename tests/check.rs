@@ -19,14 +19,12 @@ fn checks_invalid_structural_match() {
     let output = cmd(&binary_path, "check", &tree_path, &[]);
     let actual = String::from_utf8(output.stderr).unwrap();
 
-    let expected = r#"Codegen not found: Couldn't find a corresponding element for "test_GivenTheSenderDoesNotImplementTheHook" in the solidity file.
-Invalid codegen order: Found a matching element for "givenTheSenderImplementsTheHook", but the order is not correct.
-Invalid codegen order: Found a matching element for "givenTheStreamsStatusIsCANCELED", but the order is not correct.
-Invalid codegen order: Found a matching element for "givenTheStreamsStatusIsSETTLED", but the order is not correct.
+    let expected = r#"Codegen not found: Couldn't find a corresponding element for "givenTheStreamIsCold" in the solidity file.
+Codegen not found: Couldn't find a corresponding element for "whenTheSenderDoesNotRevert" in the solidity file.
 Invalid codegen order: Found a matching element for "test_RevertGiven_TheStreamsStatusIsCANCELED", but the order is not correct.
-Invalid codegen order: Found a matching element for "test_RevertGiven_TheStreamsStatusIsDEPLETED", but the order is not correct.
 Invalid codegen order: Found a matching element for "test_RevertGiven_TheStreamsStatusIsSETTLED", but the order is not correct.
-Invalid codegen order: Found a matching element for "whenTheSenderReverts", but the order is not correct."#;
+Invalid codegen order: Found a matching element for "test_WhenTheSenderReverts", but the order is not correct.
+Invalid codegen order: Found a matching element for "test_WhenThereIsReentrancy", but the order is not correct."#;
 
     // We trim here because we don't care about ending newlines.
     assert_eq!(expected.trim(), actual.trim());

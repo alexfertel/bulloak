@@ -1,14 +1,7 @@
 pragma solidity 0.8.0;
 
 contract CancelTest {
-  modifier whenDelegateCalled() {
-    _;
-  }
-
-  function test_RevertWhen_DelegateCalled()
-    external
-    whenDelegateCalled
-  {
+  function test_RevertWhen_DelegateCalled() external {
     // it should revert
   }
 
@@ -16,14 +9,9 @@ contract CancelTest {
     _;
   }
 
-  modifier givenTheIdReferencesANullStream() {
-    _;
-  }
-
   function test_RevertGiven_TheIdReferencesANullStream()
     external
     whenNotDelegateCalled
-    givenTheIdReferencesANullStream
   {
     // it should revert
   }
@@ -36,22 +24,13 @@ contract CancelTest {
     _;
   }
 
-  modifier givenTheStreamsStatusIsDEPLETED() {
-    _;
-  }
-
   function test_RevertGiven_TheStreamsStatusIsDEPLETED()
     external
     whenNotDelegateCalled
     givenTheIdDoesNotReferenceANullStream
     givenTheStreamIsCold
-    givenTheStreamsStatusIsDEPLETED
   {
     // it should revert
-  }
-
-  modifier givenTheStreamsStatusIsCANCELED() {
-    _;
   }
 
   function test_RevertGiven_TheStreamsStatusIsCANCELED()
@@ -59,13 +38,8 @@ contract CancelTest {
     whenNotDelegateCalled
     givenTheIdDoesNotReferenceANullStream
     givenTheStreamIsCold
-    givenTheStreamsStatusIsCANCELED
   {
     // it should revert
-  }
-
-  modifier givenTheStreamsStatusIsSETTLED() {
-    _;
   }
 
   function test_RevertGiven_TheStreamsStatusIsSETTLED()
@@ -73,7 +47,6 @@ contract CancelTest {
     whenNotDelegateCalled
     givenTheIdDoesNotReferenceANullStream
     givenTheStreamIsCold
-    givenTheStreamsStatusIsSETTLED
   {
     // it should revert
   }
@@ -86,23 +59,14 @@ contract CancelTest {
     _;
   }
 
-  modifier whenTheCallerIsAMaliciousThirdParty() {
-    _;
-  }
-
   function test_RevertWhen_TheCallerIsAMaliciousThirdParty()
     external
     whenNotDelegateCalled
     givenTheIdDoesNotReferenceANullStream
     givenTheStreamIsWarm
     whenTheCallerIsUnauthorized
-    whenTheCallerIsAMaliciousThirdParty
   {
     // it should revert
-  }
-
-  modifier whenTheCallerIsAnApprovedThirdParty() {
-    _;
   }
 
   function test_RevertWhen_TheCallerIsAnApprovedThirdParty()
@@ -111,13 +75,8 @@ contract CancelTest {
     givenTheIdDoesNotReferenceANullStream
     givenTheStreamIsWarm
     whenTheCallerIsUnauthorized
-    whenTheCallerIsAnApprovedThirdParty
   {
     // it should revert
-  }
-
-  modifier whenTheCallerIsAFormerRecipient() {
-    _;
   }
 
   function test_RevertWhen_TheCallerIsAFormerRecipient()
@@ -126,16 +85,11 @@ contract CancelTest {
     givenTheIdDoesNotReferenceANullStream
     givenTheStreamIsWarm
     whenTheCallerIsUnauthorized
-    whenTheCallerIsAFormerRecipient
   {
     // it should revert
   }
 
   modifier whenTheCallerIsAuthorized() {
-    _;
-  }
-
-  modifier givenTheStreamIsNotCancelable() {
     _;
   }
 
@@ -145,16 +99,11 @@ contract CancelTest {
     givenTheIdDoesNotReferenceANullStream
     givenTheStreamIsWarm
     whenTheCallerIsAuthorized
-    givenTheStreamIsNotCancelable
   {
     // it should revert
   }
 
   modifier givenTheStreamIsCancelable() {
-    _;
-  }
-
-  modifier givenTheStreamsStatusIsPENDING() {
     _;
   }
 
@@ -165,7 +114,6 @@ contract CancelTest {
     givenTheStreamIsWarm
     whenTheCallerIsAuthorized
     givenTheStreamIsCancelable
-    givenTheStreamsStatusIsPENDING
   {
     // it should cancel the stream
     // it should mark the stream as depleted
@@ -180,10 +128,6 @@ contract CancelTest {
     _;
   }
 
-  modifier givenTheRecipientIsNotAContract() {
-    _;
-  }
-
   function test_GivenTheRecipientIsNotAContract()
     external
     whenNotDelegateCalled
@@ -193,17 +137,12 @@ contract CancelTest {
     givenTheStreamIsCancelable
     givenTheStreamsStatusIsSTREAMING
     whenTheCallerIsTheSender
-    givenTheRecipientIsNotAContract
   {
     // it should cancel the stream
     // it should mark the stream as canceled
   }
 
   modifier givenTheRecipientIsAContract() {
-    _;
-  }
-
-  modifier givenTheRecipientDoesNotImplementTheHook() {
     _;
   }
 
@@ -217,7 +156,6 @@ contract CancelTest {
     givenTheStreamsStatusIsSTREAMING
     whenTheCallerIsTheSender
     givenTheRecipientIsAContract
-    givenTheRecipientDoesNotImplementTheHook
   {
     // it should cancel the stream
     // it should mark the stream as canceled
@@ -226,10 +164,6 @@ contract CancelTest {
   }
 
   modifier givenTheRecipientImplementsTheHook() {
-    _;
-  }
-
-  modifier whenTheRecipientReverts() {
     _;
   }
 
@@ -244,7 +178,6 @@ contract CancelTest {
     whenTheCallerIsTheSender
     givenTheRecipientIsAContract
     givenTheRecipientImplementsTheHook
-    whenTheRecipientReverts
   {
     // it should cancel the stream
     // it should mark the stream as canceled
@@ -253,10 +186,6 @@ contract CancelTest {
   }
 
   modifier whenTheRecipientDoesNotRevert() {
-    _;
-  }
-
-  modifier whenThereIsReentrancy() {
     _;
   }
 
@@ -272,16 +201,11 @@ contract CancelTest {
     givenTheRecipientIsAContract
     givenTheRecipientImplementsTheHook
     whenTheRecipientDoesNotRevert
-    whenThereIsReentrancy
   {
     // it should cancel the stream
     // it should mark the stream as canceled
     // it should call the recipient hook
     // it should ignore the revert
-  }
-
-  modifier whenThereIsNoReentrancy() {
-    _;
   }
 
   function test_WhenThereIsNoReentrancy()
@@ -296,7 +220,6 @@ contract CancelTest {
     givenTheRecipientIsAContract
     givenTheRecipientImplementsTheHook
     whenTheRecipientDoesNotRevert
-    whenThereIsNoReentrancy
   {
     // it should cancel the stream
     // it should mark the stream as canceled
@@ -312,10 +235,6 @@ contract CancelTest {
     _;
   }
 
-  modifier givenTheSenderIsNotAContract() {
-    _;
-  }
-
   function test_GivenTheSenderIsNotAContract()
     external
     whenNotDelegateCalled
@@ -325,17 +244,12 @@ contract CancelTest {
     givenTheStreamIsCancelable
     givenTheStreamsStatusIsSTREAMING
     whenTheCallerIsTheRecipient
-    givenTheSenderIsNotAContract
   {
     // it should cancel the stream
     // it should mark the stream as canceled
   }
 
   modifier givenTheSenderIsAContract() {
-    _;
-  }
-
-  modifier givenTheSenderDoesNotImplementTheHook() {
     _;
   }
 
@@ -349,7 +263,6 @@ contract CancelTest {
     givenTheStreamsStatusIsSTREAMING
     whenTheCallerIsTheRecipient
     givenTheSenderIsAContract
-    givenTheSenderDoesNotImplementTheHook
   {
     // it should cancel the stream
     // it should mark the stream as canceled
@@ -358,10 +271,6 @@ contract CancelTest {
   }
 
   modifier givenTheSenderImplementsTheHook() {
-    _;
-  }
-
-  modifier whenTheSenderReverts() {
     _;
   }
 
@@ -376,7 +285,6 @@ contract CancelTest {
     whenTheCallerIsTheRecipient
     givenTheSenderIsAContract
     givenTheSenderImplementsTheHook
-    whenTheSenderReverts
   {
     // it should cancel the stream
     // it should mark the stream as canceled
@@ -385,10 +293,6 @@ contract CancelTest {
   }
 
   modifier whenTheSenderDoesNotRevert() {
-    _;
-  }
-
-  modifier whenThereIsReentrancy() {
     _;
   }
 
@@ -404,16 +308,11 @@ contract CancelTest {
     givenTheSenderIsAContract
     givenTheSenderImplementsTheHook
     whenTheSenderDoesNotRevert
-    whenThereIsReentrancy
   {
     // it should cancel the stream
     // it should mark the stream as canceled
     // it should call the sender hook
     // it should ignore the revert
-  }
-
-  modifier whenThereIsNoReentrancy() {
-    _;
   }
 
   function test_WhenThereIsNoReentrancy()
@@ -428,7 +327,6 @@ contract CancelTest {
     givenTheSenderIsAContract
     givenTheSenderImplementsTheHook
     whenTheSenderDoesNotRevert
-    whenThereIsNoReentrancy
   {
     // it should cancel the stream
     // it should mark the stream as canceled

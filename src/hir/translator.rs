@@ -138,18 +138,29 @@ impl<'a> Visitor for TranslatorI<'a> {
     ) -> Result<Self::Output, Self::Error> {
         let mut children = Vec::new();
 
-        // It's fine to unwrap here because we discover all modifiers in a previous pass.
-        let modifier = self.modifiers.get(&condition.title).unwrap();
-        self.modifier_stack.push(modifier);
-
-        // Add a modifier node.
-        let hir = Hir::FunctionDefinition(hir::FunctionDefinition {
-            identifier: modifier.clone(),
-            ty: hir::FunctionTy::Modifier,
-            modifiers: None,
-            children: None,
-        });
-        children.push(hir);
+        let action_count = condition
+            .children
+            .iter()
+            .filter(|child| ast::Ast::is_action(child))
+            .count();
+        // If this condition only has actions as children, then we don't generate
+        // a modifier for it, since it would only be used in the emitted function.
+        if condition.children.len() != action_count {
+            match self.modifiers.get(&condition.title) {
+                Some(modifier) => {
+                    self.modifier_stack.push(modifier);
+                    // Add a modifier node.
+                    let hir = Hir::FunctionDefinition(hir::FunctionDefinition {
+                        identifier: modifier.clone(),
+                        ty: hir::FunctionTy::Modifier,
+                        modifiers: None,
+                        children: None,
+                    });
+                    children.push(hir);
+                }
+                None => (),
+            };
+        }
 
         // We first visit all actions in order to keep the functions
         // in the same order that they appear in the source .tree text.
@@ -173,13 +184,11 @@ impl<'a> Visitor for TranslatorI<'a> {
                     }
                 });
 
-            // It's fine to unwrap here because we check that no action appears outside of a condition.
-            let last_modifier = self.modifier_stack.last().unwrap();
-            let function_name = if is_revert {
-                let mut words = condition.title.split_whitespace();
-                // It is fine to unwrap because conditions have at least one word in them.
-                let keyword = capitalize_first_letter(words.next().unwrap());
+            let mut words = condition.title.split_whitespace();
+            // It is fine to unwrap because conditions have at least one word in them.
+            let keyword = capitalize_first_letter(words.next().unwrap());
 
+            let function_name = if is_revert {
                 // Map an iterator over the words of a condition to the test name.
                 //
                 // Example: [when, something, happens] -> WhenSomethingHappens
@@ -199,14 +208,28 @@ impl<'a> Visitor for TranslatorI<'a> {
                 // where `KEYWORD` is the starting word of the condition.
                 format!("test_Revert{keyword}_{test_name}")
             } else {
-                let test_name = capitalize_first_letter(last_modifier);
+                // Map an iterator over the words of a condition to the test name.
+                //
+                // Example: [when, something, happens] -> WhenSomethingHappens
+                let test_name = words.fold(keyword, |mut acc, w| {
+                    acc.reserve(w.len() + 1);
+                    acc.push_str(&capitalize_first_letter(w));
+                    acc
+                });
+
                 format!("test_{test_name}")
+            };
+
+            let modifiers = if self.modifier_stack.is_empty() {
+                None
+            } else {
+                Some(self.modifier_stack.iter().map(|&m| m.to_owned()).collect())
             };
 
             let hir = Hir::FunctionDefinition(hir::FunctionDefinition {
                 identifier: function_name,
                 ty: hir::FunctionTy::Function,
-                modifiers: Some(self.modifier_stack.iter().map(|&m| m.to_owned()).collect()),
+                modifiers,
                 children: Some(actions),
             });
             children.push(hir);
@@ -219,7 +242,9 @@ impl<'a> Visitor for TranslatorI<'a> {
             }
         }
 
-        self.modifier_stack.pop();
+        if condition.children.len() != action_count {
+            self.modifier_stack.pop();
+        }
 
         Ok(children)
     }
@@ -288,20 +313,12 @@ mod tests {
             translate("Foo_Test\n└── when something bad happens\n   └── it should revert").unwrap(),
             root(vec![contract(
                 "Foo_Test".to_owned(),
-                vec![
-                    function(
-                        "whenSomethingBadHappens".to_owned(),
-                        hir::FunctionTy::Modifier,
-                        None,
-                        None
-                    ),
-                    function(
-                        "test_RevertWhen_SomethingBadHappens".to_owned(),
-                        hir::FunctionTy::Function,
-                        Some(vec!["whenSomethingBadHappens".to_owned()]),
-                        Some(vec![comment("it should revert".to_owned())])
-                    ),
-                ]
+                vec![function(
+                    "test_RevertWhen_SomethingBadHappens".to_owned(),
+                    hir::FunctionTy::Function,
+                    None,
+                    Some(vec![comment("it should revert".to_owned())])
+                ),]
             )])
         );
     }
@@ -321,27 +338,15 @@ mod tests {
                 "FooBarTheBest_Test".to_owned(),
                 vec![
                     function(
-                        "whenStuffCalled".to_owned(),
-                        hir::FunctionTy::Modifier,
-                        None,
-                        None
-                    ),
-                    function(
                         "test_RevertWhen_StuffCalled".to_owned(),
                         hir::FunctionTy::Function,
-                        Some(vec!["whenStuffCalled".to_owned()]),
-                        Some(vec![comment("it should revert".to_owned())])
-                    ),
-                    function(
-                        "givenNotStuffCalled".to_owned(),
-                        hir::FunctionTy::Modifier,
                         None,
-                        None
+                        Some(vec![comment("it should revert".to_owned())])
                     ),
                     function(
                         "test_RevertGiven_NotStuffCalled".to_owned(),
                         hir::FunctionTy::Function,
-                        Some(vec!["givenNotStuffCalled".to_owned()]),
+                        None,
                         Some(vec![comment("it should revert".to_owned())])
                     ),
                 ]
@@ -384,27 +389,15 @@ Foo_Test
                         ])
                     ),
                     function(
-                        "whenACalled".to_owned(),
-                        hir::FunctionTy::Modifier,
-                        None,
-                        None
-                    ),
-                    function(
                         "test_RevertWhen_ACalled".to_owned(),
                         hir::FunctionTy::Function,
-                        Some(vec!["whenStuffCalled".to_owned(), "whenACalled".to_owned()]),
+                        Some(vec!["whenStuffCalled".to_owned()]),
                         Some(vec![comment("it should revert".to_owned())])
-                    ),
-                    function(
-                        "whenBCalled".to_owned(),
-                        hir::FunctionTy::Modifier,
-                        None,
-                        None
                     ),
                     function(
                         "test_WhenBCalled".to_owned(),
                         hir::FunctionTy::Function,
-                        Some(vec!["whenStuffCalled".to_owned(), "whenBCalled".to_owned()]),
+                        Some(vec!["whenStuffCalled".to_owned()]),
                         Some(vec![comment("it should not revert".to_owned())])
                     ),
                 ]
