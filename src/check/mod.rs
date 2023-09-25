@@ -7,6 +7,7 @@ use std::{fs, path::PathBuf};
 
 use clap::Parser;
 
+use owo_colors::OwoColorize;
 use violation::Violation;
 use violation::ViolationKind;
 
@@ -82,6 +83,11 @@ impl Check {
                 eprintln!("{violation}");
             }
             std::process::exit(1);
+        } else {
+            println!(
+                "{}",
+                "All checks completed successfully! No issues found.".green()
+            );
         }
 
         Ok(())
