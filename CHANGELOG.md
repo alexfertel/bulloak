@@ -4,11 +4,23 @@ All notable changes to this project will be documented in this file.
 
 ## [unreleased]
 
+### Bug Fixes
+
+- *(docs)* Remove extra sentence in CONTRIBUTING.md
+- *(docs)* Use a smaller logo
+- *(docs)* Warn that bulloak is still v0.*.*
+- *(scaffold)* Handle empty trees properly (#32)
+- *(tokenizer)* Check for identifiers after a given
+- Avoid duplicating modifiers unnecessarily
+
+
 ### Features
 
+- *(check)* Print success message if no violations are found
 - *(ci)* Add code coverage
 - *(docs)* Add codecov badge to README
 - Add support for specifying the contract name (#27)
+- Add the "bulloak check" command (#31)
 
 
 ## [0.4.5] - 2023-09-01
