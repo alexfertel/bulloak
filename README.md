@@ -49,26 +49,27 @@ Say you have a `foo.tree` file with the following contents:
 
 ```tree
 FooTest
- └── When stuff called
-    └── It should revert.
+└── When stuff is called
+    └── When a condition is met
+        └── It should revert.
 ```
 
 You can use `bulloak scaffold` to generate a solidity contract
 containing modifiers and tests that match the spec described in
-`foo.tree`. This will be printed to `stdout`.
+`foo.tree`. The following will be printed to `stdout`:
 
 ```terminal
 $ bulloak scaffold foo.tree
 pragma solidity 0.8.0;
 
 contract FooTest {
-  modifier whenStuffCalled() {
+  modifier whenStuffIsCalled() {
     _;
   }
 
-  function test_RevertWhen_StuffCalled()
+  function test_WhenAConditionIsMet()
     external
-    whenStuffCalled
+    whenStuffIsCalled
   {
     // It should revert.
   }
