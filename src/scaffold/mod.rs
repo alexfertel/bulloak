@@ -1,6 +1,6 @@
 //! Defines the `bulloak scaffold` command.
 //!
-//! This command scaffolds a solidity file from a spec `.tree` file.
+//! This command scaffolds a Solidity file from a spec `.tree` file.
 
 use std::{fs, path::PathBuf};
 
@@ -12,13 +12,13 @@ use crate::{hir::translator, syntax};
 pub mod emitter;
 pub mod modifiers;
 
-/// Generate solidity tests based on your spec.
+/// Generate Solidity tests based on your spec.
 #[doc(hidden)]
 #[derive(Parser, Debug)]
 pub struct Scaffold {
     /// The set of tree files to generate from.
     ///
-    /// Each solidity file will be named after its matching
+    /// Each Solidity file will be named after its matching
     /// tree spec.
     files: Vec<PathBuf>,
 
@@ -45,7 +45,7 @@ pub struct Scaffold {
     #[arg(short = 'f', long, requires = "file-handling", default_value = "false")]
     force_write: bool,
 
-    /// Sets a solidity version for the test contracts.
+    /// Sets a Solidity version for the test contracts.
     #[arg(short = 's', long, default_value = "0.8.0")]
     solidity_version: String,
 }
@@ -111,7 +111,7 @@ pub struct Scaffolder<'s> {
     with_comments: bool,
     /// The indentation of the output code.
     indent: usize,
-    /// Sets a solidity version for the test contracts.
+    /// Sets a Solidity version for the test contracts.
     solidity_version: &'s str,
 }
 

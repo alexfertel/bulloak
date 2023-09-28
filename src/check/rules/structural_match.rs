@@ -93,7 +93,7 @@ impl Checker for StructuralMatcher {
     }
 }
 
-/// Checks that function structures match between the HIR and the solidity AST.
+/// Checks that function structures match between the HIR and the Solidity AST.
 ///
 /// This could be better, currently it is O(N^2).
 fn check_fns_structure(
@@ -178,7 +178,7 @@ fn find_matching_fn<'a>(
         })
 }
 
-/// Check whether a solidity function matches its bulloak counterpart.
+/// Check whether a Solidity function matches its bulloak counterpart.
 ///
 /// Two functions match if they have the same name and their types match.
 fn fns_match(fn_hir: &hir::FunctionDefinition, fn_sol: &pt::FunctionDefinition) -> bool {

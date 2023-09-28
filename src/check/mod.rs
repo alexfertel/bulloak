@@ -1,7 +1,7 @@
 //! Defines the `bulloak check` command.
 //!
 //! This command performs checks on the relationship between a bulloak tree and a
-//! solidity file.
+//! Solidity file.
 
 use std::{fs, path::PathBuf};
 
@@ -64,7 +64,7 @@ impl Check {
 
             let tree_hir = &crate::hir::translate(&tree)?;
             let (sol_ast, _) =
-                &solang_parser::parse(&code, 0).expect("should parse the solidity file");
+                &solang_parser::parse(&code, 0).expect("should parse the Solidity file");
 
             let sol_path_str = sol_path.to_string_lossy().into_owned();
             let ctx = Context {

@@ -1,14 +1,14 @@
 //! Defines a high-level intermediate representation (HIR).
 
 /// A high-level intermediate representation (HIR) that describes
-/// the semantic structure of a solidity contract as emitted by `bulloak`.
+/// the semantic structure of a Solidity contract as emitted by `bulloak`.
 #[derive(Debug, PartialEq, Eq)]
 pub enum Hir {
     /// An abstract root node that does not correspond
-    /// to any concrete solidity construct.
+    /// to any concrete Solidity construct.
     ///
     /// This is used as a sort of "file" boundary since it
-    /// is easier to express file-level solidity constraints,
+    /// is easier to express file-level Solidity constraints,
     /// like the pragma directive.
     ///
     /// Note that this means that there can only be a single

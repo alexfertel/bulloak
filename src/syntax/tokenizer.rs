@@ -134,7 +134,7 @@ pub struct Tokenizer {
     /// This is to prevent malformed names when emitting identifiers.
     ///
     /// This is `true` by default because the first token must be
-    /// a contract name, which has to be a valid solidity identifier.
+    /// a contract name, which has to be a valid Solidity identifier.
     identifier_mode: Cell<bool>,
 }
 

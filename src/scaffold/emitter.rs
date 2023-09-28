@@ -1,4 +1,4 @@
-//! Defines a solidity code emitter from a HIR.
+//! Defines a Solidity code emitter from a HIR.
 
 use std::result;
 
@@ -16,7 +16,7 @@ pub struct Emitter<'s> {
     with_actions_as_comments: bool,
     /// The indentation level of the emitted code.
     indent: usize,
-    /// The solidity version to be used in the pragma directive.
+    /// The Solidity version to be used in the pragma directive.
     solidity_version: &'s str,
 }
 
@@ -44,7 +44,7 @@ impl<'s> Emitter<'s> {
     }
 }
 
-/// The internal implementation of the solidity code emitter.
+/// The internal implementation of the Solidity code emitter.
 ///
 /// This emitter generates skeleton contracts and tests functions
 /// inside that contract described in the input .tree file.
