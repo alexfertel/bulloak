@@ -3,7 +3,7 @@
 use std::fmt;
 
 /// An error that occurred while checking specification rules between
-/// a tree and a solidity contract.
+/// a tree and a Solidity contract.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct Violation {
     /// The kind of violation.
@@ -18,18 +18,18 @@ impl Violation {
 }
 
 /// The type of an error that occurred while checking specification rules between
-/// a tree and a solidity contract.
+/// a tree and a Solidity contract.
 ///
 /// NOTE: Adding a variant to this enum most certainly will mean adding a variant to the
 /// `Rules` section of `bulloak`'s README. Please, do not forget to add it if you are
 /// implementing a rule.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) enum ViolationKind {
-    /// The corresponding solidity file does not exist.
+    /// The corresponding Solidity file does not exist.
     FileMissing(String),
-    /// Couldn't read the corresponding solidity file.
+    /// Couldn't read the corresponding Solidity file.
     FileUnreadable(String),
-    /// Found no matching solidity contract.
+    /// Found no matching Solidity contract.
     ContractMissing(String),
     /// Contract name doesn't match.
     ContractNameNotMatches(String, String),
@@ -59,22 +59,22 @@ impl fmt::Display for ViolationKind {
         match self {
             FileMissing(file) => write!(
                 f,
-                r#"File not found: The file "{file}" is missing its matching solidity file."#
+                r#"File not found: The file "{file}" is missing its matching Solidity file."#
             ),
             FileUnreadable(file) => {
                 write!(f, r#"File unreadable: Bulloak couldn't read "{file}"."#)
             }
             ContractMissing(contract) => write!(
                 f,
-                r#"Contract not found: Couldn't find a corresponding contract for "{contract}" in the solidity file."#
+                r#"Contract not found: Couldn't find a corresponding contract for "{contract}" in the Solidity file."#
             ),
             MatchingCodegenMissing(codegen_name) => write!(
                 f,
-                r#"Codegen not found: Couldn't find a corresponding element for "{codegen_name}" in the solidity file."#
+                r#"Codegen not found: Couldn't find a corresponding element for "{codegen_name}" in the Solidity file."#
             ),
             ContractNameNotMatches(tree_name, sol_name) => write!(
                 f,
-                r#"Invalid contract name: Couldn't find a corresponding contract for "{tree_name}" in the solidity file. Found "{sol_name}"."#
+                r#"Invalid contract name: Couldn't find a corresponding contract for "{tree_name}" in the Solidity file. Found "{sol_name}"."#
             ),
             CodegenOrderMismatch(codegen_name) => write!(
                 f,
