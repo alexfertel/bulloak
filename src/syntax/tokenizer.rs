@@ -313,9 +313,6 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
             }
 
             match self.char() {
-                '─' | '│' if self.is_identifier_mode() => {
-                    self.error(self.span(), ErrorKind::IdentifierCharInvalid(self.char()));
-                }
                 ' ' | '─' | '│' => {}
                 '\n' | '\t' | '\r' => {
                     self.exit_mode();
@@ -338,7 +335,7 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
                 _ => {
                     let token = self.scan_word()?;
                     if token.kind == TokenKind::When || token.kind == TokenKind::Given {
-                        self.enter_identifier_mode()
+                        self.enter_identifier_mode();
                     };
                     tokens.push(token);
                 }
@@ -357,10 +354,8 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
         loop {
             match self.peek() {
                 Some('\n') | None => break,
-                Some(_) => {
-                    self.scan();
-                }
-            }
+                Some(_) => self.scan(),
+            };
         }
     }
 
@@ -368,15 +363,19 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
     ///
     /// A word is defined as a sequence of characters that are not whitespace.
     /// If the word is a keyword, then the appropriate token is returned.
-    /// Otherwise, a Word token is returned.
+    /// Otherwise, a `Word` token is returned.
     fn scan_word(&self) -> Result<Token> {
         let mut lexeme = String::new();
         let span_start = self.pos();
 
         loop {
             if self.is_identifier_mode() && !is_valid_identifier_char(self.char()) {
-                return Err(self.error(self.span(), ErrorKind::IdentifierCharInvalid(self.char())));
-            } else if self.peek().is_none() || self.peek().is_some_and(char::is_whitespace) {
+                let invalid_identifier_error =
+                    self.error(self.span(), ErrorKind::IdentifierCharInvalid(self.char()));
+                return Err(invalid_identifier_error);
+            };
+
+            if self.peek().is_none() || self.peek().is_some_and(char::is_whitespace) {
                 lexeme.push(self.char());
                 let kind = match lexeme.to_lowercase().as_str() {
                     "when" => TokenKind::When,
@@ -384,6 +383,7 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
                     "given" => TokenKind::Given,
                     _ => TokenKind::Word,
                 };
+
                 return Ok(Token {
                     kind,
                     span: self.span().with_start(span_start),
@@ -397,10 +397,10 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
     }
 }
 
-/// Checks whether a character might appear in an identifier.
+/// Checks whether a character can appear in an identifier.
 ///
 /// Valid identifiers are those which can be used as a variable name
-/// and `-`, which will be converted to `_` in the generated code.
+/// plus `-`, which will be converted to `_` in the generated code.
 fn is_valid_identifier_char(c: char) -> bool {
     c.is_alphanumeric() || c == '_' || c == '-' || c == '\'' || c == '"'
 }
@@ -410,39 +410,26 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     use crate::error::Result;
-    use crate::span::{Position, Span};
+    use crate::span::Span;
+    use crate::syntax::test_utils::{p, s, TestError};
     use crate::syntax::tokenizer::{
         self, ErrorKind::IdentifierCharInvalid, Token, TokenKind, Tokenizer,
     };
 
-    #[derive(Clone, Debug)]
-    struct TestError {
-        span: Span,
-        kind: tokenizer::ErrorKind,
-    }
-
-    impl PartialEq<tokenizer::Error> for TestError {
+    impl PartialEq<tokenizer::Error> for TestError<tokenizer::ErrorKind> {
         fn eq(&self, other: &tokenizer::Error) -> bool {
             self.span == other.span && self.kind == other.kind
         }
     }
 
-    impl PartialEq<TestError> for tokenizer::Error {
-        fn eq(&self, other: &TestError) -> bool {
+    impl PartialEq<TestError<tokenizer::ErrorKind>> for tokenizer::Error {
+        fn eq(&self, other: &TestError<tokenizer::ErrorKind>) -> bool {
             self.span == other.span && self.kind == other.kind
         }
     }
 
-    fn e(kind: tokenizer::ErrorKind, span: Span) -> TestError {
+    fn e<K>(kind: K, span: Span) -> TestError<K> {
         TestError { kind, span }
-    }
-
-    fn p(offset: usize, line: usize, column: usize) -> Position {
-        Position::new(offset, line, column)
-    }
-
-    fn s(start: Position, end: Position) -> Span {
-        Span::new(start, end)
     }
 
     fn t(kind: TokenKind, lexeme: &str, span: Span) -> Token {
@@ -530,43 +517,43 @@ mod tests {
     fn test_invalid_characters() {
         assert_eq!(
             tokenize("foo\n└── when |weird identifier").unwrap_err(),
-            e(IdentifierCharInvalid('|'), s(p(19, 2, 10), p(19, 2, 10)),)
+            e(IdentifierCharInvalid('|'), s(p(19, 2, 10), p(19, 2, 10)))
         );
         assert_eq!(
             tokenize("foo\n└── when w|eird identifier").unwrap_err(),
-            e(IdentifierCharInvalid('|'), s(p(20, 2, 11), p(20, 2, 11)),)
+            e(IdentifierCharInvalid('|'), s(p(20, 2, 11), p(20, 2, 11)))
         );
         assert_eq!(
             tokenize("foo\n└── when weird| identifier").unwrap_err(),
-            e(IdentifierCharInvalid('|'), s(p(24, 2, 15), p(24, 2, 15)),)
+            e(IdentifierCharInvalid('|'), s(p(24, 2, 15), p(24, 2, 15)))
         );
         assert_eq!(
             tokenize("foo\n└── when .weird identifier").unwrap_err(),
-            e(IdentifierCharInvalid('.'), s(p(19, 2, 10), p(19, 2, 10)),)
+            e(IdentifierCharInvalid('.'), s(p(19, 2, 10), p(19, 2, 10)))
         );
         assert_eq!(
             tokenize("foo\n└── when w,eird identifier").unwrap_err(),
-            e(IdentifierCharInvalid(','), s(p(20, 2, 11), p(20, 2, 11)),)
+            e(IdentifierCharInvalid(','), s(p(20, 2, 11), p(20, 2, 11)))
         );
         assert_eq!(
             tokenize("foo\n└── given |weird identifier").unwrap_err(),
-            e(IdentifierCharInvalid('|'), s(p(20, 2, 11), p(20, 2, 11)),)
+            e(IdentifierCharInvalid('|'), s(p(20, 2, 11), p(20, 2, 11)))
         );
         assert_eq!(
             tokenize("foo\n└── given w|eird identifier").unwrap_err(),
-            e(IdentifierCharInvalid('|'), s(p(21, 2, 12), p(21, 2, 12)),)
+            e(IdentifierCharInvalid('|'), s(p(21, 2, 12), p(21, 2, 12)))
         );
         assert_eq!(
             tokenize("foo\n└── given weird| identifier").unwrap_err(),
-            e(IdentifierCharInvalid('|'), s(p(25, 2, 16), p(25, 2, 16)),)
+            e(IdentifierCharInvalid('|'), s(p(25, 2, 16), p(25, 2, 16)))
         );
         assert_eq!(
             tokenize("foo\n└── given .weird identifier").unwrap_err(),
-            e(IdentifierCharInvalid('.'), s(p(20, 2, 11), p(20, 2, 11)),)
+            e(IdentifierCharInvalid('.'), s(p(20, 2, 11), p(20, 2, 11)))
         );
         assert_eq!(
             tokenize("foo\n└── given w,eird identifier").unwrap_err(),
-            e(IdentifierCharInvalid(','), s(p(21, 2, 12), p(21, 2, 12)),)
+            e(IdentifierCharInvalid(','), s(p(21, 2, 12), p(21, 2, 12)))
         );
     }
 

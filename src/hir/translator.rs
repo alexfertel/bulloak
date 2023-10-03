@@ -84,8 +84,9 @@ impl<'a> Visitor for TranslatorI<'a> {
         let mut contract_children = Vec::new();
         for ast in &root.children {
             match ast {
-                // A root node cannot be a child of a root node.
-                ast::Ast::Root(_) => unreachable!(),
+                // Root or ActionDescription nodes cannot be children of a root node. This
+                // must be handled in a previous pass.
+                ast::Ast::Root(_) | ast::Ast::ActionDescription(_) => unreachable!(),
                 // Found a top-level action. This corresponds to a function.
                 ast::Ast::Action(action) => {
                     let words = action.title.split_whitespace();
@@ -146,19 +147,16 @@ impl<'a> Visitor for TranslatorI<'a> {
         // If this condition only has actions as children, then we don't generate
         // a modifier for it, since it would only be used in the emitted function.
         if condition.children.len() != action_count {
-            match self.modifiers.get(&condition.title) {
-                Some(modifier) => {
-                    self.modifier_stack.push(modifier);
-                    // Add a modifier node.
-                    let hir = Hir::FunctionDefinition(hir::FunctionDefinition {
-                        identifier: modifier.clone(),
-                        ty: hir::FunctionTy::Modifier,
-                        modifiers: None,
-                        children: None,
-                    });
-                    children.push(hir);
-                }
-                None => (),
+            if let Some(modifier) = self.modifiers.get(&condition.title) {
+                self.modifier_stack.push(modifier);
+                // Add a modifier node.
+                let hir = Hir::FunctionDefinition(hir::FunctionDefinition {
+                    identifier: modifier.clone(),
+                    ty: hir::FunctionTy::Modifier,
+                    modifiers: None,
+                    children: None,
+                });
+                children.push(hir);
             };
         }
 
@@ -253,8 +251,26 @@ impl<'a> Visitor for TranslatorI<'a> {
         &mut self,
         action: &crate::syntax::ast::Action,
     ) -> Result<Self::Output, Self::Error> {
-        Ok(vec![hir::Hir::Comment(hir::Comment {
+        let mut descriptions = vec![];
+        for description in &action.children {
+            if let ast::Ast::ActionDescription(description) = description {
+                descriptions.append(&mut self.visit_description(description)?);
+            }
+        }
+
+        Ok(std::iter::once(hir::Hir::Comment(hir::Comment {
             lexeme: action.title.clone(),
+        }))
+        .chain(descriptions)
+        .collect())
+    }
+
+    fn visit_description(
+        &mut self,
+        description: &crate::syntax::ast::Description,
+    ) -> Result<Self::Output, Self::Error> {
+        Ok(vec![hir::Hir::Comment(hir::Comment {
+            lexeme: description.text.clone(),
         })])
     }
 }

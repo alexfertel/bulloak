@@ -78,16 +78,16 @@ impl Check {
             )?);
         }
 
-        if !violations.is_empty() {
-            for violation in violations {
-                eprintln!("{violation}");
-            }
-            std::process::exit(1);
-        } else {
+        if violations.is_empty() {
             println!(
                 "{}",
                 "All checks completed successfully! No issues found.".green()
             );
+        } else {
+            for violation in violations {
+                eprintln!("{violation}");
+            }
+            std::process::exit(1);
         }
 
         Ok(())
