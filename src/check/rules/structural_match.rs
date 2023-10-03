@@ -162,7 +162,7 @@ fn check_fns_structure(
 fn find_matching_fn<'a>(
     contract_sol: &'a pt::ContractDefinition,
     fn_hir: &'a hir::FunctionDefinition,
-) -> Option<(usize, &'a Box<pt::FunctionDefinition>)> {
+) -> Option<(usize, &'a pt::FunctionDefinition)> {
     contract_sol
         .parts
         .iter()
@@ -170,7 +170,7 @@ fn find_matching_fn<'a>(
         .find_map(|(idx, part)| {
             if let pt::ContractPart::FunctionDefinition(fn_sol) = part {
                 if fns_match(fn_hir, fn_sol) {
-                    return Some((idx, fn_sol));
+                    return Some((idx, &**fn_sol));
                 }
             };
 
@@ -186,7 +186,7 @@ fn fns_match(fn_hir: &hir::FunctionDefinition, fn_sol: &pt::FunctionDefinition) 
         .name
         .clone()
         .is_some_and(|pt::Identifier { ref name, .. }| {
-            name == &fn_hir.identifier && fn_types_match(&fn_hir.ty, &fn_sol.ty)
+            name == &fn_hir.identifier && fn_types_match(&fn_hir.ty, fn_sol.ty)
         })
 }
 
@@ -196,7 +196,7 @@ fn fns_match(fn_hir: &hir::FunctionDefinition, fn_sol: &pt::FunctionDefinition) 
 /// We check that the function types match, even though we know that the
 /// name not matching is enough, since a modifier will never be
 /// named the same as a function per Foundry's best practices.
-const fn fn_types_match(ty_hir: &hir::FunctionTy, ty_sol: &pt::FunctionTy) -> bool {
+const fn fn_types_match(ty_hir: &hir::FunctionTy, ty_sol: pt::FunctionTy) -> bool {
     match ty_hir {
         hir::FunctionTy::Function => matches!(ty_sol, pt::FunctionTy::Function),
         hir::FunctionTy::Modifier => matches!(ty_sol, pt::FunctionTy::Modifier),
@@ -215,11 +215,11 @@ mod tests {
     fn test_fn_types_match() {
         assert!(fn_types_match(
             &hir::FunctionTy::Function,
-            &pt::FunctionTy::Function
+            pt::FunctionTy::Function
         ));
         assert!(fn_types_match(
             &hir::FunctionTy::Modifier,
-            &pt::FunctionTy::Modifier
+            pt::FunctionTy::Modifier
         ));
     }
 
@@ -298,7 +298,7 @@ mod tests {
 
         let expected = needle_sol;
         let actual = find_matching_fn(&contract, &needle_hir).unwrap();
-        assert_eq!((2, &Box::new(expected)), actual);
+        assert_eq!((2, &expected), actual);
 
         let haystack = vec![];
         let needle_hir = fn_hir("needle", hir::FunctionTy::Function);

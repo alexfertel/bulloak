@@ -335,7 +335,7 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
                 _ => {
                     let token = self.scan_word()?;
                     if token.kind == TokenKind::When || token.kind == TokenKind::Given {
-                        self.enter_identifier_mode()
+                        self.enter_identifier_mode();
                     };
                     tokens.push(token);
                 }

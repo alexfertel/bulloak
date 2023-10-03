@@ -263,8 +263,7 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
         let mut children = vec![];
         while let Some(current_token) = self.current() {
             let child = match current_token.kind {
-                TokenKind::Corner => self.parse_branch(current_token)?,
-                TokenKind::Tee => self.parse_branch(current_token)?,
+                TokenKind::Corner | TokenKind::Tee => self.parse_branch(current_token)?,
                 TokenKind::Word => Err(self.error(
                     current_token.span,
                     ErrorKind::WordUnexpected(current_token.lexeme.clone()),

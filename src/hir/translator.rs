@@ -147,19 +147,16 @@ impl<'a> Visitor for TranslatorI<'a> {
         // If this condition only has actions as children, then we don't generate
         // a modifier for it, since it would only be used in the emitted function.
         if condition.children.len() != action_count {
-            match self.modifiers.get(&condition.title) {
-                Some(modifier) => {
-                    self.modifier_stack.push(modifier);
-                    // Add a modifier node.
-                    let hir = Hir::FunctionDefinition(hir::FunctionDefinition {
-                        identifier: modifier.clone(),
-                        ty: hir::FunctionTy::Modifier,
-                        modifiers: None,
-                        children: None,
-                    });
-                    children.push(hir);
-                }
-                None => (),
+            if let Some(modifier) = self.modifiers.get(&condition.title) {
+                self.modifier_stack.push(modifier);
+                // Add a modifier node.
+                let hir = Hir::FunctionDefinition(hir::FunctionDefinition {
+                    identifier: modifier.clone(),
+                    ty: hir::FunctionTy::Modifier,
+                    modifiers: None,
+                    children: None,
+                });
+                children.push(hir);
             };
         }
 
@@ -264,7 +261,7 @@ impl<'a> Visitor for TranslatorI<'a> {
         Ok(std::iter::once(hir::Hir::Comment(hir::Comment {
             lexeme: action.title.clone(),
         }))
-        .chain(descriptions.into_iter())
+        .chain(descriptions)
         .collect())
     }
 
