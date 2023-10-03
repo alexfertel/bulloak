@@ -19,4 +19,9 @@ pub trait Visitor {
     fn visit_condition(&mut self, condition: &ast::Condition) -> Result<Self::Output, Self::Error>;
     /// This method is called on an action node.
     fn visit_action(&mut self, action: &ast::Action) -> Result<Self::Output, Self::Error>;
+    /// This method is called on an action description node.
+    fn visit_description(
+        &mut self,
+        description: &ast::Description,
+    ) -> Result<Self::Output, Self::Error>;
 }

@@ -84,8 +84,9 @@ impl<'a> Visitor for TranslatorI<'a> {
         let mut contract_children = Vec::new();
         for ast in &root.children {
             match ast {
-                // A root node cannot be a child of a root node.
-                ast::Ast::Root(_) => unreachable!(),
+                // Root or ActionDescription nodes cannot be children of a root node. This
+                // must be handled in a previous pass.
+                ast::Ast::Root(_) | ast::Ast::ActionDescription(_) => unreachable!(),
                 // Found a top-level action. This corresponds to a function.
                 ast::Ast::Action(action) => {
                     let words = action.title.split_whitespace();
@@ -253,8 +254,26 @@ impl<'a> Visitor for TranslatorI<'a> {
         &mut self,
         action: &crate::syntax::ast::Action,
     ) -> Result<Self::Output, Self::Error> {
-        Ok(vec![hir::Hir::Comment(hir::Comment {
+        let mut descriptions = vec![];
+        for description in &action.children {
+            if let ast::Ast::ActionDescription(description) = description {
+                descriptions.append(&mut self.visit_description(description)?);
+            }
+        }
+
+        Ok(std::iter::once(hir::Hir::Comment(hir::Comment {
             lexeme: action.title.clone(),
+        }))
+        .chain(descriptions.into_iter())
+        .collect())
+    }
+
+    fn visit_description(
+        &mut self,
+        description: &crate::syntax::ast::Description,
+    ) -> Result<Self::Output, Self::Error> {
+        Ok(vec![hir::Hir::Comment(hir::Comment {
+            lexeme: description.text.clone(),
         })])
     }
 }

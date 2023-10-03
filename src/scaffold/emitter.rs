@@ -322,8 +322,7 @@ contract FileTest {
 
     #[test]
     fn test_actions_without_conditions() -> Result<()> {
-        let file_contents =
-            String::from("FileTest\n├── it should do st-ff\n   └── It never reverts.");
+        let file_contents = String::from("FileTest\n├── it should do st-ff\n└── It never reverts.");
 
         assert_eq!(
             &scaffold_with_flags(&file_contents, true, 2, "0.8.0")?,
@@ -534,6 +533,34 @@ contract ActionsTest {
     }
 
     #[test]
+    fn action_descriptions() -> Result<()> {
+        let file_contents = String::from(
+            r"DescriptionsTest
+└── when something bad happens
+   └── it should try to revert
+      ├── some stuff happened
+      │  └── and that stuff
+      └── was very _bad_",
+        );
+
+        assert_eq!(
+            &scaffold(&file_contents)?,
+            r"pragma solidity 0.8.0;
+
+contract DescriptionsTest {
+  function test_WhenSomethingBadHappens() external {
+    // it should try to revert
+    //    some stuff happened
+    //       and that stuff
+    //    was very _bad_
+  }
+}"
+        );
+
+        Ok(())
+    }
+
+    #[test]
     fn test_deep_tree() -> Result<()> {
         let file_contents = String::from(
             r#"DeepTest
@@ -554,7 +581,10 @@ contract ActionsTest {
           │  └── it should emit a {MultipleChildren} event
           └── when the asset does not miss the ERC-20 return value
               ├── it should create the child
-              └── it should emit a {MultipleChildren} event"#,
+              └── it should emit a {MultipleChildren} event
+                 ├── - Because the deposit should not be 0.
+                 ├── - The number count is > 0.
+                 └── - Events should be emitted."#,
         );
 
         assert_eq!(
@@ -620,6 +650,9 @@ contract DeepTest {
   {
     // it should create the child
     // it should emit a {MultipleChildren} event
+    //    - Because the deposit should not be 0.
+    //    - The number count is > 0.
+    //    - Events should be emitted.
   }
 }"
         );

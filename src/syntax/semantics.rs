@@ -120,6 +120,7 @@ impl<'t> SemanticAnalyzer<'t> {
             Ast::Root(root) => self.visit_root(root),
             Ast::Condition(condition) => self.visit_condition(condition),
             Ast::Action(action) => self.visit_action(action),
+            Ast::ActionDescription(description) => self.visit_description(description),
         }
         // It is fine to unwrap here since analysis errors will
         // be stored in `self.errors`.
@@ -151,8 +152,8 @@ impl Visitor for SemanticAnalyzer<'_> {
                 Ast::Action(action) => {
                     self.visit_action(action)?;
                 }
-                Ast::Root(root) => {
-                    self.error(root.span, ErrorKind::NodeUnexpected);
+                node => {
+                    self.error(*node.span(), ErrorKind::NodeUnexpected);
                 }
             }
         }
@@ -176,8 +177,8 @@ impl Visitor for SemanticAnalyzer<'_> {
                 Ast::Action(action) => {
                     self.visit_action(action)?;
                 }
-                Ast::Root(root) => {
-                    self.error(root.span, ErrorKind::NodeUnexpected);
+                node => {
+                    self.error(*node.span(), ErrorKind::NodeUnexpected);
                 }
             }
         }
@@ -186,6 +187,14 @@ impl Visitor for SemanticAnalyzer<'_> {
     }
 
     fn visit_action(&mut self, _action: &ast::Action) -> result::Result<Self::Output, Self::Error> {
+        // We don't implement any semantic rules here for now.
+        Ok(())
+    }
+
+    fn visit_description(
+        &mut self,
+        _description: &ast::Description,
+    ) -> result::Result<Self::Output, Self::Error> {
         // We don't implement any semantic rules here for now.
         Ok(())
     }
