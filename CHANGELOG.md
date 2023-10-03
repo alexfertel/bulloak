@@ -6,6 +6,29 @@ All notable changes to this project will be documented in this file.
 
 ### Bug Fixes
 
+- *(docs)* Update README example
+
+
+### Features
+
+- *(docs)* Mention VSCode extensions (#36)
+
+
+### Miscellaneous Tasks
+
+- Ignore .DS_Store files
+
+
+### Refactor
+
+- Rename solidity -> Solidity
+- Rename solidity -> Solidity across the whole project
+
+
+## [0.5.0] - 2023-09-25
+
+### Bug Fixes
+
 - *(docs)* Remove extra sentence in CONTRIBUTING.md
 - *(docs)* Use a smaller logo
 - *(docs)* Warn that bulloak is still v0.*.*
