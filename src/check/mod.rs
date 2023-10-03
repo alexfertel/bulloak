@@ -11,10 +11,13 @@ use owo_colors::OwoColorize;
 use violation::Violation;
 use violation::ViolationKind;
 
+use self::location::Location;
 use self::rules::Checker;
 use self::rules::Context;
 
+mod location;
 mod rules;
+mod utils;
 pub(crate) mod violation;
 
 /// Check that the tests match the spec.
@@ -40,9 +43,11 @@ impl Check {
 
             let tree_path_str = tree_path.to_string_lossy().into_owned();
             if !sol_path.exists() {
-                violations.push(Violation::new(ViolationKind::FileMissing(
-                    tree_path_str.clone(),
-                )));
+                let filename = tree_path_str.clone();
+                violations.push(Violation::new(
+                    ViolationKind::FileMissing(filename),
+                    Location::File(filename),
+                ));
 
                 continue;
             }
@@ -68,10 +73,12 @@ impl Check {
 
             let sol_path_str = sol_path.to_string_lossy().into_owned();
             let ctx = Context {
-                tree_hir,
-                sol_ast,
                 tree_path: &tree_path_str,
+                tree_hir,
+                tree_contents: &tree,
                 sol_path: &sol_path_str,
+                sol_ast,
+                sol_contents: &code,
             };
             violations.append(&mut rules::structural_match::StructuralMatcher::check(
                 &ctx,
@@ -96,8 +103,7 @@ impl Check {
 
 fn try_read_to_string(path: &PathBuf) -> Result<String, Violation> {
     fs::read_to_string(path).map_err(|_| {
-        Violation::new(ViolationKind::FileUnreadable(
-            path.to_string_lossy().into_owned(),
-        ))
+        let path = path.to_string_lossy().into_owned();
+        Violation::new(ViolationKind::FileUnreadable(path), Location::File(path))
     })
 }

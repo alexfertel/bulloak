@@ -2,18 +2,25 @@
 
 use std::fmt;
 
+use crate::utils::repeat_str;
+
+use super::location::Location;
+
+type Filename = String;
+
 /// An error that occurred while checking specification rules between
 /// a tree and a Solidity contract.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct Violation {
     /// The kind of violation.
     kind: ViolationKind,
+    location: Location,
 }
 
 impl Violation {
     /// Create a new violation.
-    pub(crate) fn new(kind: ViolationKind) -> Self {
-        Self { kind }
+    pub(crate) fn new(kind: ViolationKind, location: Location) -> Self {
+        Self { kind, location }
     }
 }
 
@@ -26,9 +33,9 @@ impl Violation {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) enum ViolationKind {
     /// The corresponding Solidity file does not exist.
-    FileMissing(String),
+    FileMissing(Filename),
     /// Couldn't read the corresponding Solidity file.
-    FileUnreadable(String),
+    FileUnreadable(Filename),
     /// Found no matching Solidity contract.
     ContractMissing(String),
     /// Contract name doesn't match.
@@ -46,7 +53,13 @@ pub(crate) enum ViolationKind {
 
 impl fmt::Display for Violation {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.kind)
+        let divider = repeat_str("•", 79);
+        writeln!(f, "{divider}")?;
+
+        writeln!(f, "Check failed: {}", self.kind)?;
+        writeln!(f, "{}", self.location)?;
+
+        Ok(())
     }
 }
 
@@ -59,26 +72,26 @@ impl fmt::Display for ViolationKind {
         match self {
             FileMissing(file) => write!(
                 f,
-                r#"File not found: The file "{file}" is missing its matching Solidity file."#
+                r#"the file "{file}" is missing its matching Solidity file."#,
             ),
             FileUnreadable(file) => {
-                write!(f, r#"File unreadable: Bulloak couldn't read "{file}"."#)
+                write!(f, r#"bulloak couldn't read "{file}"."#)
             }
             ContractMissing(contract) => write!(
                 f,
-                r#"Contract not found: Couldn't find a corresponding contract for "{contract}" in the Solidity file."#
+                r#"couldn't find a corresponding contract for "{contract}" in the Solidity file."#
             ),
             MatchingCodegenMissing(codegen_name) => write!(
                 f,
-                r#"Codegen not found: Couldn't find a corresponding element for "{codegen_name}" in the Solidity file."#
+                r#"couldn't find a corresponding element for "{codegen_name}" in the Solidity file."#
             ),
             ContractNameNotMatches(tree_name, sol_name) => write!(
                 f,
-                r#"Invalid contract name: Couldn't find a corresponding contract for "{tree_name}" in the Solidity file. Found "{sol_name}"."#
+                r#"couldn't find a corresponding contract for "{tree_name}" in the Solidity file. Found "{sol_name}"."#
             ),
             CodegenOrderMismatch(codegen_name) => write!(
                 f,
-                r#"Invalid codegen order: Found a matching element for "{codegen_name}", but the order is not correct."#
+                r#"found a matching element for "{codegen_name}", but the order is not correct."#
             ),
             _ => unreachable!(),
         }

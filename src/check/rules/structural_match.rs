@@ -15,7 +15,11 @@ use std::collections::BTreeSet;
 use solang_parser::pt;
 
 use crate::{
-    check::violation::{Violation, ViolationKind},
+    check::{
+        location::Location,
+        utils::offset_to_line,
+        violation::{Violation, ViolationKind},
+    },
     hir::{self, Hir},
 };
 
@@ -53,8 +57,13 @@ impl Checker for StructuralMatcher {
         // in the HIR, else we found a violation.
         if contract_sol.is_none() {
             if let Some(Hir::ContractDefinition(contract)) = contract_hir {
-                let violation =
-                    Violation::new(ViolationKind::ContractMissing(contract.identifier.clone()));
+                let violation = Violation::new(
+                    ViolationKind::ContractMissing(contract.identifier.clone()),
+                    Location::Code(
+                        ctx.tree_path.to_owned(),
+                        offset_to_line_column(ctx.sol_contents),
+                    ),
+                );
                 violations.push(violation);
 
                 return Ok(violations);
