@@ -6,6 +6,7 @@
 pub mod ast;
 pub mod parser;
 pub mod semantics;
+mod test_utils;
 pub mod tokenizer;
 pub mod visitor;
 

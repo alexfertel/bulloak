@@ -410,39 +410,26 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     use crate::error::Result;
-    use crate::span::{Position, Span};
+    use crate::span::Span;
+    use crate::syntax::test_utils::{p, s, TestError};
     use crate::syntax::tokenizer::{
         self, ErrorKind::IdentifierCharInvalid, Token, TokenKind, Tokenizer,
     };
 
-    #[derive(Clone, Debug)]
-    struct TestError {
-        span: Span,
-        kind: tokenizer::ErrorKind,
-    }
-
-    impl PartialEq<tokenizer::Error> for TestError {
+    impl PartialEq<tokenizer::Error> for TestError<tokenizer::ErrorKind> {
         fn eq(&self, other: &tokenizer::Error) -> bool {
             self.span == other.span && self.kind == other.kind
         }
     }
 
-    impl PartialEq<TestError> for tokenizer::Error {
-        fn eq(&self, other: &TestError) -> bool {
+    impl PartialEq<TestError<tokenizer::ErrorKind>> for tokenizer::Error {
+        fn eq(&self, other: &TestError<tokenizer::ErrorKind>) -> bool {
             self.span == other.span && self.kind == other.kind
         }
     }
 
-    fn e(kind: tokenizer::ErrorKind, span: Span) -> TestError {
+    fn e<K>(kind: K, span: Span) -> TestError<K> {
         TestError { kind, span }
-    }
-
-    fn p(offset: usize, line: usize, column: usize) -> Position {
-        Position::new(offset, line, column)
-    }
-
-    fn s(start: Position, end: Position) -> Span {
-        Span::new(start, end)
     }
 
     fn t(kind: TokenKind, lexeme: &str, span: Span) -> Token {

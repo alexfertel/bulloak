@@ -69,9 +69,11 @@ pub enum ErrorKind {
     /// Did not expect an end of file.
     EofUnexpected,
     /// The token stream was empty, so the tree is empty.
-    EmptyTree,
+    TreeEmpty,
+    /// A condition or action with no title was found.
+    TitleMissing,
     /// A tree without a root was found.
-    RootlessTree,
+    TreeRootless,
     /// A corner is not the last child.
     CornerNotLastChild,
     /// A tee is the last child.
@@ -102,8 +104,9 @@ impl fmt::Display for ErrorKind {
             ItUnexpected => write!(f, "unexpected `it` keyword"),
             WordUnexpected(lexeme) => write!(f, "unexpected `word`: {lexeme}"),
             EofUnexpected => write!(f, "unexpected end of file"),
-            EmptyTree => write!(f, "found an empty tree"),
-            RootlessTree => write!(f, "missing a root"),
+            TreeEmpty => write!(f, "found an empty tree"),
+            TreeRootless => write!(f, "missing a root"),
+            TitleMissing => write!(f, "found a condition/action without a title"),
             CornerNotLastChild => write!(f, "a `Corner` must be the last child"),
             TeeLastChild => write!(f, "a `Tee` must not be the last child"),
             _ => unreachable!(),
@@ -233,11 +236,11 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
 
         let root_token = self
             .current()
-            .ok_or(self.error(Span::default(), ErrorKind::EmptyTree))?;
+            .ok_or(self.error(Span::default(), ErrorKind::TreeEmpty))?;
 
         match root_token.kind {
             TokenKind::Word => self.parse_root(root_token),
-            _ => Err(self.error(root_token.span, ErrorKind::RootlessTree)),
+            _ => Err(self.error(root_token.span, ErrorKind::TreeRootless)),
         }
     }
 
@@ -258,12 +261,7 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
         // The loop invariant is that `self.current` is a
         // `Tee` or the last `Corner`.
         let mut children = vec![];
-        loop {
-            // There are no more branches to parse.
-            let Some(current_token) = self.current() else {
-                break;
-            };
-
+        while let Some(current_token) = self.current() {
             let child = match current_token.kind {
                 TokenKind::Corner => self.parse_branch(current_token)?,
                 TokenKind::Tee => self.parse_branch(current_token)?,
@@ -352,6 +350,10 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
             ErrorKind::EofUnexpected,
         ))?;
         let title = self.parse_string(start_token);
+
+        if title.len() == start_token.lexeme.len() {
+            return Err(self.error(start_token.span, ErrorKind::TitleMissing));
+        };
 
         let mut children = vec![];
         while self
@@ -509,27 +511,26 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
 mod tests {
     use pretty_assertions::assert_eq;
 
-    use crate::span::{Position, Span};
+    use crate::span::Span;
     use crate::syntax::ast::{Action, Ast, Condition, Description, Root};
     use crate::syntax::parser::{self, ErrorKind, Parser};
+    use crate::syntax::test_utils::{p, s, TestError};
     use crate::syntax::tokenizer::Tokenizer;
 
-    #[derive(Clone, Debug)]
-    struct TestError {
-        span: Span,
-        kind: parser::ErrorKind,
-    }
-
-    impl PartialEq<parser::Error> for TestError {
+    impl PartialEq<parser::Error> for TestError<parser::ErrorKind> {
         fn eq(&self, other: &parser::Error) -> bool {
             self.span == other.span && self.kind == other.kind
         }
     }
 
-    impl PartialEq<TestError> for parser::Error {
-        fn eq(&self, other: &TestError) -> bool {
+    impl PartialEq<TestError<parser::ErrorKind>> for parser::Error {
+        fn eq(&self, other: &TestError<parser::ErrorKind>) -> bool {
             self.span == other.span && self.kind == other.kind
         }
+    }
+
+    fn e<K>(kind: K, span: Span) -> TestError<K> {
+        TestError { kind, span }
     }
 
     fn parse(file_contents: &str) -> parser::Result<Ast> {
@@ -541,10 +542,7 @@ mod tests {
     fn empty_tree() {
         assert_eq!(
             parse("").unwrap_err(),
-            TestError {
-                span: Span::default(),
-                kind: ErrorKind::EmptyTree
-            }
+            e(ErrorKind::TreeEmpty, Span::default())
         );
     }
 
@@ -552,38 +550,23 @@ mod tests {
     fn rootless_tree() {
         assert_eq!(
             parse("└── It should never revert.").unwrap_err(),
-            TestError {
-                span: Span::default(),
-                kind: ErrorKind::RootlessTree
-            }
+            e(ErrorKind::TreeRootless, Span::default())
         );
         assert_eq!(
             parse("├── It should revert.").unwrap_err(),
-            TestError {
-                span: Span::default(),
-                kind: ErrorKind::RootlessTree
-            }
+            e(ErrorKind::TreeRootless, Span::default())
         );
         assert_eq!(
             parse("└── When stuff happens").unwrap_err(),
-            TestError {
-                span: Span::default(),
-                kind: ErrorKind::RootlessTree
-            }
+            e(ErrorKind::TreeRootless, Span::default())
         );
         assert_eq!(
             parse("├── When stuff happens").unwrap_err(),
-            TestError {
-                span: Span::default(),
-                kind: ErrorKind::RootlessTree
-            }
+            e(ErrorKind::TreeRootless, Span::default())
         );
         assert_eq!(
             parse("└── this is a description").unwrap_err(),
-            TestError {
-                span: Span::default(),
-                kind: ErrorKind::RootlessTree
-            }
+            e(ErrorKind::TreeRootless, Span::default())
         );
     }
 
@@ -591,10 +574,7 @@ mod tests {
     fn tee_last_child_errors() {
         assert_eq!(
             parse("Foo_Test\n├── when something bad happens\n   └── it should revert").unwrap_err(),
-            TestError {
-                span: Span::splat(Position::new(9, 2, 1)),
-                kind: ErrorKind::TeeLastChild
-            }
+            e(ErrorKind::TeeLastChild, Span::splat(p(9, 2, 1)))
         );
     }
 
@@ -609,10 +589,7 @@ mod tests {
    └── it should not revert"
             )
             .unwrap_err(),
-            TestError {
-                span: Span::splat(Position::new(9, 2, 1)),
-                kind: ErrorKind::CornerNotLastChild
-            }
+            e(ErrorKind::CornerNotLastChild, Span::splat(p(9, 2, 1)))
         );
     }
 
@@ -621,7 +598,7 @@ mod tests {
         assert_eq!(
             parse("FooTest").unwrap(),
             Ast::Root(Root {
-                span: Span::new(Position::new(0, 1, 1), Position::new(6, 1, 7)),
+                span: s(p(0, 1, 1), p(6, 1, 7)),
                 children: vec![],
                 contract_name: String::from("FooTest"),
             })
@@ -634,12 +611,12 @@ mod tests {
             parse("Foo_Test\n└── when something bad happens\n   └── it should revert").unwrap(),
             Ast::Root(Root {
                 contract_name: String::from("Foo_Test"),
-                span: Span::new(Position::new(0, 1, 1), Position::new(74, 3, 23)),
+                span: s(p(0, 1, 1), p(74, 3, 23)),
                 children: vec![Ast::Condition(Condition {
-                    span: Span::new(Position::new(9, 2, 1), Position::new(74, 3, 23)),
+                    span: s(p(9, 2, 1), p(74, 3, 23)),
                     title: String::from("when something bad happens"),
                     children: vec![Ast::Action(Action {
-                        span: Span::new(Position::new(49, 3, 4), Position::new(74, 3, 23)),
+                        span: s(p(49, 3, 4), p(74, 3, 23)),
                         title: String::from("it should revert"),
                         children: vec![]
                     })],
@@ -659,15 +636,15 @@ mod tests {
             )
             .unwrap(),
             Ast::Root(Root {
-                span: Span::new(Position::new(0, 1, 1), Position::new(104, 4, 23)),
+                span: s(p(0, 1, 1), p(104, 4, 23)),
                 children: vec![Ast::Condition(Condition {
-                    span: Span::new(Position::new(9, 2, 1), Position::new(104, 4, 23)),
+                    span: s(p(9, 2, 1), p(104, 4, 23)),
                     title: String::from("when something bad happens"),
                     children: vec![Ast::Action(Action {
-                        span: Span::new(Position::new(49, 3, 4), Position::new(104, 4, 23)),
+                        span: s(p(49, 3, 4), p(104, 4, 23)),
                         title: String::from("it should revert"),
                         children: vec![Ast::ActionDescription(Description {
-                            span: Span::new(Position::new(82, 4, 7), Position::new(104, 4, 23)),
+                            span: s(p(82, 4, 7), p(104, 4, 23)),
                             text: String::from("   because _bad_"),
                         })]
                     })],
@@ -690,30 +667,24 @@ mod tests {
             )
             .unwrap(),
             Ast::Root(Root {
-                span: Span::new(Position::new(0, 1, 1), Position::new(177, 6, 24)),
+                span: s(p(0, 1, 1), p(177, 6, 24)),
                 children: vec![Ast::Condition(Condition {
-                    span: Span::new(Position::new(9, 2, 1), Position::new(177, 6, 24)),
+                    span: s(p(9, 2, 1), p(177, 6, 24)),
                     title: String::from("when something bad happens"),
                     children: vec![Ast::Action(Action {
-                        span: Span::new(Position::new(49, 3, 4), Position::new(177, 6, 24)),
+                        span: s(p(49, 3, 4), p(177, 6, 24)),
                         title: String::from("it should revert"),
                         children: vec![
                             Ast::ActionDescription(Description {
-                                span: Span::new(Position::new(82, 4, 7), Position::new(110, 4, 29)),
+                                span: s(p(82, 4, 7), p(110, 4, 29)),
                                 text: String::from("   some stuff happened"),
                             }),
                             Ast::ActionDescription(Description {
-                                span: Span::new(
-                                    Position::new(123, 5, 10),
-                                    Position::new(146, 5, 27)
-                                ),
+                                span: s(p(123, 5, 10), p(146, 5, 27)),
                                 text: String::from("      and that stuff"),
                             }),
                             Ast::ActionDescription(Description {
-                                span: Span::new(
-                                    Position::new(154, 6, 7),
-                                    Position::new(177, 6, 24)
-                                ),
+                                span: s(p(154, 6, 7), p(177, 6, 24)),
                                 text: String::from("   was very _bad_"),
                             }),
                         ]
@@ -721,6 +692,47 @@ mod tests {
                 })],
                 contract_name: String::from("Foo_Test"),
             })
+        );
+    }
+
+    #[test]
+    fn unexpected_tokens() {
+        use ErrorKind::*;
+        assert_eq!(
+            parse(r"a └ └").unwrap_err(),
+            e(TokenUnexpected("└".to_owned()), Span::splat(p(6, 1, 5)))
+        );
+        assert_eq!(
+            parse(r"a ├ ├").unwrap_err(),
+            e(TokenUnexpected("├".to_owned()), Span::splat(p(6, 1, 5)))
+        );
+        assert_eq!(
+            parse(r"a └").unwrap_err(),
+            e(EofUnexpected, Span::splat(p(2, 1, 3)))
+        );
+        assert_eq!(
+            parse(r"a └ when").unwrap_err(),
+            e(TitleMissing, s(p(6, 1, 5), p(9, 1, 8)))
+        );
+        assert_eq!(
+            parse(r"a ├").unwrap_err(),
+            e(EofUnexpected, Span::splat(p(2, 1, 3)))
+        );
+        assert_eq!(
+            parse(r"a when").unwrap_err(),
+            e(WhenUnexpected, s(p(2, 1, 3), p(5, 1, 6)))
+        );
+        assert_eq!(
+            parse(r"a given").unwrap_err(),
+            e(GivenUnexpected, s(p(2, 1, 3), p(6, 1, 7)))
+        );
+        assert_eq!(
+            parse(r"a it").unwrap_err(),
+            e(ItUnexpected, s(p(2, 1, 3), p(3, 1, 4)))
+        );
+        assert_eq!(
+            parse(r"a b").unwrap_err(),
+            e(WordUnexpected("b".to_owned()), Span::splat(p(2, 1, 3)))
         );
     }
 
@@ -734,10 +746,10 @@ mod tests {
       └── it because _bad_"
             )
             .unwrap_err(),
-            TestError {
-                span: Span::new(Position::new(92, 4, 11), Position::new(93, 4, 12)),
-                kind: ErrorKind::DescriptionTokenUnexpected("it".to_owned()),
-            }
+            e(
+                ErrorKind::DescriptionTokenUnexpected("it".to_owned()),
+                s(p(92, 4, 11), p(93, 4, 12))
+            )
         );
     }
 
@@ -754,23 +766,23 @@ mod tests {
             .unwrap(),
             Ast::Root(Root {
                 contract_name: String::from("FooBarTheBest_Test"),
-                span: Span::new(Position::new(0, 1, 1), Position::new(140, 5, 23)),
+                span: s(p(0, 1, 1), p(140, 5, 23)),
                 children: vec![
                     Ast::Condition(Condition {
                         title: String::from("when stuff called"),
-                        span: Span::new(Position::new(19, 2, 1), Position::new(77, 3, 23)),
+                        span: s(p(19, 2, 1), p(77, 3, 23)),
                         children: vec![Ast::Action(Action {
                             title: String::from("it should revert"),
-                            span: Span::new(Position::new(52, 3, 4), Position::new(77, 3, 23)),
+                            span: s(p(52, 3, 4), p(77, 3, 23)),
                             children: vec![]
                         })],
                     }),
                     Ast::Condition(Condition {
                         title: String::from("given not stuff called"),
-                        span: Span::new(Position::new(79, 4, 1), Position::new(140, 5, 23)),
+                        span: s(p(79, 4, 1), p(140, 5, 23)),
                         children: vec![Ast::Action(Action {
                             title: String::from("it should revert"),
-                            span: Span::new(Position::new(115, 5, 4), Position::new(140, 5, 23)),
+                            span: s(p(115, 5, 4), p(140, 5, 23)),
                             children: vec![]
                         })],
                     }),
@@ -790,13 +802,13 @@ mod tests {
             .unwrap(),
             Ast::Root(Root {
                 contract_name: String::from("FooB-rTheBestOf_Test"),
-                span: Span::new(Position::new(0, 1, 1), Position::new(77, 3, 23)),
+                span: s(p(0, 1, 1), p(77, 3, 23)),
                 children: vec![Ast::Condition(Condition {
                     title: String::from("when st_ff alld"),
-                    span: Span::new(Position::new(21, 2, 1), Position::new(77, 3, 23)),
+                    span: s(p(21, 2, 1), p(77, 3, 23)),
                     children: vec![Ast::Action(Action {
                         title: String::from("it should revert"),
-                        span: Span::new(Position::new(52, 3, 4), Position::new(77, 3, 23)),
+                        span: s(p(52, 3, 4), p(77, 3, 23)),
                         children: vec![]
                     })],
                 }),],
