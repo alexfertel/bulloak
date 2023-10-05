@@ -111,6 +111,7 @@ impl<'a> Visitor for TranslatorI<'a> {
                     let hir = Hir::FunctionDefinition(hir::FunctionDefinition {
                         identifier: test_name,
                         ty: hir::FunctionTy::Function,
+                        span: action.span,
                         modifiers: None,
                         children: Some(hirs),
                     });
@@ -153,6 +154,7 @@ impl<'a> Visitor for TranslatorI<'a> {
                 let hir = Hir::FunctionDefinition(hir::FunctionDefinition {
                     identifier: modifier.clone(),
                     ty: hir::FunctionTy::Modifier,
+                    span: condition.span,
                     modifiers: None,
                     children: None,
                 });
@@ -227,6 +229,7 @@ impl<'a> Visitor for TranslatorI<'a> {
             let hir = Hir::FunctionDefinition(hir::FunctionDefinition {
                 identifier: function_name,
                 ty: hir::FunctionTy::Function,
+                span: condition.span,
                 modifiers,
                 children: Some(actions),
             });
@@ -282,6 +285,7 @@ mod tests {
 
     use crate::hir::{self, Hir};
     use crate::scaffold::modifiers;
+    use crate::span::{Position, Span};
     use crate::syntax::parser::Parser;
     use crate::syntax::tokenizer::Tokenizer;
 
@@ -308,12 +312,14 @@ mod tests {
     fn function(
         identifier: String,
         ty: hir::FunctionTy,
+        span: Span,
         modifiers: Option<Vec<String>>,
         children: Option<Vec<Hir>>,
     ) -> Hir {
         Hir::FunctionDefinition(hir::FunctionDefinition {
             identifier,
             ty,
+            span,
             modifiers,
             children,
         })
@@ -324,7 +330,7 @@ mod tests {
     }
 
     #[test]
-    fn test_one_child() {
+    fn one_child() {
         assert_eq!(
             translate("Foo_Test\n└── when something bad happens\n   └── it should revert").unwrap(),
             root(vec![contract(
@@ -332,6 +338,7 @@ mod tests {
                 vec![function(
                     "test_RevertWhen_SomethingBadHappens".to_owned(),
                     hir::FunctionTy::Function,
+                    Span::new(Position::new(9, 2, 1), Position::new(74, 3, 23)),
                     None,
                     Some(vec![comment("it should revert".to_owned())])
                 ),]
@@ -340,7 +347,7 @@ mod tests {
     }
 
     #[test]
-    fn test_two_children() {
+    fn two_children() {
         assert_eq!(
             translate(
                 r"FooBarTheBest_Test
@@ -356,12 +363,14 @@ mod tests {
                     function(
                         "test_RevertWhen_StuffCalled".to_owned(),
                         hir::FunctionTy::Function,
+                        Span::new(Position::new(19, 2, 1), Position::new(77, 3, 23)),
                         None,
                         Some(vec![comment("it should revert".to_owned())])
                     ),
                     function(
                         "test_RevertGiven_NotStuffCalled".to_owned(),
                         hir::FunctionTy::Function,
+                        Span::new(Position::new(79, 4, 1), Position::new(140, 5, 23)),
                         None,
                         Some(vec![comment("it should revert".to_owned())])
                     ),
@@ -371,7 +380,7 @@ mod tests {
     }
 
     #[test]
-    fn test_action_with_sibling_condition() -> Result<()> {
+    fn action_with_sibling_condition() -> Result<()> {
         let file_contents = String::from(
             r"
 Foo_Test
@@ -392,12 +401,14 @@ Foo_Test
                     function(
                         "whenStuffCalled".to_owned(),
                         hir::FunctionTy::Modifier,
+                        Span::new(Position::new(10, 3, 1), Position::new(235, 9, 32)),
                         None,
                         None
                     ),
                     function(
                         "test_WhenStuffCalled".to_owned(),
                         hir::FunctionTy::Function,
+                        Span::new(Position::new(10, 3, 1), Position::new(235, 9, 32)),
                         Some(vec!["whenStuffCalled".to_owned()]),
                         Some(vec![
                             comment("It should do stuff.".to_owned()),
@@ -407,12 +418,14 @@ Foo_Test
                     function(
                         "test_RevertWhen_ACalled".to_owned(),
                         hir::FunctionTy::Function,
+                        Span::new(Position::new(76, 5, 5), Position::new(135, 6, 28)),
                         Some(vec!["whenStuffCalled".to_owned()]),
                         Some(vec![comment("it should revert".to_owned())])
                     ),
                     function(
                         "test_WhenBCalled".to_owned(),
                         hir::FunctionTy::Function,
+                        Span::new(Position::new(174, 8, 5), Position::new(235, 9, 32)),
                         Some(vec!["whenStuffCalled".to_owned()]),
                         Some(vec![comment("it should not revert".to_owned())])
                     ),

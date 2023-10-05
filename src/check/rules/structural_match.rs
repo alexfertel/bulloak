@@ -15,7 +15,11 @@ use std::collections::BTreeSet;
 use solang_parser::pt;
 
 use crate::{
-    check::violation::{Violation, ViolationKind},
+    check::{
+        location::Location,
+        utils::offset_to_line,
+        violation::{Violation, ViolationKind},
+    },
     hir::{self, Hir},
 };
 
@@ -49,12 +53,14 @@ impl Checker for StructuralMatcher {
         let contract_sol = pt
             .iter()
             .find(|&part| matches!(part, pt::SourceUnitPart::ContractDefinition(_)));
-        // If we find no contract, then we check if there is no contract
-        // in the HIR, else we found a violation.
+        // If we find no contract in the Solidity file, then we check
+        // if there is no contract in the HIR, else we found a violation.
         if contract_sol.is_none() {
             if let Some(Hir::ContractDefinition(contract)) = contract_hir {
-                let violation =
-                    Violation::new(ViolationKind::ContractMissing(contract.identifier.clone()));
+                let violation = Violation::new(
+                    ViolationKind::ContractMissing(contract.identifier.clone()),
+                    Location::File(ctx.tree_path.to_owned()),
+                );
                 violations.push(violation);
 
                 return Ok(violations);
@@ -75,17 +81,23 @@ impl Checker for StructuralMatcher {
                 // We won't deal right now with a parsing error from solang_parser.
                 if let Some(ref identifier) = contract_sol.name {
                     if identifier.name != contract_hir.identifier {
-                        let violation = Violation::new(ViolationKind::ContractNameNotMatches(
-                            identifier.name.clone(),
-                            contract_hir.identifier.clone(),
-                        ));
+                        let violation = Violation::new(
+                            ViolationKind::ContractNameNotMatches(
+                                identifier.name.clone(),
+                                contract_hir.identifier.clone(),
+                            ),
+                            Location::Code(
+                                ctx.sol_path.to_owned(),
+                                offset_to_line(ctx.sol_contents, contract_sol.loc.start()),
+                            ),
+                        );
                         violations.push(violation);
                     }
                 };
 
                 // Check that all the functions are present in the
                 // output file with the right order.
-                violations.append(&mut check_fns_structure(contract_hir, contract_sol));
+                violations.append(&mut check_fns_structure(contract_hir, contract_sol, ctx));
             };
         };
 
@@ -99,6 +111,7 @@ impl Checker for StructuralMatcher {
 fn check_fns_structure(
     contract_hir: &hir::ContractDefinition,
     contract_sol: &pt::ContractDefinition,
+    ctx: &Context,
 ) -> Vec<Violation> {
     let mut violations = Vec::new();
 
@@ -108,26 +121,27 @@ fn check_fns_structure(
             let fn_sol = find_matching_fn(contract_sol, fn_hir);
 
             match fn_sol {
-                // Store the matched function to check its at the
+                // Store the matched function to check it is at the
                 // appropriate place later.
                 Some((sol_idx, _)) => present_fn_indices.push((hir_idx, sol_idx)),
                 // We didn't find a matching function, so this is a
                 // violation.
-                None => violations.push(Violation::new(ViolationKind::MatchingCodegenMissing(
-                    fn_hir.identifier.clone(),
-                ))),
+                None => violations.push(Violation::new(
+                    ViolationKind::MatchingCodegenMissing(fn_hir.identifier.clone()),
+                    Location::Code(ctx.tree_path.to_owned(), fn_hir.span.start.line),
+                )),
             }
         };
     }
 
-    // We need to check for inversions in order to know if the order is wrong.
-    let mut unsorted_set: BTreeSet<String> = BTreeSet::new();
     // No matching constructs were found. We can just return, since
     // we already processed violations in the prev step.
     if present_fn_indices.is_empty() {
         return violations;
     }
 
+    // We need to check for inversions in order to know if the order is wrong.
+    let mut unsorted_set: BTreeSet<(usize, usize)> = BTreeSet::new();
     for i in 0..present_fn_indices.len() - 1 {
         let (i_hir_idx, i_sol_idx) = present_fn_indices[i];
         // Everything that's less than the current item is unsorted.
@@ -135,21 +149,30 @@ fn check_fns_structure(
         // current item, then, this element is also unsorted.
         for j in i + 1..present_fn_indices.len() {
             let (j_hir_idx, j_sol_idx) = present_fn_indices[j];
-            // An inversion.
+            // We found an inversion.
             if i_sol_idx > j_sol_idx {
-                if let Hir::FunctionDefinition(ref function) = contract_hir.children[i_hir_idx] {
-                    unsorted_set.insert(function.identifier.clone());
-                }
-                if let Hir::FunctionDefinition(ref function) = contract_hir.children[j_hir_idx] {
-                    unsorted_set.insert(function.identifier.clone());
-                }
+                unsorted_set.insert((i_hir_idx, i_sol_idx));
+                unsorted_set.insert((j_hir_idx, j_sol_idx));
             }
         }
     }
 
     // Emit a violation per unsorted item.
-    for name in unsorted_set {
-        violations.push(Violation::new(ViolationKind::CodegenOrderMismatch(name)));
+    for (hir_idx, sol_idx) in unsorted_set {
+        if let Hir::FunctionDefinition(ref fn_hir) = contract_hir.children[hir_idx] {
+            if let pt::ContractPart::FunctionDefinition(ref fn_sol) = contract_sol.parts[sol_idx] {
+                violations.push(Violation::new(
+                    ViolationKind::CodegenOrderMismatch(
+                        fn_hir.identifier.clone(),
+                        fn_hir.span.start.line,
+                    ),
+                    Location::Code(
+                        ctx.sol_path.to_owned(),
+                        offset_to_line(ctx.sol_contents, fn_sol.loc.start()),
+                    ),
+                ));
+            }
+        }
     }
 
     violations
@@ -227,6 +250,7 @@ mod tests {
         hir::FunctionDefinition {
             identifier: name.to_owned(),
             ty,
+            span: Default::default(),
             modifiers: Default::default(),
             children: Default::default(),
         }

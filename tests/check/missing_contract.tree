@@ -1,0 +1,2 @@
+MissingContract
+└── It should not find a contract in the Solidity file.

@@ -1,5 +1,7 @@
 //! Defines a high-level intermediate representation (HIR).
 
+use crate::span::Span;
+
 /// A high-level intermediate representation (HIR) that describes
 /// the semantic structure of a Solidity contract as emitted by `bulloak`.
 #[derive(Debug, PartialEq, Eq)]
@@ -73,6 +75,9 @@ pub struct FunctionDefinition {
     pub identifier: Identifier,
     /// The type of this function.
     pub ty: FunctionTy,
+    /// The span of the branch that generated this
+    /// function.
+    pub span: Span,
     /// The set of modifiers applied to this function.
     ///
     /// This might be `None` if the function's type

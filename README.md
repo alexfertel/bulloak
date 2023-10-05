@@ -133,14 +133,7 @@ contract HashPairTest {
     // It should never revert.
   }
 
-  modifier whenFirstArgIsSmallerThanSecondArg() {
-    _;
-  }
-
-  function test_WhenFirstArgIsSmallerThanSecondArg()
-    external
-    whenFirstArgIsSmallerThanSecondArg
-  {
+  function test_WhenFirstArgIsSmallerThanSecondArg() external {
     // It should match the result of `keccak256(abi.encodePacked(a,b))`.
   }
 }
@@ -150,8 +143,9 @@ This Solidity file is missing the tests for `When first arg is bigger than secon
 which would be reported after running `bulloak check`, like so:
 
 ```text
-Codegen not found: Couldn't find a corresponding element for "whenFirstArgIsBiggerThanSecondArg" in the Solidity file.
-Codegen not found: Couldn't find a corresponding element for "test_WhenFirstArgIsBiggerThanSecondArg" in the Solidity file.
+•••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••
+check failed: couldn't find a corresponding element for "test_WhenFirstArgIsBiggerThanSecondArg" in the Solidity file
+file: /Users/alexfertel/stuff/test.tree | line: 5
 ```
 
 #### Rules

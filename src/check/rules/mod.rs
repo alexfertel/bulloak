@@ -16,18 +16,18 @@ pub(crate) mod structural_match;
 /// This is a utility struct that abstracts away the requirements
 /// for a `check` call. If you need any additional information
 /// for your rule, feel free to add it here.
-pub(crate) struct Context<'h> {
+pub(crate) struct Context<'c> {
     /// The path to the tree file.
-    #[allow(dead_code)]
-    pub(crate) tree_path: &'h str,
+    pub(crate) tree_path: &'c str,
     /// The high-level intermediate representation
     /// of the bulloak tree.
-    pub(crate) tree_hir: &'h Hir,
+    pub(crate) tree_hir: &'c Hir,
     /// The path to the Solidity file.
-    #[allow(dead_code)]
-    pub(crate) sol_path: &'h str,
+    pub(crate) sol_path: &'c str,
+    /// The contents of the Solidity file.
+    pub(crate) sol_contents: &'c str,
     /// The abstract syntax tree of the Solidity file.
-    pub(crate) sol_ast: &'h SourceUnit,
+    pub(crate) sol_ast: &'c SourceUnit,
 }
 
 /// Trait definition for a rule checker object.
