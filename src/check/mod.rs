@@ -84,7 +84,7 @@ impl Check {
             )?);
         }
 
-        exit(violations);
+        exit(&violations);
 
         Ok(())
     }
@@ -97,14 +97,14 @@ fn try_read_to_string(path: &PathBuf) -> Result<String, Violation> {
     })
 }
 
-fn exit(violations: Vec<Violation>) {
+fn exit(violations: &[Violation]) {
     if violations.is_empty() {
         println!(
             "{}",
             "All checks completed successfully! No issues found.".green()
         );
     } else {
-        for violation in &violations {
+        for violation in violations {
             eprint!("{violation}");
         }
 
