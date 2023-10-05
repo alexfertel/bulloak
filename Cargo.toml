@@ -9,8 +9,7 @@ repository = "https://github.com/alexfertel/bulloak"
 homepage = "https://github.com/alexfertel/bulloak"
 documentation = "https://github.com/alexfertel/bulloak"
 description = """
-A simple, fast, and easy-to-use Solidity test generator based on
-the Branching Tree Technique.
+A Solidity test generator based on the Branching Tree Technique.
 """
 keywords = ["solidity", "testing", "compiler", "cli", "tree"]
 categories = ["development-tools::testing", "command-line-utilities", "compilers", "parsing"]
