@@ -245,6 +245,17 @@ There are a few things to keep in mind about the scaffolded Solidity test:
 
 Please refer to [CONTRIBUTING.md](./CONTRIBUTING.md).
 
+## Publishing
+
+These are the current steps taken to publish `bulloak`:
+
+- Bump the version field in [Cargo.toml](./Cargo.toml).
+- Create the corresponding git tag named after the version.
+- Update the [CHANGELOG.md](./CHANGELOG.md) file with `git cliff -o CHANGELOG.md`.
+- Run `cargo publish --dry-run` to make sure that everything looks good.
+- Commit & push the changes.
+- Run `cargo publish`.
+
 ## License
 
 This project is licensed under either of:
