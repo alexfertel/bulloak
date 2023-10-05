@@ -73,3 +73,33 @@ fn checks_empty_contract() {
     assert!(actual.contains(r#"check failed: couldn't find a corresponding element for "test_ShouldNeverRevert" in the Solidity file"#));
     assert!(actual.contains(r#"check failed: couldn't find a corresponding element for "test_ShouldNotFindTheSolidityFile" in the Solidity file"#));
 }
+
+#[test]
+fn checks_missing_contract() {
+    let cwd = env::current_dir().unwrap();
+    let binary_path = get_binary_path();
+    let tree_path = cwd
+        .join("tests")
+        .join("check")
+        .join("missing_contract.tree");
+
+    let output = cmd(&binary_path, "check", &tree_path, &[]);
+    let actual = String::from_utf8(output.stderr).unwrap();
+
+    assert!(actual.contains(r#"check failed: couldn't find a corresponding contract for "MissingContract" in the Solidity file"#));
+}
+
+#[test]
+fn checks_contract_name_mismatch() {
+    let cwd = env::current_dir().unwrap();
+    let binary_path = get_binary_path();
+    let tree_path = cwd
+        .join("tests")
+        .join("check")
+        .join("contract_names_mismatch.tree");
+
+    let output = cmd(&binary_path, "check", &tree_path, &[]);
+    let actual = String::from_utf8(output.stderr).unwrap();
+
+    assert!(actual.contains(r#"check failed: couldn't find a corresponding contract for "ADifferentName" in the Solidity file. Found "ContractName""#));
+}

@@ -159,21 +159,20 @@ fn check_fns_structure(
 
     // Emit a violation per unsorted item.
     for (hir_idx, sol_idx) in unsorted_set {
-        let Hir::FunctionDefinition(ref fn_hir) = contract_hir.children[hir_idx] else {
-            break;
-        };
-
-        let pt::ContractPart::FunctionDefinition(ref fn_sol) = contract_sol.parts[sol_idx] else {
-            break;
-        };
-
-        violations.push(Violation::new(
-            ViolationKind::CodegenOrderMismatch(fn_hir.identifier.clone(), fn_hir.span.start.line),
-            Location::Code(
-                ctx.sol_path.to_owned(),
-                offset_to_line(ctx.sol_contents, fn_sol.loc.start()),
-            ),
-        ));
+        if let Hir::FunctionDefinition(ref fn_hir) = contract_hir.children[hir_idx] {
+            if let pt::ContractPart::FunctionDefinition(ref fn_sol) = contract_sol.parts[sol_idx] {
+                violations.push(Violation::new(
+                    ViolationKind::CodegenOrderMismatch(
+                        fn_hir.identifier.clone(),
+                        fn_hir.span.start.line,
+                    ),
+                    Location::Code(
+                        ctx.sol_path.to_owned(),
+                        offset_to_line(ctx.sol_contents, fn_sol.loc.start()),
+                    ),
+                ));
+            }
+        }
     }
 
     violations
