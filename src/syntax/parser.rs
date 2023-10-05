@@ -3,10 +3,10 @@
 use std::fmt;
 use std::{borrow::Borrow, cell::Cell, result};
 
-use super::ast::{Action, Ast, Condition, Root};
+use super::ast::{Action, Ast, Condition, Description, Root};
 use super::tokenizer::{Token, TokenKind};
 use crate::span::Span;
-use crate::utils::sanitize;
+use crate::utils::{repeat_str, sanitize};
 
 type Result<T> = result::Result<T, Error>;
 
@@ -56,6 +56,8 @@ pub enum ErrorKind {
     /// parser ends up in a state where the current grammar production
     /// being applied doesn't expect this token to occur.
     TokenUnexpected(Lexeme),
+    /// Did not expect this token when parsing a description node.
+    DescriptionTokenUnexpected(Lexeme),
     /// Did not expect this When keyword.
     WhenUnexpected,
     /// Did not expect this Given keyword.
@@ -66,8 +68,16 @@ pub enum ErrorKind {
     WordUnexpected(Lexeme),
     /// Did not expect an end of file.
     EofUnexpected,
-    /// The token stream was empty, so the tree was empty.
-    EmptyTree,
+    /// The token stream was empty, so the tree is empty.
+    TreeEmpty,
+    /// A condition or action with no title was found.
+    TitleMissing,
+    /// A tree without a root was found.
+    TreeRootless,
+    /// A corner is not the last child.
+    CornerNotLastChild,
+    /// A tee is the last child.
+    TeeLastChild,
     /// This enum may grow additional variants, so this makes sure clients
     /// don't count on exhaustive matching. (Otherwise, adding a new variant
     /// could break existing code.)
@@ -83,18 +93,22 @@ impl fmt::Display for Error {
 
 impl fmt::Display for ErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        use self::ErrorKind::{
-            EmptyTree, EofUnexpected, GivenUnexpected, ItUnexpected, TokenUnexpected,
-            WhenUnexpected, WordUnexpected,
-        };
+        use self::ErrorKind::*;
         match self {
             TokenUnexpected(lexeme) => write!(f, "unexpected token: {lexeme}"),
+            DescriptionTokenUnexpected(lexeme) => {
+                write!(f, "unexpected token in description: {lexeme}")
+            }
             WhenUnexpected => write!(f, "unexpected `when` keyword"),
             GivenUnexpected => write!(f, "unexpected `given` keyword"),
             ItUnexpected => write!(f, "unexpected `it` keyword"),
             WordUnexpected(lexeme) => write!(f, "unexpected `word`: {lexeme}"),
             EofUnexpected => write!(f, "unexpected end of file"),
-            EmptyTree => write!(f, "found an empty tree"),
+            TreeEmpty => write!(f, "found an empty tree"),
+            TreeRootless => write!(f, "missing a root"),
+            TitleMissing => write!(f, "found a condition/action without a title"),
+            CornerNotLastChild => write!(f, "a `Corner` must be the last child"),
+            TeeLastChild => write!(f, "a `Tee` must not be the last child"),
             _ => unreachable!(),
         }
     }
@@ -167,9 +181,27 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
         }
     }
 
+    /// Returns true if the next call to `current` would
+    /// return `None`.
+    fn is_eof(&self) -> bool {
+        self.parser().current.get() == self.tokens.len()
+    }
+
     /// Return the current token.
+    ///
+    /// Returns `None` if the parser is past the end
+    /// of the token stream.
     fn current(&self) -> Option<&Token> {
         self.tokens.get(self.parser().current.get())
+    }
+
+    /// Return a reference to the next token.
+    ///
+    /// Returns `None` if the parser is currently at, or
+    /// past the end of the token stream.
+    fn peek(&self) -> Option<&Token> {
+        let current_index = self.parser().current.get();
+        self.tokens.get(current_index + 1)
     }
 
     /// Return the previous token.
@@ -177,17 +209,17 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
     /// Returns `None` if the parser is currently at the start
     /// of the token stream.
     fn previous(&self) -> Option<&Token> {
-        if self.parser().current.get() == 0 {
-            return None;
+        match self.parser().current.get() {
+            0 => None,
+            current => self.tokens.get(current - 1),
         }
-        self.tokens.get(self.parser().current.get() - 1)
     }
 
     /// Move to the next token, returning a reference to it.
     ///
     /// If there are no more tokens, return `None`.
     fn consume(&self) -> Option<&Token> {
-        if self.parser().current.get() == self.tokens.len() {
+        if self.is_eof() {
             return None;
         }
         self.parser().current.set(self.parser().current.get() + 1);
@@ -202,107 +234,262 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
     pub(crate) fn parse(&self) -> Result<Ast> {
         self.parser().reset();
 
-        if self.tokens.is_empty() {
-            return Err(self.error(Span::default(), ErrorKind::EmptyTree));
-        }
+        let root_token = self
+            .current()
+            .ok_or(self.error(Span::default(), ErrorKind::TreeEmpty))?;
 
-        self._parse()
-    }
-
-    /// Internal recursive implementation of parsing.
-    ///
-    /// The invariants of this method are:
-    /// - The first call to this function parses the root node.
-    /// - The parser is always at the start of a production when entering
-    /// this function.
-    fn _parse(&self) -> Result<Ast> {
-        let Some(current_token) = self.current() else {
-            return Err(self.error(self.tokens.last().unwrap().span, ErrorKind::EofUnexpected));
-        };
-
-        match current_token.kind {
-            TokenKind::Word if self.parser().current.get() == 0 => self.parse_root(current_token),
-            TokenKind::Tee | TokenKind::Corner => {
-                let Some(next_token) = self.consume() else {
-                    return Err(
-                        self.error(self.tokens.last().unwrap().span, ErrorKind::EofUnexpected)
-                    );
-                };
-
-                match next_token.kind {
-                    TokenKind::It => {
-                        let title = self.parse_string(next_token);
-                        let previous = self.previous().unwrap();
-                        Ok(Ast::Action(Action {
-                            title,
-                            span: Span::new(current_token.span.start, previous.span.end),
-                        }))
-                    }
-                    TokenKind::When | TokenKind::Given => {
-                        let title = self.parse_string(next_token);
-
-                        let mut children = vec![];
-                        while self
-                            .current()
-                            // Only parse tokens that are indented more than the current token.
-                            // The column is our way to determine the tree level we are in.
-                            .is_some_and(|t| t.span.start.column > current_token.span.start.column)
-                        {
-                            let ast = self._parse()?;
-                            children.push(ast);
-                        }
-
-                        let previous = self.previous().unwrap();
-                        Ok(Ast::Condition(Condition {
-                            title: sanitize(&title),
-                            children,
-                            span: Span::new(current_token.span.start, previous.span.end),
-                        }))
-                    }
-                    _ => Err(self.error(
-                        current_token.span,
-                        ErrorKind::TokenUnexpected(next_token.lexeme.clone()),
-                    )),
-                }
-            }
-            TokenKind::Word => Err(self.error(
-                current_token.span,
-                ErrorKind::WordUnexpected(current_token.lexeme.clone()),
-            )),
-            TokenKind::When => Err(self.error(current_token.span, ErrorKind::WhenUnexpected)),
-            TokenKind::Given => Err(self.error(current_token.span, ErrorKind::GivenUnexpected)),
-            TokenKind::It => Err(self.error(current_token.span, ErrorKind::ItUnexpected)),
+        match root_token.kind {
+            TokenKind::Word => self.parse_root(root_token),
+            _ => Err(self.error(root_token.span, ErrorKind::TreeRootless)),
         }
     }
 
     /// Parse the root node of the AST.
-    fn parse_root(&self, current_token: &Token) -> Result<Ast> {
+    ///
+    /// A root has the form:
+    /// ```grammar
+    /// CONTRACT_NAME
+    /// (<TEE> [Condition | Action])*
+    /// <CORNER> [Condition | Action]
+    /// ```
+    ///
+    /// Panics if called when the parser is not at a `Word` token.
+    fn parse_root(&self, token: &Token) -> Result<Ast> {
+        assert!(matches!(token.kind, TokenKind::Word));
         self.consume();
-        // A string at the start of the file is the root ast node.
+
+        // The loop invariant is that `self.current` is a
+        // `Tee` or the last `Corner`.
         let mut children = vec![];
-        while self.current().is_some() {
-            let ast = self._parse()?;
-            children.push(ast);
+        while let Some(current_token) = self.current() {
+            let child = match current_token.kind {
+                TokenKind::Corner | TokenKind::Tee => self.parse_branch(current_token)?,
+                TokenKind::Word => Err(self.error(
+                    current_token.span,
+                    ErrorKind::WordUnexpected(current_token.lexeme.clone()),
+                ))?,
+                TokenKind::When => Err(self.error(current_token.span, ErrorKind::WhenUnexpected))?,
+                TokenKind::Given => {
+                    Err(self.error(current_token.span, ErrorKind::GivenUnexpected))?
+                }
+                TokenKind::It => Err(self.error(current_token.span, ErrorKind::ItUnexpected))?,
+            };
+
+            children.push(child);
         }
 
         let last_span = if children.is_empty() {
-            &current_token.span
+            &token.span
         } else {
-            children[children.len() - 1].span()
+            children.iter().last().unwrap().span()
         };
 
         Ok(Ast::Root(Root {
-            span: Span::new(current_token.span.start, last_span.end),
+            span: Span::new(token.span.start, last_span.end),
             children,
-            contract_name: current_token.lexeme.clone(),
+            contract_name: token.lexeme.clone(),
+        }))
+    }
+
+    /// Parse a branch.
+    ///
+    /// A branch is a production that starts with a `Tee` or a `Corner`
+    /// token.
+    ///
+    /// Panics if called when the parser is not at a `Tee` or a `Corner`
+    /// token.
+    fn parse_branch(&self, token: &Token) -> Result<Ast> {
+        assert!(matches!(token.kind, TokenKind::Tee | TokenKind::Corner));
+
+        let first_token = self.peek().ok_or(self.error(
+            token.span.with_start(token.span.end),
+            ErrorKind::EofUnexpected,
+        ))?;
+
+        let ast = match first_token.kind {
+            TokenKind::When | TokenKind::Given => self.parse_condition(token)?,
+            TokenKind::It => self.parse_action(token)?,
+            _ => Err(self.error(
+                first_token.span,
+                ErrorKind::TokenUnexpected(first_token.lexeme.clone()),
+            ))?,
+        };
+
+        if matches!(token.kind, TokenKind::Tee) && self.is_eof() {
+            return Err(self.error(
+                token.span.with_start(token.span.end),
+                ErrorKind::TeeLastChild,
+            ));
+        } else if matches!(token.kind, TokenKind::Corner) && !self.is_eof() {
+            return Err(self.error(
+                token.span.with_start(token.span.end),
+                ErrorKind::CornerNotLastChild,
+            ));
+        };
+
+        Ok(ast)
+    }
+
+    /// Parse a condition node.
+    ///
+    /// A condition has the form:
+    /// ```grammar
+    /// (<TEE> | <CORNER>) (<WHEN> | <GIVEN>) <WORD>*
+    ///   (<TEE> [Condition | Action])*
+    ///   <CORNER> [Condition | Action]
+    /// ```
+    ///
+    /// Panics if called when the parser is not at a `Tee` or a `Corner`
+    /// token.
+    fn parse_condition(&self, token: &Token) -> Result<Ast> {
+        assert!(matches!(token.kind, TokenKind::Tee | TokenKind::Corner));
+
+        let start_token = self.peek().ok_or(self.error(
+            token.span.with_start(token.span.end),
+            ErrorKind::EofUnexpected,
+        ))?;
+        let title = self.parse_string(start_token);
+
+        if title.len() == start_token.lexeme.len() {
+            return Err(self.error(start_token.span, ErrorKind::TitleMissing));
+        };
+
+        let mut children = vec![];
+        while self
+            .current()
+            // Only parse tokens that are indented more than the current token.
+            // The column determines the tree level we are in.
+            .is_some_and(|t| t.span.start.column > token.span.start.column)
+        {
+            let next_token = self.peek().ok_or(self.error(
+                token.span.with_start(token.span.end),
+                ErrorKind::EofUnexpected,
+            ))?;
+
+            let current_token = self.current().unwrap();
+            let ast = match next_token.kind {
+                TokenKind::When | TokenKind::Given => self.parse_condition(current_token)?,
+                TokenKind::It => self.parse_action(current_token)?,
+                _ => Err(self.error(
+                    next_token.span,
+                    ErrorKind::TokenUnexpected(next_token.lexeme.clone()),
+                ))?,
+            };
+
+            children.push(ast);
+        }
+
+        let previous = self.previous().unwrap();
+        Ok(Ast::Condition(Condition {
+            title: sanitize(&title),
+            children,
+            span: Span::new(token.span.start, previous.span.end),
+        }))
+    }
+
+    /// Parse an action node.
+    ///
+    /// An action has the form:
+    /// ```grammar
+    /// (<TEE> | <CORNER>) <IT> <WORD>*
+    ///   (<TEE> ActionDescription)*
+    ///   <CORNER> ActionDescription
+    /// ```
+    ///
+    /// Panics if called when the parser is not at a `Tee` or a `Corner`
+    /// token.
+    fn parse_action(&self, token: &Token) -> Result<Ast> {
+        assert!(matches!(token.kind, TokenKind::Tee | TokenKind::Corner));
+
+        let start_token = self.peek().ok_or(self.error(
+            token.span.with_start(token.span.end),
+            ErrorKind::EofUnexpected,
+        ))?;
+        let title = self.parse_string(start_token);
+
+        let mut children = vec![];
+        while self
+            .current()
+            // Only parse tokens that are indented more than the current token.
+            // The column determines the tree level we are in.
+            .is_some_and(|t| t.span.start.column > token.span.start.column)
+        {
+            let next_token = self.peek().ok_or(self.error(
+                token.span.with_start(token.span.end),
+                ErrorKind::EofUnexpected,
+            ))?;
+
+            let current_token = self.current().unwrap();
+            let ast = match next_token.kind {
+                TokenKind::Word => self.parse_description(
+                    current_token,
+                    current_token.span.start.column - token.span.start.column,
+                )?,
+                _ => Err(self.error(
+                    next_token.span,
+                    ErrorKind::DescriptionTokenUnexpected(next_token.lexeme.clone()),
+                ))?,
+            };
+
+            children.push(ast);
+        }
+
+        let previous = self.previous().unwrap();
+        Ok(Ast::Action(Action {
+            title,
+            children,
+            span: Span::new(token.span.start, previous.span.end),
+        }))
+    }
+
+    /// Parse an action description node.
+    ///
+    /// An action description has the form:
+    /// ```grammar
+    /// [<TEE> <WORD>* | <CORNER> <WORD>]
+    ///   (<TEE> ActionDescription)*
+    ///   <CORNER> ActionDescription
+    /// ```
+    ///
+    /// This function receives a `column_delta` used to know
+    /// the number of spaces to prepend the lexeme with. E.g.
+    /// For the following action:
+    ///
+    /// ```tree
+    /// It should do something.
+    ///     <CORNER> I describe the above action.
+    /// ^^^^
+    /// ```
+    ///
+    /// Then, `column_delta = 4` and the emitted description should
+    /// respect this.
+    ///
+    /// Panics if called when the parser is not at a `Tee` or a `Corner`
+    /// token.
+    fn parse_description(&self, token: &Token, column_delta: usize) -> Result<Ast> {
+        assert!(matches!(token.kind, TokenKind::Tee | TokenKind::Corner));
+
+        let start_token = self.peek().ok_or(self.error(
+            token.span.with_start(token.span.end),
+            ErrorKind::EofUnexpected,
+        ))?;
+        let text = self.parse_string(start_token);
+
+        let previous = self.previous().unwrap();
+        Ok(Ast::ActionDescription(Description {
+            text: format!("{}{}", repeat_str(" ", column_delta), text),
+            span: Span::new(token.span.start, previous.span.end),
         }))
     }
 
     /// Parse a string.
     ///
     /// A string is a sequence of words separated by spaces.
+    ///
+    /// Consumes all the tokens including the given token
+    /// until no more words are found.
     fn parse_string(&self, start_token: &Token) -> String {
-        // Strings always start with one of [It, When, Given].
+        self.consume();
         let mut string = String::from(&start_token.lexeme);
 
         // Consume all words.
@@ -323,27 +510,26 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
 mod tests {
     use pretty_assertions::assert_eq;
 
-    use crate::span::{Position, Span};
-    use crate::syntax::ast::{Action, Ast, Condition, Root};
-    use crate::syntax::parser::{self, Parser};
+    use crate::span::Span;
+    use crate::syntax::ast::{Action, Ast, Condition, Description, Root};
+    use crate::syntax::parser::{self, ErrorKind, Parser};
+    use crate::syntax::test_utils::{p, s, TestError};
     use crate::syntax::tokenizer::Tokenizer;
 
-    #[derive(Clone, Debug)]
-    struct TestError {
-        span: Span,
-        kind: parser::ErrorKind,
-    }
-
-    impl PartialEq<parser::Error> for TestError {
+    impl PartialEq<parser::Error> for TestError<parser::ErrorKind> {
         fn eq(&self, other: &parser::Error) -> bool {
             self.span == other.span && self.kind == other.kind
         }
     }
 
-    impl PartialEq<TestError> for parser::Error {
-        fn eq(&self, other: &TestError) -> bool {
+    impl PartialEq<TestError<parser::ErrorKind>> for parser::Error {
+        fn eq(&self, other: &TestError<parser::ErrorKind>) -> bool {
             self.span == other.span && self.kind == other.kind
         }
+    }
+
+    fn e<K>(kind: K, span: Span) -> TestError<K> {
+        TestError { kind, span }
     }
 
     fn parse(file_contents: &str) -> parser::Result<Ast> {
@@ -352,11 +538,66 @@ mod tests {
     }
 
     #[test]
-    fn test_only_contract_name() {
+    fn empty_tree() {
+        assert_eq!(
+            parse("").unwrap_err(),
+            e(ErrorKind::TreeEmpty, Span::default())
+        );
+    }
+
+    #[test]
+    fn rootless_tree() {
+        assert_eq!(
+            parse("└── It should never revert.").unwrap_err(),
+            e(ErrorKind::TreeRootless, Span::default())
+        );
+        assert_eq!(
+            parse("├── It should revert.").unwrap_err(),
+            e(ErrorKind::TreeRootless, Span::default())
+        );
+        assert_eq!(
+            parse("└── When stuff happens").unwrap_err(),
+            e(ErrorKind::TreeRootless, Span::default())
+        );
+        assert_eq!(
+            parse("├── When stuff happens").unwrap_err(),
+            e(ErrorKind::TreeRootless, Span::default())
+        );
+        assert_eq!(
+            parse("└── this is a description").unwrap_err(),
+            e(ErrorKind::TreeRootless, Span::default())
+        );
+    }
+
+    #[test]
+    fn tee_last_child_errors() {
+        assert_eq!(
+            parse("Foo_Test\n├── when something bad happens\n   └── it should revert").unwrap_err(),
+            e(ErrorKind::TeeLastChild, Span::splat(p(9, 2, 1)))
+        );
+    }
+
+    #[test]
+    fn corner_not_last_child_errors() {
+        assert_eq!(
+            parse(
+                r"Foo_Test
+└── when something bad happens
+   └── it should revert
+└── when something happens
+   └── it should not revert"
+            )
+            .unwrap_err(),
+            e(ErrorKind::CornerNotLastChild, Span::splat(p(9, 2, 1)))
+        );
+    }
+
+    #[test]
+    fn only_contract_name() {
         assert_eq!(
             parse("FooTest").unwrap(),
             Ast::Root(Root {
-                span: Span::new(Position::new(0, 1, 1), Position::new(6, 1, 7)),
+                span: s(p(0, 1, 1), p(6, 1, 7)),
                 children: vec![],
                 contract_name: String::from("FooTest"),
             })
@@ -364,17 +605,47 @@ mod tests {
     }
 
     #[test]
-    fn test_one_child() {
+    fn one_child() {
         assert_eq!(
             parse("Foo_Test\n└── when something bad happens\n   └── it should revert").unwrap(),
             Ast::Root(Root {
-                span: Span::new(Position::new(0, 1, 1), Position::new(74, 3, 23)),
+                contract_name: String::from("Foo_Test"),
+                span: s(p(0, 1, 1), p(74, 3, 23)),
                 children: vec![Ast::Condition(Condition {
-                    span: Span::new(Position::new(9, 2, 1), Position::new(74, 3, 23)),
+                    span: s(p(9, 2, 1), p(74, 3, 23)),
                     title: String::from("when something bad happens"),
                     children: vec![Ast::Action(Action {
-                        span: Span::new(Position::new(49, 3, 4), Position::new(74, 3, 23)),
+                        span: s(p(49, 3, 4), p(74, 3, 23)),
                         title: String::from("it should revert"),
+                        children: vec![]
+                    })],
+                })],
+            })
+        );
+    }
+
+    #[test]
+    fn one_action_description() {
+        assert_eq!(
+            parse(
+                r"Foo_Test
+└── when something bad happens
+   └── it should revert
+      └── because _bad_"
+            )
+            .unwrap(),
+            Ast::Root(Root {
+                span: s(p(0, 1, 1), p(104, 4, 23)),
+                children: vec![Ast::Condition(Condition {
+                    span: s(p(9, 2, 1), p(104, 4, 23)),
+                    title: String::from("when something bad happens"),
+                    children: vec![Ast::Action(Action {
+                        span: s(p(49, 3, 4), p(104, 4, 23)),
+                        title: String::from("it should revert"),
+                        children: vec![Ast::ActionDescription(Description {
+                            span: s(p(82, 4, 7), p(104, 4, 23)),
+                            text: String::from("   because _bad_"),
+                        })]
                     })],
                 })],
                 contract_name: String::from("Foo_Test"),
@@ -383,7 +654,106 @@ mod tests {
     }
 
     #[test]
-    fn test_two_children() {
+    fn nested_action_descriptions() {
+        assert_eq!(
+            parse(
+                r"Foo_Test
+└── when something bad happens
+   └── it should revert
+      ├── some stuff happened
+      │  └── and that stuff
+      └── was very _bad_"
+            )
+            .unwrap(),
+            Ast::Root(Root {
+                span: s(p(0, 1, 1), p(177, 6, 24)),
+                children: vec![Ast::Condition(Condition {
+                    span: s(p(9, 2, 1), p(177, 6, 24)),
+                    title: String::from("when something bad happens"),
+                    children: vec![Ast::Action(Action {
+                        span: s(p(49, 3, 4), p(177, 6, 24)),
+                        title: String::from("it should revert"),
+                        children: vec![
+                            Ast::ActionDescription(Description {
+                                span: s(p(82, 4, 7), p(110, 4, 29)),
+                                text: String::from("   some stuff happened"),
+                            }),
+                            Ast::ActionDescription(Description {
+                                span: s(p(123, 5, 10), p(146, 5, 27)),
+                                text: String::from("      and that stuff"),
+                            }),
+                            Ast::ActionDescription(Description {
+                                span: s(p(154, 6, 7), p(177, 6, 24)),
+                                text: String::from("   was very _bad_"),
+                            }),
+                        ]
+                    })],
+                })],
+                contract_name: String::from("Foo_Test"),
+            })
+        );
+    }
+
+    #[test]
+    fn unexpected_tokens() {
+        use ErrorKind::*;
+        assert_eq!(
+            parse(r"a └ └").unwrap_err(),
+            e(TokenUnexpected("└".to_owned()), Span::splat(p(6, 1, 5)))
+        );
+        assert_eq!(
+            parse(r"a ├ ├").unwrap_err(),
+            e(TokenUnexpected("├".to_owned()), Span::splat(p(6, 1, 5)))
+        );
+        assert_eq!(
+            parse(r"a └").unwrap_err(),
+            e(EofUnexpected, Span::splat(p(2, 1, 3)))
+        );
+        assert_eq!(
+            parse(r"a └ when").unwrap_err(),
+            e(TitleMissing, s(p(6, 1, 5), p(9, 1, 8)))
+        );
+        assert_eq!(
+            parse(r"a ├").unwrap_err(),
+            e(EofUnexpected, Span::splat(p(2, 1, 3)))
+        );
+        assert_eq!(
+            parse(r"a when").unwrap_err(),
+            e(WhenUnexpected, s(p(2, 1, 3), p(5, 1, 6)))
+        );
+        assert_eq!(
+            parse(r"a given").unwrap_err(),
+            e(GivenUnexpected, s(p(2, 1, 3), p(6, 1, 7)))
+        );
+        assert_eq!(
+            parse(r"a it").unwrap_err(),
+            e(ItUnexpected, s(p(2, 1, 3), p(3, 1, 4)))
+        );
+        assert_eq!(
+            parse(r"a b").unwrap_err(),
+            e(WordUnexpected("b".to_owned()), Span::splat(p(2, 1, 3)))
+        );
+    }
+
+    #[test]
+    fn descriptions_are_the_only_action_children() {
+        assert_eq!(
+            parse(
+                r"Foo_Test
+└── when something bad happens
+   └── it should revert
+      └── it because _bad_"
+            )
+            .unwrap_err(),
+            e(
+                ErrorKind::DescriptionTokenUnexpected("it".to_owned()),
+                s(p(92, 4, 11), p(93, 4, 12))
+            )
+        );
+    }
+
+    #[test]
+    fn two_children() {
         assert_eq!(
             parse(
                 r"FooBarTheBest_Test
@@ -395,22 +765,24 @@ mod tests {
             .unwrap(),
             Ast::Root(Root {
                 contract_name: String::from("FooBarTheBest_Test"),
-                span: Span::new(Position::new(0, 1, 1), Position::new(140, 5, 23)),
+                span: s(p(0, 1, 1), p(140, 5, 23)),
                 children: vec![
                     Ast::Condition(Condition {
                         title: String::from("when stuff called"),
-                        span: Span::new(Position::new(19, 2, 1), Position::new(77, 3, 23)),
+                        span: s(p(19, 2, 1), p(77, 3, 23)),
                         children: vec![Ast::Action(Action {
                             title: String::from("it should revert"),
-                            span: Span::new(Position::new(52, 3, 4), Position::new(77, 3, 23)),
+                            span: s(p(52, 3, 4), p(77, 3, 23)),
+                            children: vec![]
                         })],
                     }),
                     Ast::Condition(Condition {
                         title: String::from("given not stuff called"),
-                        span: Span::new(Position::new(79, 4, 1), Position::new(140, 5, 23)),
+                        span: s(p(79, 4, 1), p(140, 5, 23)),
                         children: vec![Ast::Action(Action {
                             title: String::from("it should revert"),
-                            span: Span::new(Position::new(115, 5, 4), Position::new(140, 5, 23)),
+                            span: s(p(115, 5, 4), p(140, 5, 23)),
+                            children: vec![]
                         })],
                     }),
                 ],
@@ -419,7 +791,7 @@ mod tests {
     }
 
     #[test]
-    fn test_unsanitized_input() {
+    fn unsanitized_input() {
         assert_eq!(
             parse(
                 r#"FooB-rTheBestOf_Test
@@ -429,13 +801,14 @@ mod tests {
             .unwrap(),
             Ast::Root(Root {
                 contract_name: String::from("FooB-rTheBestOf_Test"),
-                span: Span::new(Position::new(0, 1, 1), Position::new(77, 3, 23)),
+                span: s(p(0, 1, 1), p(77, 3, 23)),
                 children: vec![Ast::Condition(Condition {
                     title: String::from("when st_ff alld"),
-                    span: Span::new(Position::new(21, 2, 1), Position::new(77, 3, 23)),
+                    span: s(p(21, 2, 1), p(77, 3, 23)),
                     children: vec![Ast::Action(Action {
                         title: String::from("it should revert"),
-                        span: Span::new(Position::new(52, 3, 4), Position::new(77, 3, 23)),
+                        span: s(p(52, 3, 4), p(77, 3, 23)),
+                        children: vec![]
                     })],
                 }),],
             })

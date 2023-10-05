@@ -47,11 +47,11 @@ fn skips_trees_when_file_exists() {
 }
 
 #[test]
-fn warns_when_tree_is_empty() {
+fn errors_when_tree_is_empty() {
     let cwd = env::current_dir().unwrap();
     let binary_path = get_binary_path();
     let tests_path = cwd.join("tests").join("scaffold");
-    let trees = ["empty_tree.tree"];
+    let trees = ["empty.tree"];
 
     for tree_name in trees {
         let tree_path = tests_path.join(tree_name);

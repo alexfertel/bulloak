@@ -16,16 +16,21 @@ pub enum Ast {
     ///
     /// This node corresponds to a leaf node of the tree.
     Action(Action),
+    /// Additional action description.
+    ///
+    /// This node can only appear as a child of an action.
+    ActionDescription(Description),
 }
 
 impl Ast {
     /// Return the span of this abstract syntax tree.
     #[must_use]
     pub fn span(&self) -> &Span {
-        match *self {
-            Self::Root(ref x) => &x.span,
-            Self::Condition(ref x) => &x.span,
-            Self::Action(ref x) => &x.span,
+        match self {
+            Self::Root(x) => &x.span,
+            Self::Condition(x) => &x.span,
+            Self::Action(x) => &x.span,
+            Self::ActionDescription(x) => &x.span,
         }
     }
 
@@ -67,8 +72,24 @@ pub struct Condition {
 pub struct Action {
     /// The title of this action.
     ///
-    /// For example: "it should revert"
+    /// For example: "It should revert."
     pub title: String,
+    /// The span that encompasses this node.
+    pub span: Span,
+    /// The children AST nodes of this node.
+    ///
+    /// For now we only support action description
+    /// nodes.
+    pub children: Vec<Ast>,
+}
+
+/// A description node of the AST.
+#[derive(Debug, PartialEq, Eq)]
+pub struct Description {
+    /// The text of this action.
+    ///
+    /// For example: "Describe your actions."
+    pub text: String,
     /// The span that encompasses this node.
     pub span: Span,
 }

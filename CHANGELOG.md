@@ -2,16 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
-## [unreleased]
+## [0.5.1] - 2023-10-03
 
 ### Bug Fixes
 
 - *(docs)* Update README example
+- *(docs)* Fix typo in the README
 
 
 ### Features
 
 - *(docs)* Mention VSCode extensions (#36)
+- Add support for action descriptions (#44)
 
 
 ### Miscellaneous Tasks

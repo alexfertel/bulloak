@@ -210,7 +210,7 @@ fn fns_match(fn_hir: &hir::FunctionDefinition, fn_sol: &pt::FunctionDefinition) 
         .name
         .clone()
         .is_some_and(|pt::Identifier { ref name, .. }| {
-            name == &fn_hir.identifier && fn_types_match(&fn_hir.ty, &fn_sol.ty)
+            name == &fn_hir.identifier && fn_types_match(&fn_hir.ty, fn_sol.ty)
         })
 }
 
@@ -220,7 +220,7 @@ fn fns_match(fn_hir: &hir::FunctionDefinition, fn_sol: &pt::FunctionDefinition) 
 /// We check that the function types match, even though we know that the
 /// name not matching is enough, since a modifier will never be
 /// named the same as a function per Foundry's best practices.
-const fn fn_types_match(ty_hir: &hir::FunctionTy, ty_sol: &pt::FunctionTy) -> bool {
+const fn fn_types_match(ty_hir: &hir::FunctionTy, ty_sol: pt::FunctionTy) -> bool {
     match ty_hir {
         hir::FunctionTy::Function => matches!(ty_sol, pt::FunctionTy::Function),
         hir::FunctionTy::Modifier => matches!(ty_sol, pt::FunctionTy::Modifier),
@@ -239,11 +239,11 @@ mod tests {
     fn test_fn_types_match() {
         assert!(fn_types_match(
             &hir::FunctionTy::Function,
-            &pt::FunctionTy::Function
+            pt::FunctionTy::Function
         ));
         assert!(fn_types_match(
             &hir::FunctionTy::Modifier,
-            &pt::FunctionTy::Modifier
+            pt::FunctionTy::Modifier
         ));
     }
 

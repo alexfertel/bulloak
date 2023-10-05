@@ -82,6 +82,14 @@ impl Visitor for ModifierDiscoverer {
         // No-op.
         Ok(())
     }
+
+    fn visit_description(
+        &mut self,
+        _description: &ast::Description,
+    ) -> Result<Self::Output, Self::Error> {
+        // No-op.
+        Ok(())
+    }
 }
 
 #[cfg(test)]
