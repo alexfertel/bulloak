@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.2] - 2023-10-05
+
+### Features
+
+- *(check)* Improve violations reporting (#45)
+- *(docs)* Add action descriptions to the README
+
+
 ## [0.5.1] - 2023-10-03
 
 ### Bug Fixes
