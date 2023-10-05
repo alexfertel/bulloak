@@ -17,17 +17,21 @@ fn checks_invalid_structural_match() {
         .join("invalid_sol_structure.tree");
 
     let output = cmd(&binary_path, "check", &tree_path, &[]);
-    let actual = String::from_utf8(output.stderr).unwrap();
+    let stderr = String::from_utf8(output.stderr).unwrap();
+    let actual = stderr
+        .lines()
+        .filter(|line| line.starts_with("check failed:"));
 
-    let expected = r#"Codegen not found: Couldn't find a corresponding element for "givenTheStreamIsCold" in the Solidity file.
-Codegen not found: Couldn't find a corresponding element for "whenTheSenderDoesNotRevert" in the Solidity file.
-Invalid codegen order: Found a matching element for "test_RevertGiven_TheStreamsStatusIsCANCELED", but the order is not correct.
-Invalid codegen order: Found a matching element for "test_RevertGiven_TheStreamsStatusIsSETTLED", but the order is not correct.
-Invalid codegen order: Found a matching element for "test_WhenTheSenderReverts", but the order is not correct.
-Invalid codegen order: Found a matching element for "test_WhenThereIsReentrancy", but the order is not correct."#;
+    let expected = r#"check failed: couldn't find a corresponding element for "givenTheStreamIsCold" in the Solidity file
+check failed: couldn't find a corresponding element for "whenTheSenderDoesNotRevert" in the Solidity file
+check failed: found a matching element for "test_RevertGiven_TheStreamsStatusIsCANCELED" in line 11, but the order is not correct
+check failed: found a matching element for "test_RevertGiven_TheStreamsStatusIsSETTLED" in line 13, but the order is not correct
+check failed: found a matching element for "test_WhenTheSenderReverts" in line 29, but the order is not correct
+check failed: found a matching element for "test_WhenThereIsReentrancy" in line 35, but the order is not correct"#.lines();
 
-    // We trim here because we don't care about ending newlines.
-    assert_eq!(expected.trim(), actual.trim());
+    for (expected, actual) in expected.zip(actual) {
+        assert_eq!(expected, actual);
+    }
 }
 
 #[test]
@@ -37,10 +41,11 @@ fn checks_valid_structural_match() {
     let tree_path = cwd.join("tests").join("check").join("extra_codegen.tree");
 
     let output = cmd(&binary_path, "check", &tree_path, &[]);
-    let actual = String::from_utf8(output.stderr).unwrap();
+    let stderr = String::from_utf8(output.stderr).unwrap();
+    let stdout = String::from_utf8(output.stdout).unwrap();
 
-    // We trim here because we don't care about ending newlines.
-    assert_eq!("", actual);
+    assert_eq!("", stderr);
+    assert!(stdout.contains("All checks completed successfully! No issues found."));
 }
 
 #[test]
@@ -52,8 +57,7 @@ fn checks_missing_sol_file() {
     let output = cmd(&binary_path, "check", &tree_path, &[]);
     let actual = String::from_utf8(output.stderr).unwrap();
 
-    // We trim here because we don't care about ending newlines.
-    assert!(actual.contains("File not found"));
+    assert!(actual.contains("check failed: the file is missing its matching Solidity file"));
     assert!(actual.contains("no_matching_sol.tree"));
 }
 
@@ -66,9 +70,6 @@ fn checks_empty_contract() {
     let output = cmd(&binary_path, "check", &tree_path, &[]);
     let actual = String::from_utf8(output.stderr).unwrap();
 
-    println!("{actual}");
-    // We trim here because we don't care about ending newlines.
-    assert!(actual.contains("Codegen not found"));
-    assert!(actual.contains("test_ShouldNeverRevert"));
-    assert!(actual.contains("test_ShouldNotFindTheSolidityFile"));
+    assert!(actual.contains(r#"check failed: couldn't find a corresponding element for "test_ShouldNeverRevert" in the Solidity file"#));
+    assert!(actual.contains(r#"check failed: couldn't find a corresponding element for "test_ShouldNotFindTheSolidityFile" in the Solidity file"#));
 }

@@ -19,8 +19,6 @@ pub(crate) mod structural_match;
 pub(crate) struct Context<'c> {
     /// The path to the tree file.
     pub(crate) tree_path: &'c str,
-    /// The contents of the tree file.
-    pub(crate) tree_contents: &'c str,
     /// The high-level intermediate representation
     /// of the bulloak tree.
     pub(crate) tree_hir: &'c Hir,

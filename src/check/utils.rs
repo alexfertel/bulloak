@@ -15,3 +15,7 @@ pub(crate) fn offset_to_line_column(content: &str, start: usize) -> (usize, usiz
 
     unreachable!("content.len() > start")
 }
+
+pub(crate) fn offset_to_line(content: &str, start: usize) -> usize {
+    offset_to_line_column(content, start).0
+}

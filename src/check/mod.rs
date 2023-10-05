@@ -45,7 +45,7 @@ impl Check {
             if !sol_path.exists() {
                 let filename = tree_path_str.clone();
                 violations.push(Violation::new(
-                    ViolationKind::FileMissing(filename),
+                    ViolationKind::FileMissing,
                     Location::File(filename),
                 ));
 
@@ -75,7 +75,6 @@ impl Check {
             let ctx = Context {
                 tree_path: &tree_path_str,
                 tree_hir,
-                tree_contents: &tree,
                 sol_path: &sol_path_str,
                 sol_ast,
                 sol_contents: &code,
@@ -85,17 +84,7 @@ impl Check {
             )?);
         }
 
-        if !violations.is_empty() {
-            for violation in violations {
-                eprintln!("{violation}");
-            }
-            std::process::exit(1);
-        } else {
-            println!(
-                "{}",
-                "All checks completed successfully! No issues found.".green()
-            );
-        }
+        exit(violations);
 
         Ok(())
     }
@@ -104,6 +93,33 @@ impl Check {
 fn try_read_to_string(path: &PathBuf) -> Result<String, Violation> {
     fs::read_to_string(path).map_err(|_| {
         let path = path.to_string_lossy().into_owned();
-        Violation::new(ViolationKind::FileUnreadable(path), Location::File(path))
+        Violation::new(ViolationKind::FileUnreadable, Location::File(path))
     })
+}
+
+fn exit(violations: Vec<Violation>) {
+    if violations.is_empty() {
+        println!(
+            "{}",
+            "All checks completed successfully! No issues found.".green()
+        );
+    } else {
+        for violation in &violations {
+            eprint!("{violation}");
+        }
+
+        let pluralized_check = if violations.len() == 1 {
+            "check"
+        } else {
+            "checks"
+        };
+        eprintln!(
+            "\n{}: {} {} failed. See details above.",
+            "error".bold().red(),
+            violations.len(),
+            pluralized_check
+        );
+
+        std::process::exit(1);
+    }
 }
