@@ -195,7 +195,7 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
 
     /// Return a reference to the text being parsed.
     fn text(&self) -> &str {
-        self.text.borrow()
+        self.text
     }
 
     /// Return the character at the current position of the tokenizer.

@@ -8,7 +8,7 @@ use super::location::Location;
 
 /// An error that occurred while checking specification rules between
 /// a tree and a Solidity contract.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Debug)]
 pub(crate) struct Violation {
     /// The kind of violation.
     kind: ViolationKind,
@@ -28,10 +28,10 @@ impl Violation {
 /// NOTE: Adding a variant to this enum most certainly will mean adding a variant to the
 /// `Rules` section of `bulloak`'s README. Please, do not forget to add it if you are
 /// implementing a rule.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Debug)]
 pub(crate) enum ViolationKind {
     /// The corresponding Solidity file does not exist.
-    FileMissing,
+    FileMissing(String),
     /// Couldn't read the corresponding Solidity file.
     FileUnreadable,
     /// Found no matching Solidity contract.
@@ -42,6 +42,8 @@ pub(crate) enum ViolationKind {
     MatchingCodegenMissing(String),
     /// Found an incorrectly ordered element.
     CodegenOrderMismatch(String, usize),
+    /// The parsing of a tree or a Solidity file failed.
+    ParsingFailed(anyhow::Error),
     /// This enum may grow additional variants, so this makes sure clients
     /// don't count on exhaustive matching. (Otherwise, adding a new variant
     /// could break existing code.)
@@ -65,10 +67,15 @@ impl fmt::Display for ViolationKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use self::ViolationKind::{
             CodegenOrderMismatch, ContractMissing, ContractNameNotMatches, FileMissing,
-            FileUnreadable, MatchingCodegenMissing,
+            FileUnreadable, MatchingCodegenMissing, ParsingFailed,
         };
         match self {
-            FileMissing => write!(f, r#"the file is missing its matching Solidity file"#,),
+            FileMissing(filename) => {
+                write!(
+                    f,
+                    "the file is missing its matching Solidity file.\nTry running `bulloak scaffold {filename}`"
+                )
+            }
             FileUnreadable => {
                 write!(f, "bulloak couldn't read the file")
             }
@@ -88,6 +95,8 @@ impl fmt::Display for ViolationKind {
                 f,
                 r#"found a matching element for "{name_in_tree}" in line {line_in_tree}, but the order is not correct"#
             ),
+            ParsingFailed(source) => write!(f, r#"parsing failed: {source}"#),
+
             _ => unreachable!(),
         }
     }

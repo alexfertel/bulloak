@@ -27,20 +27,19 @@ use super::{Checker, Context};
 
 /// An implementation of a structural matching rule.
 ///
-/// Read more at the module-level documentation.
+/// Read more at the [module-level documentation].
 ///
-/// TODO: Add link to module-level documentation.
+/// module-level documentation: self
 pub(crate) struct StructuralMatcher;
 
 impl Checker for StructuralMatcher {
-    fn check(ctx: &Context) -> anyhow::Result<Vec<Violation>> {
+    fn check(ctx: &Context) -> Vec<Violation> {
         let mut violations = vec![];
 
-        let hir = ctx.tree_hir;
         // We currently only support one tree per .tree file, which
         // means that there can only be one contract. This is reflected
         // in the current tree hierarchy of the HIR.
-        let contract_hir = if let Hir::Root(root) = hir {
+        let contract_hir = if let Hir::Root(ref root) = ctx.tree_hir {
             root.children
                 .iter()
                 .find(|&child| matches!(child, Hir::ContractDefinition(_)))
@@ -59,15 +58,15 @@ impl Checker for StructuralMatcher {
             if let Some(Hir::ContractDefinition(contract)) = contract_hir {
                 let violation = Violation::new(
                     ViolationKind::ContractMissing(contract.identifier.clone()),
-                    Location::File(ctx.tree_path.to_owned()),
+                    Location::File(ctx.tree_path.to_string_lossy().into_owned()),
                 );
                 violations.push(violation);
 
-                return Ok(violations);
+                return violations;
             };
 
             // Both contracts are missing, so we're done.
-            return Ok(violations);
+            return violations;
         }
 
         // We know a contract exists in both trees because of the
@@ -87,8 +86,8 @@ impl Checker for StructuralMatcher {
                                 contract_hir.identifier.clone(),
                             ),
                             Location::Code(
-                                ctx.sol_path.to_owned(),
-                                offset_to_line(ctx.sol_contents, contract_sol.loc.start()),
+                                ctx.sol_path.as_path().to_string_lossy().into_owned(),
+                                offset_to_line(&ctx.sol_contents, contract_sol.loc.start()),
                             ),
                         );
                         violations.push(violation);
@@ -101,7 +100,7 @@ impl Checker for StructuralMatcher {
             };
         };
 
-        Ok(violations)
+        violations
     }
 }
 
@@ -128,7 +127,10 @@ fn check_fns_structure(
                 // violation.
                 None => violations.push(Violation::new(
                     ViolationKind::MatchingCodegenMissing(fn_hir.identifier.clone()),
-                    Location::Code(ctx.tree_path.to_owned(), fn_hir.span.start.line),
+                    Location::Code(
+                        ctx.tree_path.to_string_lossy().into_owned(),
+                        fn_hir.span.start.line,
+                    ),
                 )),
             }
         };
@@ -167,8 +169,8 @@ fn check_fns_structure(
                         fn_hir.span.start.line,
                     ),
                     Location::Code(
-                        ctx.sol_path.to_owned(),
-                        offset_to_line(ctx.sol_contents, fn_sol.loc.start()),
+                        ctx.sol_path.to_path_buf().to_string_lossy().into_owned(),
+                        offset_to_line(&ctx.sol_contents, fn_sol.loc.start()),
                     ),
                 ));
             }

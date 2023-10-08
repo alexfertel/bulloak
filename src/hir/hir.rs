@@ -4,7 +4,7 @@ use crate::span::Span;
 
 /// A high-level intermediate representation (HIR) that describes
 /// the semantic structure of a Solidity contract as emitted by `bulloak`.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Hir {
     /// An abstract root node that does not correspond
     /// to any concrete Solidity construct.
@@ -35,14 +35,14 @@ type Identifier = String;
 /// The root HIR node.
 ///
 /// There can only be one root node in any HIR.
-#[derive(Debug, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Root {
     /// The children HIR nodes of this node.
     pub children: Vec<Hir>,
 }
 
 /// A contract definition HIR node.
-#[derive(Debug, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct ContractDefinition {
     /// The contract name.
     pub identifier: Identifier,
@@ -54,7 +54,7 @@ pub struct ContractDefinition {
 ///
 /// Currently, we only care about regular functions (tests)
 /// and modifier functions.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum FunctionTy {
     /// `function`
     Function,
@@ -69,7 +69,7 @@ impl Default for FunctionTy {
 }
 
 /// A function definition HIR node.
-#[derive(Debug, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct FunctionDefinition {
     /// The function name.
     pub identifier: Identifier,
@@ -88,7 +88,7 @@ pub struct FunctionDefinition {
 }
 
 /// A comment node.
-#[derive(Debug, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Comment {
     /// The contract name.
     pub lexeme: String,
