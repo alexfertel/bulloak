@@ -103,3 +103,17 @@ fn checks_contract_name_mismatch() {
 
     assert!(actual.contains(r#"check failed: couldn't find a corresponding contract for "ADifferentName" in the Solidity file. Found "ContractName""#));
 }
+
+#[test]
+fn checks_invalid_tree() {
+    let cwd = env::current_dir().unwrap();
+    let binary_path = get_binary_path();
+    let tree_path = cwd.join("tests").join("check").join("invalid.tree");
+
+    let output = cmd(&binary_path, "check", &tree_path, &[]);
+    let actual = String::from_utf8(output.stderr).unwrap();
+
+    assert!(actual.contains(
+        r#"check failed: an error occurred while parsing the tree: unexpected token '├'"#
+    ));
+}

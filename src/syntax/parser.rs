@@ -95,14 +95,14 @@ impl fmt::Display for ErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use self::ErrorKind::*;
         match self {
-            TokenUnexpected(lexeme) => write!(f, "unexpected token: {lexeme}"),
+            TokenUnexpected(lexeme) => write!(f, "unexpected token '{lexeme}'"),
             DescriptionTokenUnexpected(lexeme) => {
-                write!(f, "unexpected token in description: {lexeme}")
+                write!(f, "unexpected token in description '{lexeme}'")
             }
             WhenUnexpected => write!(f, "unexpected `when` keyword"),
             GivenUnexpected => write!(f, "unexpected `given` keyword"),
             ItUnexpected => write!(f, "unexpected `it` keyword"),
-            WordUnexpected(lexeme) => write!(f, "unexpected `word`: {lexeme}"),
+            WordUnexpected(lexeme) => write!(f, "unexpected `word` '{lexeme}'"),
             EofUnexpected => write!(f, "unexpected end of file"),
             TreeEmpty => write!(f, "found an empty tree"),
             TreeRootless => write!(f, "missing a root"),

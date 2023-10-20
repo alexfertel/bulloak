@@ -36,16 +36,16 @@ pub(crate) struct Context {
 impl Context {
     pub(crate) fn new(tree_path: PathBuf) -> Result<Self, Violation> {
         let tree_path_cow = tree_path.to_string_lossy();
-        let sol_path = get_path_with_ext(&tree_path, "t.sol")?;
-
         let tree_contents = try_read_to_string(&tree_path)?;
-        let sol_contents = try_read_to_string(&sol_path)?;
         let tree_hir = crate::hir::translate(&tree_contents).map_err(|e| {
             Violation::new(
                 ViolationKind::ParsingFailed(e),
                 Location::File(tree_path_cow.into_owned()),
             )
         })?;
+
+        let sol_path = get_path_with_ext(&tree_path, "t.sol")?;
+        let sol_contents = try_read_to_string(&sol_path)?;
         let (sol_ast, _) =
             solang_parser::parse(&sol_contents, 0).expect("should parse the Solidity file");
 

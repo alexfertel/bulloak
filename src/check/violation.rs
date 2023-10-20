@@ -2,6 +2,7 @@
 
 use std::fmt;
 
+use crate::error;
 use crate::utils::repeat_str;
 
 use super::location::Location;
@@ -95,7 +96,29 @@ impl fmt::Display for ViolationKind {
                 f,
                 r#"found a matching element for "{name_in_tree}" in line {line_in_tree}, but the order is not correct"#
             ),
-            ParsingFailed(source) => write!(f, r#"parsing failed: {source}"#),
+            ParsingFailed(error) => {
+                if let Some(error) = error.downcast_ref::<error::Error>() {
+                    return match error {
+                        error::Error::Tokenize(error) => write!(
+                            f,
+                            "an error occurred while parsing the tree: {}",
+                            error.kind()
+                        ),
+                        error::Error::Parse(error) => write!(
+                            f,
+                            "an error occurred while parsing the tree: {}",
+                            error.kind()
+                        ),
+                        error::Error::Semantic(_) => write!(
+                            f,
+                            "at least one semantic error occured while parsing the tree"
+                        ),
+                        _ => Ok(()),
+                    };
+                }
+
+                Ok(())
+            }
 
             _ => unreachable!(),
         }
