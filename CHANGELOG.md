@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.3] - 2023-10-20
+
+### Bug Fixes
+
+- Properly handle a few violation edge-cases
+
+
+### Miscellaneous Tasks
+
+- *(docs)* Update bulloak's small description
+
+
+### Refactor
+
+- *(check)* Simplify context creation
+
+
 ## [0.5.2] - 2023-10-05
 
 ### Features
