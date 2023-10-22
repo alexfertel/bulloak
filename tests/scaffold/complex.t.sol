@@ -189,7 +189,7 @@ contract CancelTest {
     _;
   }
 
-  function test_WhenThereIsReentrancy()
+  function test_WhenThereIsReentrancy1()
     external
     whenNotDelegateCalled
     givenTheIdDoesNotReferenceANullStream
@@ -208,7 +208,7 @@ contract CancelTest {
     // it should ignore the revert
   }
 
-  function test_WhenThereIsNoReentrancy()
+  function test_WhenThereIsNoReentrancy1()
     external
     whenNotDelegateCalled
     givenTheIdDoesNotReferenceANullStream
@@ -296,7 +296,7 @@ contract CancelTest {
     _;
   }
 
-  function test_WhenThereIsReentrancy()
+  function test_WhenThereIsReentrancy2()
     external
     whenNotDelegateCalled
     givenTheIdDoesNotReferenceANullStream
@@ -315,7 +315,7 @@ contract CancelTest {
     // it should ignore the revert
   }
 
-  function test_WhenThereIsNoReentrancy()
+  function test_WhenThereIsNoReentrancy2()
     external
     whenNotDelegateCalled
     givenTheIdDoesNotReferenceANullStream
