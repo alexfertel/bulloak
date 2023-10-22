@@ -114,6 +114,8 @@ fn check_fns_structure(
 ) -> Vec<Violation> {
     let mut violations = Vec::new();
 
+    // Check that hir functions are present in the solidity contract. Store
+    // their indices for later processing.
     let mut present_fn_indices = Vec::with_capacity(contract_hir.children.len());
     for (hir_idx, fn_hir) in contract_hir.children.iter().enumerate() {
         if let Hir::FunctionDefinition(fn_hir) = fn_hir {
@@ -142,8 +144,8 @@ fn check_fns_structure(
         return violations;
     }
 
-    // We need to check for inversions in order to know if the order is wrong.
     let mut unsorted_set: BTreeSet<(usize, usize)> = BTreeSet::new();
+    // We need to check for inversions in order to know if the order is wrong.
     for i in 0..present_fn_indices.len() - 1 {
         let (i_hir_idx, i_sol_idx) = present_fn_indices[i];
         // Everything that's less than the current item is unsorted.
@@ -180,10 +182,8 @@ fn check_fns_structure(
     violations
 }
 
-/// Performs a search over the sol contract parts trying to find
-/// the matching bulloak function.
-///
-/// Two functions match if they have the same name and their types match.
+/// Given a HIR function, `find_matching_fn` performs a search over the sol
+/// contract parts trying to find a sol function with a matching name and type.
 fn find_matching_fn<'a>(
     contract_sol: &'a pt::ContractDefinition,
     fn_hir: &'a hir::FunctionDefinition,
