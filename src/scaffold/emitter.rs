@@ -156,7 +156,7 @@ impl<'s> Visitor for EmitterI<'s> {
 
     fn visit_root(&mut self, root: &hir::Root) -> result::Result<Self::Output, Self::Error> {
         let mut emitted = String::new();
-
+        emitted.push_str(&format!("// SPDX-License-Identifier: UNLICENSED\n\n").as_str());
         emitted.push_str(&format!(
             "pragma solidity {};\n\n",
             self.emitter.solidity_version
