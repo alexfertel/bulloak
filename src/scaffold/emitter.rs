@@ -156,7 +156,7 @@ impl<'s> Visitor for EmitterI<'s> {
 
     fn visit_root(&mut self, root: &hir::Root) -> result::Result<Self::Output, Self::Error> {
         let mut emitted = String::new();
-        emitted.push_str(&format!("// SPDX-License-Identifier: UNLICENSED\n\n").as_str());
+        emitted.push_str(&format!("// SPDX-License-Identifier: UNLICENSED\n").as_str());
         emitted.push_str(&format!(
             "pragma solidity {};\n\n",
             self.emitter.solidity_version
@@ -276,7 +276,6 @@ mod tests {
         assert_eq!(
             &scaffold(&file_contents)?,
             r"// SPDX-License-Identifier: UNLICENSED
-
 pragma solidity 0.8.0;
 
 contract FileTest {
@@ -293,7 +292,6 @@ contract FileTest {
         assert_eq!(
             &scaffold(&file_contents)?,
             r"// SPDX-License-Identifier: UNLICENSED
-
 pragma solidity 0.8.0;
 
 contract FileTest {
@@ -314,7 +312,6 @@ contract FileTest {
         assert_eq!(
             &scaffold_with_flags(&file_contents, false, 2, "0.8.0")?,
             r"// SPDX-License-Identifier: UNLICENSED
-
 pragma solidity 0.8.0;
 
 contract FileTest {
@@ -333,7 +330,6 @@ contract FileTest {
         assert_eq!(
             &scaffold_with_flags(&file_contents, true, 2, "0.8.0")?,
             r"// SPDX-License-Identifier: UNLICENSED
-
 pragma solidity 0.8.0;
 
 contract FileTest {
@@ -357,7 +353,6 @@ contract FileTest {
         assert_eq!(
             &scaffold_with_flags(&file_contents, true, 2, "0.8.0")?,
             r"// SPDX-License-Identifier: UNLICENSED
-
 pragma solidity 0.8.0;
 
 contract FileTest {
@@ -382,7 +377,6 @@ contract FileTest {
         assert_eq!(
             &scaffold_with_flags(&file_contents, true, 2, "0.8.0")?,
             r"// SPDX-License-Identifier: UNLICENSED
-
 pragma solidity 0.8.0;
 
 contract FileTest {
@@ -411,7 +405,6 @@ contract FileTest {
         assert_eq!(
             &scaffold_with_flags(&file_contents, false, 2, "0.8.0")?,
             r"// SPDX-License-Identifier: UNLICENSED
-
 pragma solidity 0.8.0;
 
 contract Fi_eTest {
@@ -431,7 +424,6 @@ contract Fi_eTest {
         assert_eq!(
             &scaffold_with_flags(&file_contents, false, 4, "0.8.0")?,
             r"// SPDX-License-Identifier: UNLICENSED
-
 pragma solidity 0.8.0;
 
 contract FileTest {
@@ -456,7 +448,6 @@ contract FileTest {
         assert_eq!(
             &scaffold(&file_contents)?,
             r"// SPDX-License-Identifier: UNLICENSED
-
 pragma solidity 0.8.0;
 
 contract TwoChildren_Test {
@@ -490,7 +481,6 @@ Foo_Test
         assert_eq!(
             &scaffold(&file_contents)?,
             r"// SPDX-License-Identifier: UNLICENSED
-
 pragma solidity 0.8.0;
 
 contract Foo_Test {
@@ -539,7 +529,6 @@ contract Foo_Test {
         assert_eq!(
             &scaffold(&file_contents)?,
             r"// SPDX-License-Identifier: UNLICENSED
-
 pragma solidity 0.8.0;
 
 contract ActionsTest {
@@ -568,7 +557,6 @@ contract ActionsTest {
         assert_eq!(
             &scaffold(&file_contents)?,
             r"// SPDX-License-Identifier: UNLICENSED
-
 pragma solidity 0.8.0;
 
 contract DescriptionsTest {
@@ -614,7 +602,6 @@ contract DescriptionsTest {
         assert_eq!(
             &scaffold(&file_contents)?,
             r"// SPDX-License-Identifier: UNLICENSED
-
 pragma solidity 0.8.0;
 
 contract DeepTest {
