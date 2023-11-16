@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.4] - 2023-11-16
+
+### Bug Fixes
+
+- *(scaffold)* Error when a duplicated condition is found
+- *(tests)* Remove duplicated branches from complex.tree
+- Stop ignoring Cargo.lock
+
+
+### Features
+
+- *(docs)* Add a few comments to structural_match.rs
+- *(emitter)* Emit dummy SPDX identifier (#47)
+
+
 ## [0.5.3] - 2023-10-20
 
 ### Bug Fixes
