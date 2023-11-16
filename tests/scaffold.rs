@@ -61,3 +61,19 @@ fn errors_when_tree_is_empty() {
         assert!(actual.contains("found an empty tree"));
     }
 }
+
+#[test]
+fn errors_when_condition_appears_multiple_times() {
+    let cwd = env::current_dir().unwrap();
+    let binary_path = get_binary_path();
+    let tests_path = cwd.join("tests").join("scaffold");
+    let trees = ["duplicated_condition.tree"];
+
+    for tree_name in trees {
+        let tree_path = tests_path.join(tree_name);
+        let output = cmd(&binary_path, "scaffold", &tree_path, &[]);
+        let actual = String::from_utf8(output.stderr).unwrap();
+
+        assert!(actual.contains("found a condition more than once"));
+    }
+}

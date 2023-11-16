@@ -16,8 +16,7 @@ use crate::utils::{lower_first_letter, to_pascal_case};
 /// `when only owner` is converted to the `whenOnlyOwner` modifier.
 ///
 /// For ease of retrieval, the discovered modifiers are stored in a `IndexMap`
-/// for the later phases of the compiler. Note that this means that
-/// we assume that duplicate titles translate to the same modifier.
+/// for the later phases of the compiler.
 /// `IndexMap` was chosen since preserving the order of insertion
 /// to match the order of the modifiers in the source tree is helpful
 /// and the performance trade-off is negligible.
