@@ -28,10 +28,6 @@ pub struct Scaffold {
     #[arg(short = 'c', default_value = "true")]
     with_actions_as_comments: bool,
 
-    /// The indentation of the output code.
-    #[arg(short = 'i', default_value = "2")]
-    indent: usize,
-
     /// Whether to write to files instead of stdout.
     ///
     /// This will write the output for each input file to the file
@@ -53,11 +49,7 @@ pub struct Scaffold {
 
 impl Scaffold {
     pub fn run(self) -> anyhow::Result<()> {
-        let scaffolder = Scaffolder::new(
-            self.with_actions_as_comments,
-            self.indent,
-            &self.solidity_version,
-        );
+        let scaffolder = Scaffolder::new(self.with_actions_as_comments, &self.solidity_version);
 
         // For each input file, compile it and print it or write it
         // to the filesystem.
@@ -109,14 +101,14 @@ impl Scaffold {
     }
 }
 
+const INTERNAL_DEFAULT_INDENTATION: usize = 2;
+
 /// The overarching struct that generates Solidity
 /// code from a `.tree` file.
 pub struct Scaffolder<'s> {
     /// Whether to print `it` branches as comments
     /// in the output code.
     with_comments: bool,
-    /// The indentation of the output code.
-    indent: usize,
     /// Sets a Solidity version for the test contracts.
     solidity_version: &'s str,
 }
@@ -124,10 +116,9 @@ pub struct Scaffolder<'s> {
 impl<'s> Scaffolder<'s> {
     /// Creates a new scaffolder with the provided configuration.
     #[must_use]
-    pub fn new(with_comments: bool, indent: usize, solidity_version: &'s str) -> Self {
+    pub fn new(with_comments: bool, solidity_version: &'s str) -> Self {
         Scaffolder {
             with_comments,
-            indent,
             solidity_version,
         }
     }
@@ -138,8 +129,12 @@ impl<'s> Scaffolder<'s> {
         let mut discoverer = modifiers::ModifierDiscoverer::new();
         let modifiers = discoverer.discover(&ast);
         let hir = translator::Translator::new().translate(&ast, modifiers);
-        let emitted = emitter::Emitter::new(self.with_comments, self.indent, self.solidity_version)
-            .emit(&hir);
+        let emitted = emitter::Emitter::new(
+            self.with_comments,
+            INTERNAL_DEFAULT_INDENTATION,
+            self.solidity_version,
+        )
+        .emit(&hir);
 
         Ok(emitted)
     }
