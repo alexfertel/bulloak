@@ -22,6 +22,7 @@ name = "bulloak"
 [dependencies]
 anyhow = "1.0.75"
 clap = { version = "4.3.19", features = ["derive"] }
+forge-fmt = "0.2.0"
 indexmap = "2.0.0"
 owo-colors = "3.5.0"
 solang-parser = "0.3.2"

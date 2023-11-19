@@ -43,7 +43,7 @@ mod tests {
     use super::to_pascal_case;
 
     #[test]
-    fn test_to_modifier() {
+    fn to_modifier() {
         assert_eq!(to_pascal_case("when only owner"), "WhenOnlyOwner");
         assert_eq!(to_pascal_case("when"), "When");
         assert_eq!(to_pascal_case(""), "");

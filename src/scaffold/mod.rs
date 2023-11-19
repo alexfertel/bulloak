@@ -5,6 +5,7 @@
 use std::{fs, path::PathBuf};
 
 use clap::Parser;
+use forge_fmt::fmt;
 use owo_colors::OwoColorize;
 
 use crate::{hir::translator, syntax};
@@ -64,6 +65,11 @@ impl Scaffold {
             let text = fs::read_to_string(file)?;
             match scaffolder.scaffold(&text) {
                 Ok(emitted) => {
+                    let emitted = fmt(&emitted).unwrap_or_else(|e| {
+                        eprintln!("{}: {}", "WARN".yellow(), e);
+                        emitted
+                    });
+
                     if self.write_files {
                         let mut output_path = file.clone();
 
