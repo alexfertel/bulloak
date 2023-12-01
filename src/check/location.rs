@@ -12,6 +12,14 @@ pub(crate) enum Location {
     File(Filename),
 }
 
+impl Location {
+    pub(crate) fn file(&self) -> String {
+        match self {
+            Location::Code(file, _) | Location::File(file) => file.clone(),
+        }
+    }
+}
+
 impl fmt::Display for Location {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {

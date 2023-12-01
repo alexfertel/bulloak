@@ -49,6 +49,7 @@ type Lexeme = String;
 
 /// The type of an error that occurred while building an AST.
 #[derive(Clone, Debug, Eq, PartialEq)]
+#[non_exhaustive]
 pub enum ErrorKind {
     /// This might happen because of an internal bug or the user
     /// might have passed an invalid .tree.
@@ -78,11 +79,6 @@ pub enum ErrorKind {
     CornerNotLastChild,
     /// A tee is the last child.
     TeeLastChild,
-    /// This enum may grow additional variants, so this makes sure clients
-    /// don't count on exhaustive matching. (Otherwise, adding a new variant
-    /// could break existing code.)
-    #[doc(hidden)]
-    __Nonexhaustive,
 }
 
 impl fmt::Display for Error {
@@ -93,7 +89,11 @@ impl fmt::Display for Error {
 
 impl fmt::Display for ErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        use self::ErrorKind::*;
+        use self::ErrorKind::{
+            CornerNotLastChild, DescriptionTokenUnexpected, EofUnexpected, GivenUnexpected,
+            ItUnexpected, TeeLastChild, TitleMissing, TokenUnexpected, TreeEmpty, TreeRootless,
+            WhenUnexpected, WordUnexpected,
+        };
         match self {
             TokenUnexpected(lexeme) => write!(f, "unexpected token '{lexeme}'"),
             DescriptionTokenUnexpected(lexeme) => {
@@ -109,7 +109,6 @@ impl fmt::Display for ErrorKind {
             TitleMissing => write!(f, "found a condition/action without a title"),
             CornerNotLastChild => write!(f, "a `Corner` must be the last child"),
             TeeLastChild => write!(f, "a `Tee` must not be the last child"),
-            _ => unreachable!(),
         }
     }
 }
@@ -810,7 +809,7 @@ mod tests {
                         span: s(p(52, 3, 4), p(77, 3, 23)),
                         children: vec![]
                     })],
-                }),],
+                })],
             })
         );
     }

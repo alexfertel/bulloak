@@ -17,7 +17,7 @@ use crate::utils::{capitalize_first_letter, sanitize};
 pub struct Translator;
 
 impl Translator {
-    /// Create a new translator with the given Solidity version.
+    /// Create a new translator.
     #[must_use]
     pub const fn new() -> Self {
         Self {}

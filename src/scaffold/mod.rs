@@ -8,7 +8,8 @@ use clap::Parser;
 use forge_fmt::fmt;
 use owo_colors::OwoColorize;
 
-use crate::{hir::translator, syntax};
+use crate::constants::INTERNAL_DEFAULT_SOL_VERSION;
+use crate::{hir, sol, syntax};
 
 pub mod emitter;
 pub mod modifiers;
@@ -22,34 +23,26 @@ pub struct Scaffold {
     /// Each Solidity file will be named after its matching
     /// tree spec.
     files: Vec<PathBuf>,
-
-    /// Whether to print `it` branches as comments
-    /// in the output code.
-    #[arg(short = 'c', default_value = "true")]
-    with_actions_as_comments: bool,
-
     /// Whether to write to files instead of stdout.
     ///
     /// This will write the output for each input file to the file
     /// specified at the root of the input file if the output file
     /// doesn't already exist. To overwrite, use `--force-write`
     /// together with `--write-files`.
-    #[arg(short = 'w', long, group = "file-handling")]
+    #[arg(short = 'w', long, group = "file-handling", default_value = "false")]
     write_files: bool,
-
-    /// When `write_files` is specified, use `--force-write` to
+    /// When `--write-files` is passed, use `--force-write` to
     /// overwrite the output files.
     #[arg(short = 'f', long, requires = "file-handling", default_value = "false")]
     force_write: bool,
-
     /// Sets a Solidity version for the test contracts.
-    #[arg(short = 's', long, default_value = "0.8.0")]
+    #[arg(short = 's', long, default_value = INTERNAL_DEFAULT_SOL_VERSION)]
     solidity_version: String,
 }
 
 impl Scaffold {
     pub fn run(self) -> anyhow::Result<()> {
-        let scaffolder = Scaffolder::new(self.with_actions_as_comments, &self.solidity_version);
+        let scaffolder = Scaffolder::new(&self.solidity_version);
 
         // For each input file, compile it and print it or write it
         // to the filesystem.
@@ -101,14 +94,9 @@ impl Scaffold {
     }
 }
 
-const INTERNAL_DEFAULT_INDENTATION: usize = 2;
-
 /// The overarching struct that generates Solidity
 /// code from a `.tree` file.
 pub struct Scaffolder<'s> {
-    /// Whether to print `it` branches as comments
-    /// in the output code.
-    with_comments: bool,
     /// Sets a Solidity version for the test contracts.
     solidity_version: &'s str,
 }
@@ -116,11 +104,8 @@ pub struct Scaffolder<'s> {
 impl<'s> Scaffolder<'s> {
     /// Creates a new scaffolder with the provided configuration.
     #[must_use]
-    pub fn new(with_comments: bool, solidity_version: &'s str) -> Self {
-        Scaffolder {
-            with_comments,
-            solidity_version,
-        }
+    pub fn new(solidity_version: &'s str) -> Self {
+        Scaffolder { solidity_version }
     }
 
     /// Generates Solidity code from a `.tree` file.
@@ -128,14 +113,11 @@ impl<'s> Scaffolder<'s> {
         let ast = syntax::parse(text)?;
         let mut discoverer = modifiers::ModifierDiscoverer::new();
         let modifiers = discoverer.discover(&ast);
-        let hir = translator::Translator::new().translate(&ast, modifiers);
-        let emitted = emitter::Emitter::new(
-            self.with_comments,
-            INTERNAL_DEFAULT_INDENTATION,
-            self.solidity_version,
-        )
-        .emit(&hir);
+        let hir = hir::translator::Translator::new().translate(&ast, modifiers);
+        let pt = sol::Translator::new(self.solidity_version).translate(&hir);
+        let source = sol::Formatter::new().emit(pt);
+        let formatted = fmt(&source).expect("should format the emitted solidity code");
 
-        Ok(emitted)
+        Ok(formatted)
     }
 }

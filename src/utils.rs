@@ -38,6 +38,14 @@ pub(crate) fn repeat_str(s: &str, n: usize) -> String {
     s.repeat(n)
 }
 
+pub(crate) fn pluralize<'a>(count: usize, singular: &'a str, plural: &'a str) -> &'a str {
+    if count == 1 {
+        singular
+    } else {
+        plural
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::to_pascal_case;

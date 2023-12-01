@@ -11,9 +11,6 @@ use crate::utils::sanitize;
 /// This struct holds the state of the emitter. It is not
 /// tied to a specific HIR.
 pub struct Emitter<'s> {
-    /// This flag determines whether actions are emitted as comments
-    /// in the body of functions.
-    with_actions_as_comments: bool,
     /// The indentation level of the emitted code.
     indent: usize,
     /// The Solidity version to be used in the pragma directive.
@@ -23,9 +20,8 @@ pub struct Emitter<'s> {
 impl<'s> Emitter<'s> {
     /// Create a new emitter with the given configuration.
     #[must_use]
-    pub fn new(with_actions_as_comments: bool, indent: usize, solidity_version: &'s str) -> Self {
+    pub fn new(indent: usize, solidity_version: &'s str) -> Self {
         Self {
-            with_actions_as_comments,
             indent,
             solidity_version,
         }
@@ -61,12 +57,15 @@ impl<'s> EmitterI<'s> {
 
     /// Emit Solidity code from the given HIR.
     ///
-    /// This function is the entry point of the emitter.
+    /// This function is the entry point of the emitter. It is fine to unwrap
+    /// here since emitting can't fail, otherwise a previous phase of the
+    /// compiler is buggy.
     fn emit(&mut self, hir: &hir::Hir) -> String {
         match hir {
-            Hir::Root(ref root) => self.visit_root(root).unwrap(),
-            // Emitting subtrees is not supported.
-            _ => unreachable!(),
+            Hir::Root(ref inner) => self.visit_root(inner).unwrap(),
+            Hir::ContractDefinition(ref inner) => self.visit_contract(inner).unwrap(),
+            Hir::FunctionDefinition(ref inner) => self.visit_function(inner).unwrap(),
+            Hir::Comment(ref inner) => self.visit_comment(inner).unwrap(),
         }
     }
 
@@ -151,12 +150,15 @@ impl<'s> EmitterI<'s> {
 /// passes ensure that the HIR is valid. In case an error
 /// is found, it should be added to a previous pass.
 impl<'s> Visitor for EmitterI<'s> {
-    type Output = String;
+    type RootOutput = String;
+    type ContractDefinitionOutput = String;
+    type FunctionDefinitionOutput = String;
+    type CommentOutput = String;
     type Error = ();
 
-    fn visit_root(&mut self, root: &hir::Root) -> result::Result<Self::Output, Self::Error> {
+    fn visit_root(&mut self, root: &hir::Root) -> result::Result<Self::RootOutput, Self::Error> {
         let mut emitted = String::new();
-        emitted.push_str(&format!("// SPDX-License-Identifier: UNLICENSED\n").as_str());
+        emitted.push_str("// SPDX-License-Identifier: UNLICENSED\n");
         emitted.push_str(&format!(
             "pragma solidity {};\n\n",
             self.emitter.solidity_version
@@ -177,7 +179,7 @@ impl<'s> Visitor for EmitterI<'s> {
     fn visit_contract(
         &mut self,
         contract: &hir::ContractDefinition,
-    ) -> result::Result<Self::Output, Self::Error> {
+    ) -> result::Result<Self::ContractDefinitionOutput, Self::Error> {
         let mut emitted = String::new();
 
         let contract_header = self.emit_contract_header(contract);
@@ -200,7 +202,7 @@ impl<'s> Visitor for EmitterI<'s> {
     fn visit_function(
         &mut self,
         function: &hir::FunctionDefinition,
-    ) -> result::Result<Self::Output, Self::Error> {
+    ) -> result::Result<Self::FunctionDefinitionOutput, Self::Error> {
         let mut emitted = String::new();
 
         if matches!(function.ty, hir::FunctionTy::Modifier) {
@@ -227,13 +229,10 @@ impl<'s> Visitor for EmitterI<'s> {
     fn visit_comment(
         &mut self,
         comment: &hir::Comment,
-    ) -> result::Result<Self::Output, Self::Error> {
+    ) -> result::Result<Self::CommentOutput, Self::Error> {
         let mut emitted = String::new();
-
-        if self.emitter.with_actions_as_comments {
-            let indentation = self.emitter.indent().repeat(2);
-            emitted.push_str(format!("{}// {}\n", indentation, comment.lexeme).as_str());
-        }
+        let indentation = self.emitter.indent().repeat(2);
+        emitted.push_str(format!("{}// {}\n", indentation, comment.lexeme).as_str());
 
         Ok(emitted)
     }
@@ -243,6 +242,7 @@ impl<'s> Visitor for EmitterI<'s> {
 mod tests {
     use pretty_assertions::assert_eq;
 
+    use crate::constants::INTERNAL_DEFAULT_SOL_VERSION;
     use crate::error::Result;
     use crate::hir::translator::Translator;
     use crate::scaffold::emitter;
@@ -250,26 +250,21 @@ mod tests {
     use crate::syntax::parser::Parser;
     use crate::syntax::tokenizer::Tokenizer;
 
-    fn scaffold_with_flags(
-        text: &str,
-        with_comments: bool,
-        indent: usize,
-        version: &str,
-    ) -> Result<String> {
+    fn scaffold_with_flags(text: &str, indent: usize, version: &str) -> Result<String> {
         let tokens = Tokenizer::new().tokenize(&text)?;
         let ast = Parser::new().parse(&text, &tokens)?;
         let mut discoverer = modifiers::ModifierDiscoverer::new();
         let modifiers = discoverer.discover(&ast);
         let hir = Translator::new().translate(&ast, modifiers);
-        Ok(emitter::Emitter::new(with_comments, indent, version).emit(&hir))
+        Ok(emitter::Emitter::new(indent, version).emit(&hir))
     }
 
     fn scaffold(text: &str) -> Result<String> {
-        scaffold_with_flags(text, true, 2, "0.8.0")
+        scaffold_with_flags(text, 2, INTERNAL_DEFAULT_SOL_VERSION)
     }
 
     #[test]
-    fn test_one_child() -> Result<()> {
+    fn one_child() -> Result<()> {
         let file_contents =
             String::from("FileTest\n└── when something bad happens\n   └── it should not revert");
 
@@ -305,30 +300,11 @@ contract FileTest {
     }
 
     #[test]
-    fn test_without_actions_as_comments() -> Result<()> {
-        let file_contents =
-            String::from("FileTest\n└── when something bad happens\n   └── it should not revert");
-
-        assert_eq!(
-            &scaffold_with_flags(&file_contents, false, 2, "0.8.0")?,
-            r"// SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.0;
-
-contract FileTest {
-  function test_WhenSomethingBadHappens() external {
-  }
-}"
-        );
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_actions_without_conditions() -> Result<()> {
+    fn actions_without_conditions() -> Result<()> {
         let file_contents = String::from("FileTest\n├── it should do st-ff\n└── It never reverts.");
 
         assert_eq!(
-            &scaffold_with_flags(&file_contents, true, 2, "0.8.0")?,
+            &scaffold_with_flags(&file_contents, 2, INTERNAL_DEFAULT_SOL_VERSION)?,
             r"// SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.0;
 
@@ -351,7 +327,7 @@ contract FileTest {
         );
 
         assert_eq!(
-            &scaffold_with_flags(&file_contents, true, 2, "0.8.0")?,
+            &scaffold_with_flags(&file_contents, 2, INTERNAL_DEFAULT_SOL_VERSION)?,
             r"// SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.0;
 
@@ -375,7 +351,7 @@ contract FileTest {
         );
 
         assert_eq!(
-            &scaffold_with_flags(&file_contents, true, 2, "0.8.0")?,
+            &scaffold_with_flags(&file_contents, 2, INTERNAL_DEFAULT_SOL_VERSION)?,
             r"// SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.0;
 
@@ -398,17 +374,18 @@ contract FileTest {
     }
 
     #[test]
-    fn test_unsanitized_input() -> Result<()> {
+    fn unsanitized_input() -> Result<()> {
         let file_contents =
             String::from("Fi-eTest\n└── when something bad happens\n   └── it should not revert");
 
         assert_eq!(
-            &scaffold_with_flags(&file_contents, false, 2, "0.8.0")?,
+            &scaffold_with_flags(&file_contents, 2, INTERNAL_DEFAULT_SOL_VERSION)?,
             r"// SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.0;
 
 contract Fi_eTest {
   function test_WhenSomethingBadHappens() external {
+    // it should not revert
   }
 }"
         );
@@ -417,17 +394,18 @@ contract Fi_eTest {
     }
 
     #[test]
-    fn test_indentation() -> Result<()> {
+    fn indentation() -> Result<()> {
         let file_contents =
             String::from("FileTest\n└── when something bad happens\n   └── it should not revert");
 
         assert_eq!(
-            &scaffold_with_flags(&file_contents, false, 4, "0.8.0")?,
+            &scaffold_with_flags(&file_contents, 4, INTERNAL_DEFAULT_SOL_VERSION)?,
             r"// SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.0;
 
 contract FileTest {
     function test_WhenSomethingBadHappens() external {
+        // it should not revert
     }
 }"
         );
@@ -436,7 +414,7 @@ contract FileTest {
     }
 
     #[test]
-    fn test_two_children() -> Result<()> {
+    fn two_children() -> Result<()> {
         let file_contents = String::from(
             r"TwoChildren_Test
 ├── when stuff called
@@ -465,7 +443,7 @@ contract TwoChildren_Test {
     }
 
     #[test]
-    fn test_action_with_sibling_condition() -> Result<()> {
+    fn action_with_sibling_condition() -> Result<()> {
         let file_contents = String::from(
             r"
 Foo_Test
@@ -516,7 +494,7 @@ contract Foo_Test {
     }
 
     #[test]
-    fn test_action_recollection() -> Result<()> {
+    fn action_recollection() -> Result<()> {
         let file_contents = String::from(
             r"ActionsTest
 └── when stuff called
@@ -573,7 +551,7 @@ contract DescriptionsTest {
     }
 
     #[test]
-    fn test_deep_tree() -> Result<()> {
+    fn deep_tree() -> Result<()> {
         let file_contents = String::from(
             r#"DeepTest
 ├── when stuff called

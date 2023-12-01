@@ -22,7 +22,7 @@ pub fn run() -> anyhow::Result<()> {
     let config = Cli::parse();
     match config.command {
         Commands::Scaffold(command) => command.run(),
-        Commands::Check(command) => command.run(),
+        Commands::Check(command) => Ok(command.run()),
     }?;
 
     Ok(())

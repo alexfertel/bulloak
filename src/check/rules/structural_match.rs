@@ -21,6 +21,8 @@ use crate::{
         violation::{Violation, ViolationKind},
     },
     hir::{self, Hir},
+    sol::{find_contract, find_matching_fn},
+    utils::sanitize,
 };
 
 use super::{Checker, Context};
@@ -39,73 +41,72 @@ impl Checker for StructuralMatcher {
         // We currently only support one tree per .tree file, which
         // means that there can only be one contract. This is reflected
         // in the current tree hierarchy of the HIR.
-        let contract_hir = if let Hir::Root(ref root) = ctx.tree_hir {
-            root.children
+        let contract_hir = match ctx.hir {
+            Hir::Root(ref root) => root
+                .children
                 .iter()
-                .find(|&child| matches!(child, Hir::ContractDefinition(_)))
-        } else {
-            None
+                .find(|&child| matches!(child, Hir::ContractDefinition(_))),
+            _ => None,
         };
 
-        let pt = &ctx.sol_ast.0;
         // Find the first occurrence of a contract.
-        let contract_sol = pt
-            .iter()
-            .find(|&part| matches!(part, pt::SourceUnitPart::ContractDefinition(_)));
-        // If we find no contract in the Solidity file, then we check
-        // if there is no contract in the HIR, else we found a violation.
+        let contract_sol = find_contract(&ctx.pt);
+        // If we find no contract in the Solidity file, then there must
+        // be no contract in the HIR, else we found a violation.
         if contract_sol.is_none() {
             if let Some(Hir::ContractDefinition(contract)) = contract_hir {
                 let violation = Violation::new(
                     ViolationKind::ContractMissing(contract.identifier.clone()),
-                    Location::File(ctx.tree_path.to_string_lossy().into_owned()),
+                    Location::File(ctx.tree.to_string_lossy().into_owned()),
                 );
                 violations.push(violation);
-
-                return violations;
             };
 
-            // Both contracts are missing, so we're done.
+            // The matching solidity contract is missing, so we're done in
+            // any case.
             return violations;
         }
 
-        // We know a contract exists in both trees because of the
-        // check above.
+        // We know a contract exists in both trees.
         let contract_hir = contract_hir.unwrap();
         let contract_sol = contract_sol.unwrap();
-
-        // Check that contract names match.
         if let Hir::ContractDefinition(contract_hir) = contract_hir {
-            if let pt::SourceUnitPart::ContractDefinition(contract_sol) = contract_sol {
-                // We won't deal right now with a parsing error from solang_parser.
-                if let Some(ref identifier) = contract_sol.name {
-                    if identifier.name != contract_hir.identifier {
-                        let violation = Violation::new(
-                            ViolationKind::ContractNameNotMatches(
-                                identifier.name.clone(),
-                                contract_hir.identifier.clone(),
-                            ),
-                            Location::Code(
-                                ctx.sol_path.as_path().to_string_lossy().into_owned(),
-                                offset_to_line(&ctx.sol_contents, contract_sol.loc.start()),
-                            ),
-                        );
-                        violations.push(violation);
-                    }
-                };
-
-                // Check that all the functions are present in the
-                // output file with the right order.
-                violations.append(&mut check_fns_structure(contract_hir, contract_sol, ctx));
-            };
+            violations.append(&mut check_contract_names(contract_hir, &contract_sol, ctx));
+            violations.append(&mut check_fns_structure(contract_hir, &contract_sol, ctx));
         };
 
         violations
     }
 }
 
+/// Checks that contract names match.
+fn check_contract_names(
+    contract_hir: &hir::ContractDefinition,
+    contract_sol: &pt::ContractDefinition,
+    ctx: &Context,
+) -> Vec<Violation> {
+    let mut violations = Vec::with_capacity(1);
+
+    // We won't deal right now with a parsing error from `solang_parser`.
+    if let Some(ref identifier) = contract_sol.name {
+        let contract_name = sanitize(&contract_hir.identifier);
+        if identifier.name != contract_name {
+            let violation = Violation::new(
+                ViolationKind::ContractNameNotMatches(contract_name, identifier.name.clone()),
+                Location::Code(
+                    ctx.sol.as_path().to_string_lossy().into_owned(),
+                    offset_to_line(&ctx.src, contract_sol.loc.start()),
+                ),
+            );
+            violations.push(violation);
+        }
+    };
+
+    violations
+}
+
 /// Checks that function structures match between the HIR and the Solidity AST.
-///
+/// i.e. that all the functions are present in the output file in the right order.
 /// This could be better, currently it is O(N^2).
 fn check_fns_structure(
     contract_hir: &hir::ContractDefinition,
@@ -128,9 +129,9 @@ fn check_fns_structure(
                 // We didn't find a matching function, so this is a
                 // violation.
                 None => violations.push(Violation::new(
-                    ViolationKind::MatchingCodegenMissing(fn_hir.identifier.clone()),
+                    ViolationKind::MatchingFunctionMissing(fn_hir.clone(), hir_idx),
                     Location::Code(
-                        ctx.tree_path.to_string_lossy().into_owned(),
+                        ctx.tree.to_string_lossy().into_owned(),
                         fn_hir.span.start.line,
                     ),
                 )),
@@ -148,31 +149,27 @@ fn check_fns_structure(
     // We need to check for inversions in order to know if the order is wrong.
     for i in 0..present_fn_indices.len() - 1 {
         let (i_hir_idx, i_sol_idx) = present_fn_indices[i];
-        // Everything that's less than the current item is unsorted.
+        // Everything that's less than the ith item is unsorted.
         // If there is at least one element that is less than the
-        // current item, then, this element is also unsorted.
+        // ith item, then, this element is also unsorted.
         for j in i + 1..present_fn_indices.len() {
-            let (j_hir_idx, j_sol_idx) = present_fn_indices[j];
+            let (_, j_sol_idx) = present_fn_indices[j];
             // We found an inversion.
             if i_sol_idx > j_sol_idx {
                 unsorted_set.insert((i_hir_idx, i_sol_idx));
-                unsorted_set.insert((j_hir_idx, j_sol_idx));
             }
         }
     }
 
     // Emit a violation per unsorted item.
     for (hir_idx, sol_idx) in unsorted_set {
-        if let Hir::FunctionDefinition(ref fn_hir) = contract_hir.children[hir_idx] {
+        if let Hir::FunctionDefinition(_) = contract_hir.children[hir_idx] {
             if let pt::ContractPart::FunctionDefinition(ref fn_sol) = contract_sol.parts[sol_idx] {
                 violations.push(Violation::new(
-                    ViolationKind::CodegenOrderMismatch(
-                        fn_hir.identifier.clone(),
-                        fn_hir.span.start.line,
-                    ),
+                    ViolationKind::FunctionOrderMismatch(*fn_sol.clone(), sol_idx, hir_idx),
                     Location::Code(
-                        ctx.sol_path.to_path_buf().to_string_lossy().into_owned(),
-                        offset_to_line(&ctx.sol_contents, fn_sol.loc.start()),
+                        ctx.sol.clone().to_string_lossy().into_owned(),
+                        offset_to_line(&ctx.src, fn_sol.loc.start()),
                     ),
                 ));
             }
@@ -180,163 +177,4 @@ fn check_fns_structure(
     }
 
     violations
-}
-
-/// Given a HIR function, `find_matching_fn` performs a search over the sol
-/// contract parts trying to find a sol function with a matching name and type.
-fn find_matching_fn<'a>(
-    contract_sol: &'a pt::ContractDefinition,
-    fn_hir: &'a hir::FunctionDefinition,
-) -> Option<(usize, &'a pt::FunctionDefinition)> {
-    contract_sol
-        .parts
-        .iter()
-        .enumerate()
-        .find_map(|(idx, part)| {
-            if let pt::ContractPart::FunctionDefinition(fn_sol) = part {
-                if fns_match(fn_hir, fn_sol) {
-                    return Some((idx, &**fn_sol));
-                }
-            };
-
-            None
-        })
-}
-
-/// Check whether a Solidity function matches its bulloak counterpart.
-///
-/// Two functions match if they have the same name and their types match.
-fn fns_match(fn_hir: &hir::FunctionDefinition, fn_sol: &pt::FunctionDefinition) -> bool {
-    fn_sol
-        .name
-        .clone()
-        .is_some_and(|pt::Identifier { ref name, .. }| {
-            name == &fn_hir.identifier && fn_types_match(&fn_hir.ty, fn_sol.ty)
-        })
-}
-
-/// Checks that the function types between a HIR function
-/// and a `solang_parser` function match.
-///
-/// We check that the function types match, even though we know that the
-/// name not matching is enough, since a modifier will never be
-/// named the same as a function per Foundry's best practices.
-const fn fn_types_match(ty_hir: &hir::FunctionTy, ty_sol: pt::FunctionTy) -> bool {
-    match ty_hir {
-        hir::FunctionTy::Function => matches!(ty_sol, pt::FunctionTy::Function),
-        hir::FunctionTy::Modifier => matches!(ty_sol, pt::FunctionTy::Modifier),
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use pretty_assertions::assert_eq;
-    use solang_parser::pt;
-
-    use crate::check::rules::structural_match::{find_matching_fn, fn_types_match, fns_match};
-    use crate::hir;
-
-    #[test]
-    fn test_fn_types_match() {
-        assert!(fn_types_match(
-            &hir::FunctionTy::Function,
-            pt::FunctionTy::Function
-        ));
-        assert!(fn_types_match(
-            &hir::FunctionTy::Modifier,
-            pt::FunctionTy::Modifier
-        ));
-    }
-
-    fn fn_hir(name: &str, ty: hir::FunctionTy) -> hir::FunctionDefinition {
-        hir::FunctionDefinition {
-            identifier: name.to_owned(),
-            ty,
-            span: Default::default(),
-            modifiers: Default::default(),
-            children: Default::default(),
-        }
-    }
-
-    fn fn_sol(name: &str, ty: pt::FunctionTy) -> pt::FunctionDefinition {
-        pt::FunctionDefinition {
-            name: Some(pt::Identifier::new(name)),
-            ty,
-            loc: Default::default(),
-            name_loc: Default::default(),
-            params: Default::default(),
-            attributes: Default::default(),
-            return_not_returns: Default::default(),
-            returns: Default::default(),
-            body: Default::default(),
-        }
-    }
-
-    #[test]
-    fn test_fns_match() {
-        assert!(fns_match(
-            &fn_hir("my_fn", hir::FunctionTy::Function),
-            &fn_sol("my_fn", pt::FunctionTy::Function)
-        ));
-        assert!(!fns_match(
-            &fn_hir("my_fn", hir::FunctionTy::Function),
-            &fn_sol("not_my_fn", pt::FunctionTy::Function)
-        ));
-        assert!(!fns_match(
-            &fn_hir("not_my_fn", hir::FunctionTy::Function),
-            &fn_sol("my_fn", pt::FunctionTy::Function)
-        ));
-        assert!(fns_match(
-            &fn_hir("my_fn", hir::FunctionTy::Modifier),
-            &fn_sol("my_fn", pt::FunctionTy::Modifier)
-        ));
-        assert!(!fns_match(
-            &fn_hir("my_fn", hir::FunctionTy::Modifier),
-            &fn_sol("my_fn", pt::FunctionTy::Function)
-        ));
-        assert!(!fns_match(
-            &fn_hir("my_fn", hir::FunctionTy::Function),
-            &fn_sol("my_fn", pt::FunctionTy::Modifier)
-        ));
-    }
-
-    fn fn_sol_as_part(name: &str, ty: pt::FunctionTy) -> pt::ContractPart {
-        pt::ContractPart::FunctionDefinition(Box::new(fn_sol(name, ty)))
-    }
-
-    #[test]
-    fn test_find_matching_fn() {
-        let needle_sol = fn_sol("needle", pt::FunctionTy::Function);
-        let haystack = vec![
-            fn_sol_as_part("hay", pt::FunctionTy::Function),
-            fn_sol_as_part("more_hay", pt::FunctionTy::Function),
-            fn_sol_as_part("needle", pt::FunctionTy::Function),
-            fn_sol_as_part("hay_more", pt::FunctionTy::Function),
-        ];
-        let needle_hir = fn_hir("needle", hir::FunctionTy::Function);
-        let contract = pt::ContractDefinition {
-            loc: Default::default(),
-            ty: pt::ContractTy::Contract(Default::default()),
-            name: Default::default(),
-            base: Default::default(),
-            parts: haystack,
-        };
-
-        let expected = needle_sol;
-        let actual = find_matching_fn(&contract, &needle_hir).unwrap();
-        assert_eq!((2, &expected), actual);
-
-        let haystack = vec![];
-        let needle_hir = fn_hir("needle", hir::FunctionTy::Function);
-        let contract = pt::ContractDefinition {
-            loc: Default::default(),
-            ty: pt::ContractTy::Contract(Default::default()),
-            name: Default::default(),
-            base: Default::default(),
-            parts: haystack,
-        };
-
-        let actual = find_matching_fn(&contract, &needle_hir);
-        assert_eq!(None, actual);
-    }
 }

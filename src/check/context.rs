@@ -1,5 +1,7 @@
 //! Defines the context in which rule-checking occurs.
 
+use forge_fmt::{format, Comments, FormatterConfig, FormatterError, InlineConfig, Parsed};
+use solang_parser::pt::SourceUnit;
 use std::{
     ffi::OsStr,
     fs,
@@ -7,8 +9,6 @@ use std::{
 };
 
 use crate::check::Violation;
-use solang_parser::pt::SourceUnit;
-
 use crate::hir::Hir;
 
 use super::{location::Location, violation::ViolationKind};
@@ -21,41 +21,75 @@ use super::{location::Location, violation::ViolationKind};
 #[derive(Clone, Debug)]
 pub(crate) struct Context {
     /// The path to the tree file.
-    pub(crate) tree_path: PathBuf,
+    pub(crate) tree: PathBuf,
     /// The high-level intermediate representation
     /// of the bulloak tree.
-    pub(crate) tree_hir: Hir,
+    pub(crate) hir: Hir,
     /// The path to the Solidity file.
-    pub(crate) sol_path: PathBuf,
+    pub(crate) sol: PathBuf,
     /// The contents of the Solidity file.
-    pub(crate) sol_contents: String,
+    pub(crate) src: String,
     /// The abstract syntax tree of the Solidity file.
-    pub(crate) sol_ast: SourceUnit,
+    pub(crate) pt: SourceUnit,
+    pub(crate) comments: Comments,
 }
 
 impl Context {
-    pub(crate) fn new(tree_path: PathBuf) -> Result<Self, Violation> {
-        let tree_path_cow = tree_path.to_string_lossy();
-        let tree_contents = try_read_to_string(&tree_path)?;
-        let tree_hir = crate::hir::translate(&tree_contents).map_err(|e| {
+    pub(crate) fn new(tree: PathBuf) -> Result<Self, Violation> {
+        let tree_path_cow = tree.to_string_lossy();
+        let tree_contents = try_read_to_string(&tree)?;
+        let hir = crate::hir::translate(&tree_contents).map_err(|e| {
             Violation::new(
                 ViolationKind::ParsingFailed(e),
                 Location::File(tree_path_cow.into_owned()),
             )
         })?;
 
-        let sol_path = get_path_with_ext(&tree_path, "t.sol")?;
-        let sol_contents = try_read_to_string(&sol_path)?;
-        let (sol_ast, _) =
-            solang_parser::parse(&sol_contents, 0).expect("should parse the Solidity file");
+        let sol = get_path_with_ext(&tree, "t.sol")?;
+        let src = try_read_to_string(&sol)?;
+        let parsed = forge_fmt::parse(&src).map_err(|_| {
+            let sol_filename = sol.to_string_lossy().into_owned();
+            Violation::new(
+                ViolationKind::ParsingFailed(anyhow::anyhow!("Failed to parse {sol_filename}")),
+                Location::File(sol_filename),
+            )
+        })?;
 
+        let pt = parsed.pt.clone();
+        let comments = parsed.comments;
         Ok(Context {
-            tree_path,
-            tree_hir,
-            sol_path,
-            sol_ast,
-            sol_contents,
+            tree,
+            hir,
+            sol,
+            src,
+            pt,
+            comments,
         })
+    }
+
+    #[inline]
+    pub(crate) fn from_parsed(mut self, parsed: Parsed) -> Self {
+        self.src = parsed.src.to_owned();
+        self.pt = parsed.pt;
+        self.comments = parsed.comments;
+        self
+    }
+
+    pub(crate) fn fmt(self) -> anyhow::Result<String, FormatterError> {
+        let mut formatted = String::new();
+        format(
+            &mut formatted,
+            forge_fmt::Parsed {
+                src: &self.src,
+                pt: self.pt,
+                comments: self.comments,
+                inline_config: InlineConfig::default(),
+                invalid_inline_config_items: Vec::default(),
+            },
+            FormatterConfig::default(),
+        )?;
+
+        Ok(formatted)
     }
 }
 
@@ -65,18 +99,18 @@ where
     S: AsRef<OsStr>,
 {
     let path = path.as_ref();
-    let mut sol_path = path.to_path_buf();
-    sol_path.set_extension(ext);
+    let mut sol = path.to_path_buf();
+    sol.set_extension(ext);
 
-    if !sol_path.exists() {
+    if !sol.exists() {
         let filename = path.to_string_lossy().into_owned();
         return Err(Violation::new(
-            ViolationKind::FileMissing(filename.clone()),
+            ViolationKind::SolidityFileMissing(filename.clone()),
             Location::File(filename),
         ));
     }
 
-    Ok(sol_path)
+    Ok(sol)
 }
 
 fn try_read_to_string<P>(path: P) -> Result<String, Violation>

@@ -6,16 +6,21 @@ contract HashPairTest {
         // It should never revert.
     }
 
-    modifier whenFirstArgIsSmallerThanSecondArg() {
-        _;
+    function an_extra_function() external {
+        // That may have some content.
     }
 
     function test_WhenFirstArgIsSmallerThanSecondArg() external whenFirstArgIsSmallerThanSecondArg {
         // It should match the result of `keccak256(abi.encodePacked(a,b))`.
     }
 
+    // A comment.
     function test_WhenFirstArgIsZero() external whenFirstArgIsSmallerThanSecondArg {
         // It should do something.
+    }
+
+    modifier whenFirstArgIsSmallerThanSecondArg() {
+        _;
     }
 
     function test_WhenFirstArgIsBiggerThanSecondArg() external {

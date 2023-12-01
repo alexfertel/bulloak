@@ -13,6 +13,7 @@ pub(crate) type Result<T> = result::Result<T, Error>;
 
 /// This error type encompasses any error that can be returned when parsing.
 #[derive(Clone, Debug, Eq, PartialEq)]
+#[non_exhaustive]
 pub enum Error {
     /// An error that occurred while tokenizing the input text.
     Tokenize(tokenizer::Error),
@@ -22,13 +23,6 @@ pub enum Error {
     /// An error that occurred while doing semantic analysis on the abstract
     /// syntax tree.
     Semantic(Vec<semantics::Error>),
-    /// Hints that destructuring should not be exhaustive.
-    ///
-    /// This enum may grow additional variants, so this makes sure clients
-    /// don't count on exhaustive matching. (Otherwise, adding a new variant
-    /// could break existing code.)
-    #[doc(hidden)]
-    __Nonexhaustive,
 }
 
 impl std::error::Error for Error {}
@@ -53,16 +47,15 @@ impl From<Vec<semantics::Error>> for Error {
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match *self {
-            Self::Parse(ref x) => x.fmt(f),
-            Self::Tokenize(ref x) => x.fmt(f),
-            Self::Semantic(ref errors) => {
+        match self {
+            Self::Parse(x) => x.fmt(f),
+            Self::Tokenize(x) => x.fmt(f),
+            Self::Semantic(errors) => {
                 for x in errors {
                     x.fmt(f)?;
                 }
                 Ok(())
             }
-            _ => unreachable!(),
         }
     }
 }

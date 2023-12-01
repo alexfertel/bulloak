@@ -52,6 +52,7 @@ impl std::error::Error for Error {}
 
 /// The type of an error that occurred while building an AST.
 #[derive(Clone, Debug, Eq, PartialEq)]
+#[non_exhaustive]
 pub enum ErrorKind {
     /// Found two conditions with the same title.
     ConditionDuplicated(Vec<Span>),
@@ -62,11 +63,6 @@ pub enum ErrorKind {
     NodeUnexpected,
     /// Found no rules to emit.
     TreeEmpty,
-    /// This enum may grow additional variants, so this makes sure clients
-    /// don't count on exhaustive matching. (Otherwise, adding a new variant
-    /// could break existing code.)
-    #[doc(hidden)]
-    __Nonexhaustive,
 }
 
 impl fmt::Display for Error {
@@ -90,7 +86,6 @@ impl fmt::Display for ErrorKind {
             ConditionEmpty => write!(f, "found a condition with no children"),
             NodeUnexpected => write!(f, "unexpected child node"),
             TreeEmpty => write!(f, "no rules where defined"),
-            _ => unreachable!(),
         }
     }
 }
@@ -150,7 +145,7 @@ impl<'t> SemanticAnalyzer<'t> {
                     // the condition's title.
                     spans[0].with_end(spans[0].start),
                     ErrorKind::ConditionDuplicated(spans),
-                )
+                );
             }
         }
 

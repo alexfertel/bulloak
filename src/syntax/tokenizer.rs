@@ -45,14 +45,10 @@ impl Error {
 
 /// The type of an error that occurred while tokenizing a tree.
 #[derive(Clone, Debug, Eq, PartialEq)]
+#[non_exhaustive]
 pub enum ErrorKind {
     /// Found an invalid identifier character.
     IdentifierCharInvalid(char),
-    /// This enum may grow additional variants, so this makes sure clients
-    /// don't count on exhaustive matching. (Otherwise, adding a new variant
-    /// could break existing code.)
-    #[doc(hidden)]
-    __Nonexhaustive,
 }
 
 impl fmt::Display for Error {
@@ -65,8 +61,7 @@ impl fmt::Display for ErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use self::ErrorKind::IdentifierCharInvalid;
         match self {
-            IdentifierCharInvalid(c) => write!(f, "invalid identifier: {c:?}"),
-            _ => unreachable!(),
+            IdentifierCharInvalid(c) => write!(f, "invalid identifier: {c}"),
         }
     }
 }

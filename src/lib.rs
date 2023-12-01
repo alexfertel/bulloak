@@ -6,8 +6,10 @@ pub mod check;
 pub mod cli;
 pub mod hir;
 pub mod scaffold;
+pub(crate) mod sol;
 pub mod syntax;
 
+mod constants;
 #[doc(hidden)]
 mod utils;
 

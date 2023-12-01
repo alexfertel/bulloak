@@ -30,6 +30,16 @@ impl Default for Hir {
     }
 }
 
+impl Hir {
+    pub(crate) fn find_contract(&self) -> Option<&ContractDefinition> {
+        match self {
+            Hir::Root(root) => root.find_contract(),
+            Hir::ContractDefinition(contract) => Some(contract),
+            _ => None,
+        }
+    }
+}
+
 type Identifier = String;
 
 /// The root HIR node.
@@ -39,6 +49,18 @@ type Identifier = String;
 pub struct Root {
     /// The children HIR nodes of this node.
     pub children: Vec<Hir>,
+}
+
+impl Root {
+    pub(crate) fn find_contract(&self) -> Option<&ContractDefinition> {
+        self.children.iter().find_map(|child| {
+            if let Hir::ContractDefinition(contract) = child {
+                Some(contract)
+            } else {
+                None
+            }
+        })
+    }
 }
 
 /// A contract definition HIR node.
@@ -80,8 +102,8 @@ pub struct FunctionDefinition {
     pub span: Span,
     /// The set of modifiers applied to this function.
     ///
-    /// This might be `None` if the function's type
-    /// is `FunctionTy::Modifier`.
+    /// `None` if the function's type is
+    /// `FunctionTy::Modifier`.
     pub modifiers: Option<Vec<Identifier>>,
     /// The children HIR nodes of this node.
     pub children: Option<Vec<Hir>>,

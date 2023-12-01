@@ -1,21 +1,9 @@
+// SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.0;
 
 contract HashPairTest {
-  function test_ShouldNeverRevert() external {
-    // It should never revert.
-  }
-
-  modifier thisisAnExtraModifier() {
-    // It has a random comment inside.
-    _;
-  }
-
   modifier whenFirstArgIsSmallerThanSecondArg() {
     _;
-  }
-
-  function thisIsAnExtraFunction() {
-    // It has a random comment inside.
   }
 
   function test_WhenFirstArgIsSmallerThanSecondArg()
@@ -29,7 +17,7 @@ contract HashPairTest {
     _;
   }
 
-  function thisIsAnotherExtraFunction() {
+  function thisIsAnotherExtraFunction() external {
     // It has a random comment inside.
   }
 

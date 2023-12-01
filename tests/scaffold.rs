@@ -41,7 +41,7 @@ fn skips_trees_when_file_exists() {
         let output = cmd(&binary_path, "scaffold", &tree_path, &["-w"]);
         let actual = String::from_utf8(output.stderr).unwrap();
 
-        let expected = format!("{}", "WARN".yellow());
+        let expected = format!("{}", "warn".yellow());
         assert!(actual.starts_with(&expected));
     }
 }
