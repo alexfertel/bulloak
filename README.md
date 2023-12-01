@@ -147,11 +147,11 @@ This Solidity file is missing the tests for the branch
 running `bulloak check`, like so:
 
 ```text
-error: function "test_WhenFirstArgIsBiggerThanSecondArg" is missing in .sol
+warn: function "test_WhenFirstArgIsBiggerThanSecondArg" is missing in .sol
      + fix: run `bulloak check --fix tests/scaffold/basic.tree`
    ~~> tests/scaffold/basic.tree:5
 
-error: 1 check failed (run `bulloak check --fix <.tree files>` to apply 1 fix)
+warn: 1 check failed (run `bulloak check --fix <.tree files>` to apply 1 fix)
 ```
 
 As you can see in the above message, `bulloak` can fix the issue automatically.
@@ -184,7 +184,7 @@ the solidity file with the fixes applied. Note that not all issues can be
 automatically fixed, and bulloak's output will reflect that.
 
 ```text
-error: 13 checks failed (run `bulloak check --fix <.tree files>` to apply 11 fixes)
+warn: 13 checks failed (run `bulloak check --fix <.tree files>` to apply 11 fixes)
 ```
 
 #### Rules
@@ -312,11 +312,13 @@ Please refer to [CONTRIBUTING.md](./CONTRIBUTING.md).
 These are the current steps taken to publish `bulloak`:
 
 - Bump the version field in [Cargo.toml](./Cargo.toml).
-- Create the corresponding git tag named after the version.
 - Update the [CHANGELOG.md](./CHANGELOG.md) file with
-  `git cliff -o CHANGELOG.md`.
+  `git cliff -o CHANGELOG.md`. This step includes setting the proper header for
+  the latest tag.
+- Commit the changes.
 - Run `cargo publish --dry-run` to make sure that everything looks good.
-- Commit & push the changes.
+- Create the corresponding git tag named after the version.
+- Push to origin.
 - Run `cargo publish`.
 
 ## License

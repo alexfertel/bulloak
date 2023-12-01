@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.6.0] - 2023-12-01
+
+### Bug Fixes
+
+- *(scaffold)* Use forge-fmt to format emitted code
+  - **BREAKING**: use forge-fmt to format emitted code
+- *(scaffold)* Remove "-i" flag
+  - **BREAKING**: remove "-i" flag
+
+
+### Features
+
+- *(bulloak)* Make output more readable & succint
+- Add ‘bulloak check —fix’
+
+
 ## [0.5.4] - 2023-11-16
 
 ### Bug Fixes
