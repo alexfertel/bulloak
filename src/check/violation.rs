@@ -102,11 +102,16 @@ pub(crate) enum ViolationKind {
 
 impl fmt::Display for Violation {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let divider = repeat_str("•", 79);
-        writeln!(f, "{divider}")?;
-
-        writeln!(f, "check failed: {}", self.kind)?;
-        writeln!(f, "{}", self.location)?;
+        writeln!(f, "{}: {}", "warn".yellow(), self.kind)?;
+        if let Some(help_text) = self.help() {
+            writeln!(f, "     {} help: {}", "=".blue(), help_text)?;
+        }
+        if self.is_fixable() {
+            let file = self.location.file().replace(".t.sol", ".tree");
+            write!(f, "     {} fix: run ", "+".blue())?;
+            writeln!(f, "`bulloak check --fix {file}`")?;
+        }
+        writeln!(f, "   {} {}", "-->".blue(), self.location)?;
 
         Ok(())
     }
@@ -119,23 +124,17 @@ impl fmt::Display for ViolationKind {
             MatchingFunctionMissing, ParsingFailed, SolidityFileMissing,
         };
         match self {
-            FileMissing(filename) => {
-                write!(
-                    f,
-                    "the file is missing its matching Solidity file.\nTry running `bulloak scaffold {filename}`"
-                )
+            ContractMissing(contract) => write!(f, r#"contract "{contract}" is missing in .sol"#),
+            ContractNameNotMatches(tree_name, sol_name) => write!(
+                f,
+                r#"contract "{tree_name}" is missing in .sol -- found "{sol_name}" instead"#
+            ),
+            SolidityFileMissing(_) => {
+                write!(f, "the tree is missing its matching Solidity file")
             }
             FileUnreadable => {
                 write!(f, "bulloak couldn't read the file")
             }
-            ContractMissing(contract) => write!(
-                f,
-                r#"couldn't find a corresponding contract for "{contract}" in the Solidity file"#
-            ),
-            ContractNameNotMatches(tree_name, sol_name) => write!(
-                f,
-                r#"couldn't find a corresponding contract for "{tree_name}" in the Solidity file. Found "{sol_name}""#
-            ),
             FunctionOrderMismatch(fn_sol, _, _) => {
                 let name = fn_sol.name.safe_unwrap();
                 write!(f, r#"incorrect position for function `{name}`"#)

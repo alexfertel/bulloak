@@ -23,8 +23,8 @@ impl Location {
 impl fmt::Display for Location {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Location::Code(filename, line) => write!(f, "file: {filename} | line: {line}"),
-            Location::File(name) => write!(f, "file: {name}"),
+            Location::Code(filename, line) => write!(f, "{filename}:{line}"),
+            Location::File(name) => write!(f, "{name}"),
         }
     }
 }

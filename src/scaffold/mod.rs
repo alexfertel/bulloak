@@ -64,19 +64,19 @@ impl Scaffold {
                         // Don't overwrite files unless `--force-write` was passed.
                         if output_path.exists() && !self.force_write {
                             eprintln!(
-                                "{}: Skipped emitting to {:?}.",
-                                "WARN".yellow(),
-                                file.as_path().bright_blue()
+                                "{}: Skipped emitting {:?}",
+                                "warn".yellow(),
+                                file.as_path().blue()
                             );
                             eprintln!(
-                                "      The file {:?} already exists.",
-                                output_path.as_path().bright_blue()
+                                "    {} The corresponding `.t.sol` file already exists",
+                                "=".blue()
                             );
                             continue;
                         }
 
                         if let Err(e) = fs::write(output_path, emitted) {
-                            eprintln!("{}: {}", "ERROR".red(), e);
+                            eprintln!("{}: {e}", "error".red());
                         };
                     } else {
                         println!("{emitted}");

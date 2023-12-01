@@ -83,9 +83,10 @@ impl Check {
                     }
                 }
 
-        exit(&violations);
+                let sol = ctx.sol.clone();
+                let formatted = ctx.fmt().expect("should format the emitted solidity code");
+                self.write(&formatted, sol);
 
-        Ok(())
                 fixed_count += fixable_count;
             }
 
@@ -104,6 +105,19 @@ impl Check {
             exit(&violations);
         }
     }
+
+    /// Handles writing the output of the `check` command.
+    ///
+    /// If the `--stdout` flag was passed, then the output is printed to
+    /// stdout, else it is written to the corresponding file.
+    fn write(&self, output: &str, sol: PathBuf) {
+        if self.stdout {
+            println!("{} {}", "-->".blue(), sol.to_string_lossy());
+            println!("{}", output.trim());
+            println!("{}", "<--".blue());
+        } else if let Err(e) = fs::write(sol, output) {
+            eprintln!("{}: {e}", "warn".yellow());
+        }
     }
 }
 
@@ -115,20 +129,26 @@ fn exit(violations: &[Violation]) {
         );
     } else {
         for violation in violations {
-            eprint!("{violation}");
+            eprintln!("{violation}");
         }
 
-        let pluralized_check = if violations.len() == 1 {
-            "check"
-        } else {
-            "checks"
-        };
-        eprintln!(
-            "\n{}: {} {} failed. See details above.",
-            "error".bold().red(),
+        let check_literal = pluralize(violations.len(), "check", "checks");
+        eprint!(
+            "{}: {} {} failed",
+            "warn".bold().yellow(),
             violations.len(),
-            pluralized_check
+            check_literal
         );
+        let fixable_count = violations.iter().filter(|v| v.is_fixable()).count();
+        if fixable_count > 0 {
+            let fix_literal = pluralize(fixable_count, "fix", "fixes");
+            eprintln!(
+                " (run `bulloak check --fix <.tree files>` to apply {} {})",
+                fixable_count, fix_literal
+            );
+        } else {
+            eprintln!();
+        }
 
         std::process::exit(1);
     }
