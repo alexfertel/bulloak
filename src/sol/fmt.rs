@@ -6,6 +6,8 @@ use solang_parser::pt::{
     SourceUnitPart, Statement, StructDefinition, TypeDefinition, VariableAttribute,
 };
 
+use crate::utils::sanitize;
+
 use super::visitor::Visitor;
 
 pub(crate) struct Formatter;
@@ -67,7 +69,7 @@ impl Visitor for Formatter {
         result.push_str(&format!("{}", contract.ty));
         result.push(' ');
         if let Some(ref name) = contract.name {
-            result.push_str(&format!("{name}"));
+            result.push_str(&sanitize(&format!("{name}")));
             result.push(' ');
         }
 

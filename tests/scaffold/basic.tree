@@ -1,4 +1,4 @@
-HashPairTest
+HashPairTest.Sanitize
 ├── It should never revert.
 ├── When first arg is smaller than second arg
 │   ├── When first arg is zero
