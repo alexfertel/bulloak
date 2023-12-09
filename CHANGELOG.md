@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.6.1] - 2023-12-09
+
+### Bug Fixes
+
+- *(scaffold)* Sanitize contract names before emitting
+
+
 ## [0.6.0] - 2023-12-01
 
 ### Bug Fixes
