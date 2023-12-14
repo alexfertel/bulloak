@@ -244,6 +244,7 @@ mod tests {
 
     use crate::constants::INTERNAL_DEFAULT_SOL_VERSION;
     use crate::error::Result;
+    use crate::hir::combiner::Combiner;
     use crate::hir::translator::Translator;
     use crate::scaffold::emitter;
     use crate::scaffold::modifiers;
@@ -252,10 +253,17 @@ mod tests {
 
     fn scaffold_with_flags(text: &str, indent: usize, version: &str) -> Result<String> {
         let tokens = Tokenizer::new().tokenize(&text)?;
-        let ast = Parser::new().parse(&text, &tokens)?;
+        let asts = Parser::new().parse(&text, &tokens)?;
+        let combiner = Combiner::new();
+        combiner.verify(&asts).unwrap();
         let mut discoverer = modifiers::ModifierDiscoverer::new();
-        let modifiers = discoverer.discover(&ast);
-        let hir = Translator::new().translate(&ast, modifiers);
+        let translator = Translator::new();
+        let mut hirs = Vec::new();
+        for ast in &asts {
+            let modifiers = discoverer.discover(ast).unwrap();
+            hirs.push(translator.clone().translate(ast, modifiers));
+        }
+        let hir = combiner.combine(hirs);
         Ok(emitter::Emitter::new(indent, version).emit(&hir))
     }
 

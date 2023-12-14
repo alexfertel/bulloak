@@ -100,6 +100,8 @@ pub enum TokenKind {
     Tee,
     /// A token representing the `└` character.
     Corner,
+    /// A token representing the tree root.
+    Root,
     /// A token representing a string.
     ///
     /// For example, in the text `foo bar`, both `foo` and `bar` are
@@ -128,8 +130,9 @@ pub struct Tokenizer {
     /// a character that is not a valid identifier character.
     /// This is to prevent malformed names when emitting identifiers.
     ///
-    /// This is `true` by default because the first token must be
-    /// a contract name, which has to be a valid Solidity identifier.
+    /// This is `false` by default. The the first token must be a contract name,
+    /// which has to be a valid Solidity identifier, but we identify Root tokens
+    /// as Word tokens when the identifier mode is false.
     identifier_mode: Cell<bool>,
 }
 
@@ -139,8 +142,9 @@ impl Tokenizer {
     pub const fn new() -> Self {
         Self {
             pos: Cell::new(Position::new(0, 1, 1)),
-            // Starts as `true` because the first token must always be a contract name.
-            identifier_mode: Cell::new(true),
+            // Starts as `false` because we identify Root tokens as Word tokens
+            // when the identifier mode is false.
+            identifier_mode: Cell::new(false),
         }
     }
 
@@ -329,7 +333,10 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
                 }
                 _ => {
                     let token = self.scan_word()?;
-                    if token.kind == TokenKind::When || token.kind == TokenKind::Given {
+                    if token.kind == TokenKind::When
+                        || token.kind == TokenKind::Given
+                        || token.kind == TokenKind::It
+                    {
                         self.enter_identifier_mode();
                     };
                     tokens.push(token);
@@ -376,6 +383,8 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
                     "when" => TokenKind::When,
                     "it" => TokenKind::It,
                     "given" => TokenKind::Given,
+                    // If identifier mode is false and the token is a Word then it is the root of a new tree.
+                    _ if !self.is_identifier_mode() => TokenKind::Root,
                     _ => TokenKind::Word,
                 };
 
@@ -449,15 +458,15 @@ mod tests {
 
         assert_eq!(
             tokenizer.tokenize(&simple_name)?,
-            vec![t(TokenKind::Word, "Foo", s(p(0, 1, 1), p(2, 1, 3)))]
+            vec![t(TokenKind::Root, "Foo", s(p(0, 1, 1), p(2, 1, 3)))]
         );
         assert_eq!(
             tokenizer.tokenize(&starts_whitespace)?,
-            vec![t(TokenKind::Word, "Foo", s(p(1, 1, 2), p(3, 1, 4)))]
+            vec![t(TokenKind::Root, "Foo", s(p(1, 1, 2), p(3, 1, 4)))]
         );
         assert_eq!(
             tokenizer.tokenize(&ends_whitespace)?,
-            vec![t(TokenKind::Word, "Foo", s(p(0, 1, 1), p(2, 1, 3)))]
+            vec![t(TokenKind::Root, "Foo", s(p(0, 1, 1), p(2, 1, 3)))]
         );
 
         Ok(())
@@ -472,7 +481,7 @@ mod tests {
         assert_eq!(
             tokenize(&file_contents)?,
             vec![
-                t(TokenKind::Word, "Foo_Test", s(p(0, 1, 1), p(7, 1, 8))),
+                t(TokenKind::Root, "Foo_Test", s(p(0, 1, 1), p(7, 1, 8))),
                 t(TokenKind::Corner, "└", s(p(9, 2, 1), p(9, 2, 1))),
                 t(TokenKind::When, "when", s(p(19, 2, 5), p(22, 2, 8))),
                 t(TokenKind::Word, "something", s(p(24, 2, 10), p(32, 2, 18))),
@@ -492,7 +501,7 @@ mod tests {
         assert_eq!(
             tokenize(&file_contents)?,
             vec![
-                t(TokenKind::Word, "Foo_Test", s(p(0, 1, 1), p(7, 1, 8))),
+                t(TokenKind::Root, "Foo_Test", s(p(0, 1, 1), p(7, 1, 8))),
                 t(TokenKind::Corner, "└", s(p(9, 2, 1), p(9, 2, 1))),
                 t(TokenKind::When, "when", s(p(19, 2, 5), p(22, 2, 8))),
                 t(TokenKind::Word, "something", s(p(24, 2, 10), p(32, 2, 18))),
@@ -558,13 +567,13 @@ mod tests {
         let starts_whitespace = String::from(" foo\n");
         let ends_whitespace = String::from("foo \n");
 
-        let expected = vec![t(TokenKind::Word, "foo", s(p(0, 1, 1), p(2, 1, 3)))];
+        let expected = vec![t(TokenKind::Root, "foo", s(p(0, 1, 1), p(2, 1, 3)))];
         let mut tokenizer = Tokenizer::new();
 
         assert_eq!(tokenizer.tokenize(&simple_name).unwrap(), expected);
         assert_eq!(
             tokenizer.tokenize(&starts_whitespace).unwrap(),
-            vec![t(TokenKind::Word, "foo", s(p(1, 1, 2), p(3, 1, 4)))]
+            vec![t(TokenKind::Root, "foo", s(p(1, 1, 2), p(3, 1, 4)))]
         );
         assert_eq!(tokenizer.tokenize(&ends_whitespace).unwrap(), expected);
     }
@@ -578,7 +587,7 @@ mod tests {
         assert_eq!(
             tokenize(&file_contents).unwrap(),
             vec![
-                t(TokenKind::Word, "Foo_Test", s(p(0, 1, 1), p(7, 1, 8))),
+                t(TokenKind::Root, "Foo_Test", s(p(0, 1, 1), p(7, 1, 8))),
                 t(TokenKind::Corner, "└", s(p(9, 2, 1), p(9, 2, 1))),
                 t(TokenKind::When, "when", s(p(19, 2, 5), p(22, 2, 8))),
                 t(TokenKind::Word, "something", s(p(24, 2, 10), p(32, 2, 18))),
@@ -598,7 +607,7 @@ mod tests {
         assert_eq!(
             tokenize(&file_contents).unwrap(),
             vec![
-                t(TokenKind::Word, "Foo_Test", s(p(0, 1, 1), p(7, 1, 8))),
+                t(TokenKind::Root, "Foo_Test", s(p(0, 1, 1), p(7, 1, 8))),
                 t(TokenKind::Corner, "└", s(p(9, 2, 1), p(9, 2, 1))),
                 t(TokenKind::Given, "given", s(p(19, 2, 5), p(23, 2, 9))),
                 t(TokenKind::Word, "something", s(p(25, 2, 11), p(33, 2, 19))),
@@ -639,7 +648,7 @@ mod tests {
         let tokens = tokenize(&file_contents).unwrap();
         let expected = vec![
             t(
-                TokenKind::Word,
+                TokenKind::Root,
                 "multiple_children.t.sol",
                 s(p(0, 1, 1), p(22, 1, 23)),
             ),
@@ -796,7 +805,7 @@ mod tests {
         assert_eq!(
             tokenize(&file_contents).unwrap(),
             vec![
-                t(TokenKind::Word, "Foo_Test", s(p(0, 1, 1), p(7, 1, 8))),
+                t(TokenKind::Root, "Foo_Test", s(p(0, 1, 1), p(7, 1, 8))),
                 t(TokenKind::Corner, "└", s(p(9, 2, 1), p(9, 2, 1))),
                 t(TokenKind::Given, "GIVEN", s(p(19, 2, 5), p(23, 2, 9))),
                 t(TokenKind::Word, "something", s(p(25, 2, 11), p(33, 2, 19))),

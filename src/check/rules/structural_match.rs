@@ -40,7 +40,7 @@ impl Checker for StructuralMatcher {
 
         // We currently only support one tree per .tree file, which
         // means that there can only be one contract. This is reflected
-        // in the current tree hierarchy of the HIR.
+        // in the current tree hierarchy of the HIR. // @follow-up - assuming the implementation is correct, at this point bulloak should support multiple trees per file
         let contract_hir = match ctx.hir {
             Hir::Root(ref root) => root
                 .children

@@ -110,10 +110,17 @@ impl<'s> Scaffolder<'s> {
 
     /// Generates Solidity code from a `.tree` file.
     pub fn scaffold(&self, text: &str) -> crate::error::Result<String> {
-        let ast = syntax::parse(text)?;
+        let asts = syntax::parse(text)?;
+        let combiner = hir::combiner::Combiner::new();
+        combiner.verify(&asts).unwrap();
         let mut discoverer = modifiers::ModifierDiscoverer::new();
-        let modifiers = discoverer.discover(&ast);
-        let hir = hir::translator::Translator::new().translate(&ast, modifiers);
+        let translator = hir::translator::Translator::new();
+        let mut hirs = Vec::new();
+        for ast in &asts {
+            let modifiers = discoverer.discover(&ast).unwrap();
+            hirs.push(translator.clone().translate(&ast, modifiers));
+        }
+        let hir = combiner.combine(hirs);
         let pt = sol::Translator::new(self.solidity_version).translate(&hir);
         let source = sol::Formatter::new().emit(pt);
         let formatted = fmt(&source).expect("should format the emitted solidity code");

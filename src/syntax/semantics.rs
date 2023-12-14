@@ -243,9 +243,9 @@ mod tests {
 
     fn analyze(text: &str) -> semantics::Result<()> {
         let tokens = Tokenizer::new().tokenize(text).unwrap();
-        let ast = Parser::new().parse(text, &tokens).unwrap();
+        let asts = Parser::new().parse(text, &tokens).unwrap();
         let mut analyzer = semantics::SemanticAnalyzer::new(&text);
-        analyzer.analyze(&ast)?;
+        asts.iter().try_for_each(|ast| analyzer.analyze(ast))?;
 
         Ok(())
     }

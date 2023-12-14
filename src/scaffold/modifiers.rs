@@ -35,14 +35,25 @@ impl ModifierDiscoverer {
     }
 
     /// Discover modifiers in the given AST.
-    pub fn discover(&mut self, ast: &Ast) -> &IndexMap<String, String> {
+    ///
+    /// `discover` is the entry point of the ModifierDiscoverer.
+    /// It takes an abstract syntax tree (AST) and returns a map of modifiers.
+    pub fn discover(&mut self, ast: &Ast) -> Result<&IndexMap<String, String>, ()> {
+        // ModifierDiscovererI::new(self, ast).discover()
+        self.reset();
+
         match ast {
             Ast::Root(root) => {
                 self.visit_root(root).unwrap();
-                &self.modifiers
+                Ok(&self.modifiers)
             }
             _ => unreachable!(),
         }
+    }
+
+    /// Reset the discoverer's state.
+    fn reset(&mut self) {
+        self.modifiers.clear();
     }
 }
 
@@ -102,19 +113,24 @@ mod tests {
     use crate::syntax::parser::Parser;
     use crate::syntax::tokenizer::Tokenizer;
 
-    fn discover(file_contents: &str) -> Result<IndexMap<String, String>> {
+    fn discover(file_contents: &str) -> Result<Vec<IndexMap<String, String>>> {
         let tokens = Tokenizer::new().tokenize(file_contents)?;
-        let ast = Parser::new().parse(file_contents, &tokens)?;
+        let asts = Parser::new().parse(file_contents, &tokens)?;
         let mut discoverer = ModifierDiscoverer::new();
-        discoverer.discover(&ast);
+        let mut modifiers = Vec::new();
+        for ast in &asts {
+            modifiers.push(discoverer.discover(ast).unwrap().clone());
+        }
 
-        Ok(discoverer.modifiers)
+        Ok(modifiers)
     }
 
     #[test]
     fn test_one_child() {
         assert_eq!(
-            discover("file.sol\n└── when something bad happens\n   └── it should revert").unwrap(),
+            discover("file.sol\n└── when something bad happens\n   └── it should revert").unwrap()
+                [0]
+            .to_owned(),
             IndexMap::from([(
                 "when something bad happens".to_owned(),
                 "whenSomethingBadHappens".to_owned()
@@ -132,7 +148,8 @@ mod tests {
 └── when not stuff called
    └── it should revert",
             )
-            .unwrap(),
+            .unwrap()[0]
+                .to_owned(),
             IndexMap::from([
                 ("when stuff called".to_owned(), "whenStuffCalled".to_owned()),
                 (
@@ -167,7 +184,8 @@ mod tests {
               ├── it should create the child
               └── it should emit a {MultipleChildren} event"#,
             )
-            .unwrap(),
+            .unwrap()[0]
+                .to_owned(),
             IndexMap::from([
                 ("when stuff called".to_owned(), "whenStuffCalled".to_owned()),
                 (

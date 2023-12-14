@@ -13,7 +13,7 @@ use crate::utils::{capitalize_first_letter, sanitize};
 ///
 /// It visits an AST in depth-first order an generates a HIR
 /// as a result.
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct Translator;
 
 impl Translator {
@@ -289,13 +289,18 @@ mod tests {
     use crate::syntax::parser::Parser;
     use crate::syntax::tokenizer::Tokenizer;
 
-    fn translate(text: &str) -> Result<hir::Hir> {
+    fn translate(text: &str) -> Result<Vec<hir::Hir>> {
         let tokens = Tokenizer::new().tokenize(&text)?;
-        let ast = Parser::new().parse(&text, &tokens)?;
+        let asts = Parser::new().parse(&text, &tokens)?;
         let mut discoverer = modifiers::ModifierDiscoverer::new();
-        let modifiers = discoverer.discover(&ast);
+        let translator = hir::translator::Translator::new();
+        let mut hirs = Vec::new();
+        for ast in &asts {
+            let modifiers = discoverer.discover(ast).unwrap();
+            hirs.push(translator.clone().translate(ast, modifiers));
+        }
 
-        Ok(hir::translator::Translator::new().translate(&ast, modifiers))
+        Ok(hirs)
     }
 
     fn root(children: Vec<Hir>) -> Hir {
@@ -332,7 +337,9 @@ mod tests {
     #[test]
     fn one_child() {
         assert_eq!(
-            translate("Foo_Test\n└── when something bad happens\n   └── it should revert").unwrap(),
+            translate("Foo_Test\n└── when something bad happens\n   └── it should revert").unwrap()
+                [0]
+            .to_owned(),
             root(vec![contract(
                 "Foo_Test".to_owned(),
                 vec![function(
@@ -356,7 +363,8 @@ mod tests {
 └── given not stuff called
    └── it should revert"
             )
-            .unwrap(),
+            .unwrap()[0]
+                .to_owned(),
             root(vec![contract(
                 "FooBarTheBest_Test".to_owned(),
                 vec![
@@ -394,7 +402,7 @@ Foo_Test
         );
 
         assert_eq!(
-            translate(&file_contents)?,
+            translate(&file_contents).unwrap()[0].to_owned(),
             root(vec![contract(
                 "Foo_Test".to_owned(),
                 vec![
