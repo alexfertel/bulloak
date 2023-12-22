@@ -65,8 +65,6 @@ pub enum ErrorKind {
     GivenUnexpected,
     /// Did not expect this It keyword.
     ItUnexpected,
-    /// Did not expect a Root.
-    RootUnexpected(Lexeme),
     /// Did not expect a Word.
     WordUnexpected(Lexeme),
     /// Did not expect an end of file.
@@ -93,8 +91,8 @@ impl fmt::Display for ErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use self::ErrorKind::{
             CornerNotLastChild, DescriptionTokenUnexpected, EofUnexpected, GivenUnexpected,
-            ItUnexpected, RootUnexpected, TeeLastChild, TitleMissing, TokenUnexpected, TreeEmpty,
-            TreeRootless, WhenUnexpected, WordUnexpected,
+            ItUnexpected, TeeLastChild, TitleMissing, TokenUnexpected, TreeEmpty, TreeRootless,
+            WhenUnexpected, WordUnexpected,
         };
         match self {
             TokenUnexpected(lexeme) => write!(f, "unexpected token '{lexeme}'"),
@@ -104,7 +102,6 @@ impl fmt::Display for ErrorKind {
             WhenUnexpected => write!(f, "unexpected `when` keyword"),
             GivenUnexpected => write!(f, "unexpected `given` keyword"),
             ItUnexpected => write!(f, "unexpected `it` keyword"),
-            RootUnexpected(lexeme) => write!(f, "unexpected `root` '{lexeme}'"),
             WordUnexpected(lexeme) => write!(f, "unexpected `word` '{lexeme}'"),
             EofUnexpected => write!(f, "unexpected end of file"),
             TreeEmpty => write!(f, "found an empty tree"),
@@ -139,7 +136,7 @@ impl Parser {
     ///
     /// `parse` is the entry point for the parser. It takes a sequence of
     /// tokens and returns an AST.
-    pub fn parse(&mut self, text: &str, tokens: &[Token]) -> Result<Vec<Ast>> {
+    pub fn parse(&mut self, text: &str, tokens: &[Token]) -> Result<Ast> {
         ParserI::new(self, text, tokens).parse()
     }
 
@@ -233,24 +230,17 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
     /// This is the entry point for the parser. Note that
     /// this method resets the parser state before parsing and
     /// that we defer the implementation of parsing to `_parse`.
-    pub(crate) fn parse(&self) -> Result<Vec<Ast>> {
+    pub(crate) fn parse(&self) -> Result<Ast> {
         self.parser().reset();
 
-        if self.current().is_none() {
-            return Err(self.error(Span::default(), ErrorKind::TreeEmpty));
+        let root_token = self
+            .current()
+            .ok_or(self.error(Span::default(), ErrorKind::TreeEmpty))?;
+
+        match root_token.kind {
+            TokenKind::Word => self.parse_root(root_token),
+            _ => Err(self.error(root_token.span, ErrorKind::TreeRootless)),
         }
-
-        let mut asts = vec![];
-
-        while let Some(root_token) = self.current() {
-            let ast = match root_token.kind {
-                TokenKind::Root => self.parse_root(root_token),
-                _ => Err(self.error(root_token.span, ErrorKind::TreeRootless)),
-            };
-            asts.push(ast?);
-        }
-
-        Ok(asts)
     }
 
     /// Parse the root node of the AST.
@@ -262,9 +252,9 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
     /// <CORNER> [Condition | Action]
     /// ```
     ///
-    /// Panics if called when the parser is not at a `Root` token.
+    /// Panics if called when the parser is not at a `Word` token.
     fn parse_root(&self, token: &Token) -> Result<Ast> {
-        assert!(matches!(token.kind, TokenKind::Root));
+        assert!(matches!(token.kind, TokenKind::Word));
         self.consume();
 
         // The loop invariant is that `self.current` is a
@@ -273,10 +263,6 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
         while let Some(current_token) = self.current() {
             let child = match current_token.kind {
                 TokenKind::Corner | TokenKind::Tee => self.parse_branch(current_token)?,
-                TokenKind::Root => Err(self.error(
-                    current_token.span,
-                    ErrorKind::RootUnexpected(current_token.lexeme.clone()),
-                ))?,
                 TokenKind::Word => Err(self.error(
                     current_token.span,
                     ErrorKind::WordUnexpected(current_token.lexeme.clone()),
@@ -545,7 +531,7 @@ mod tests {
         TestError { kind, span }
     }
 
-    fn parse(file_contents: &str) -> parser::Result<Vec<Ast>> {
+    fn parse(file_contents: &str) -> parser::Result<Ast> {
         let tokens = Tokenizer::new().tokenize(file_contents).unwrap();
         Parser::new().parse(file_contents, &tokens)
     }
@@ -561,11 +547,11 @@ mod tests {
     #[test]
     fn rootless_tree() {
         assert_eq!(
-            parse("└── It should never revert.").unwrap_err(),
+            parse("└── It should never revert").unwrap_err(),
             e(ErrorKind::TreeRootless, Span::default())
         );
         assert_eq!(
-            parse("├── It should revert.").unwrap_err(),
+            parse("├── It should revert").unwrap_err(),
             e(ErrorKind::TreeRootless, Span::default())
         );
         assert_eq!(
@@ -609,11 +595,11 @@ mod tests {
     fn only_contract_name() {
         assert_eq!(
             parse("FooTest").unwrap(),
-            [Ast::Root(Root {
+            Ast::Root(Root {
                 span: s(p(0, 1, 1), p(6, 1, 7)),
                 children: vec![],
                 contract_name: String::from("FooTest"),
-            })]
+            })
         );
     }
 
@@ -621,7 +607,7 @@ mod tests {
     fn one_child() {
         assert_eq!(
             parse("Foo_Test\n└── when something bad happens\n   └── it should revert").unwrap(),
-            [Ast::Root(Root {
+            Ast::Root(Root {
                 contract_name: String::from("Foo_Test"),
                 span: s(p(0, 1, 1), p(74, 3, 23)),
                 children: vec![Ast::Condition(Condition {
@@ -633,7 +619,7 @@ mod tests {
                         children: vec![]
                     })],
                 })],
-            })]
+            })
         );
     }
 
@@ -647,7 +633,7 @@ mod tests {
       └── because _bad_"
             )
             .unwrap(),
-            [Ast::Root(Root {
+            Ast::Root(Root {
                 span: s(p(0, 1, 1), p(104, 4, 23)),
                 children: vec![Ast::Condition(Condition {
                     span: s(p(9, 2, 1), p(104, 4, 23)),
@@ -662,7 +648,7 @@ mod tests {
                     })],
                 })],
                 contract_name: String::from("Foo_Test"),
-            })]
+            })
         );
     }
 
@@ -678,7 +664,7 @@ mod tests {
       └── was very _bad_"
             )
             .unwrap(),
-            [Ast::Root(Root {
+            Ast::Root(Root {
                 span: s(p(0, 1, 1), p(177, 6, 24)),
                 children: vec![Ast::Condition(Condition {
                     span: s(p(9, 2, 1), p(177, 6, 24)),
@@ -703,7 +689,7 @@ mod tests {
                     })],
                 })],
                 contract_name: String::from("Foo_Test"),
-            })]
+            })
         );
     }
 
@@ -776,7 +762,7 @@ mod tests {
    └── it should revert"
             )
             .unwrap(),
-            [Ast::Root(Root {
+            Ast::Root(Root {
                 contract_name: String::from("FooBarTheBest_Test"),
                 span: s(p(0, 1, 1), p(140, 5, 23)),
                 children: vec![
@@ -799,7 +785,7 @@ mod tests {
                         })],
                     }),
                 ],
-            })]
+            })
         );
     }
 
@@ -812,7 +798,7 @@ mod tests {
    └── it should revert"#
             )
             .unwrap(),
-            [Ast::Root(Root {
+            Ast::Root(Root {
                 contract_name: String::from("FooB-rTheBestOf_Test"),
                 span: s(p(0, 1, 1), p(77, 3, 23)),
                 children: vec![Ast::Condition(Condition {
@@ -824,7 +810,7 @@ mod tests {
                         children: vec![]
                     })],
                 })],
-            })]
+            })
         );
     }
 }

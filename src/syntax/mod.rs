@@ -11,11 +11,11 @@ pub mod tokenizer;
 pub mod visitor;
 
 /// Parses a tree file into an AST.
-pub fn parse(text: &str) -> crate::error::Result<Vec<ast::Ast>> {
+pub fn parse(text: &str) -> crate::error::Result<ast::Ast> {
     let tokens = tokenizer::Tokenizer::new().tokenize(text)?;
-    let asts = parser::Parser::new().parse(text, &tokens)?;
+    let ast = parser::Parser::new().parse(text, &tokens)?;
     let mut analyzer = semantics::SemanticAnalyzer::new(text);
-    asts.iter().try_for_each(|ast| analyzer.analyze(ast))?;
+    analyzer.analyze(&ast)?;
 
-    Ok(asts)
+    Ok(ast)
 }

@@ -12,23 +12,32 @@ pub use hir::*;
 ///
 /// This function leverages `crate::syntax::parse` and `translator::Translator::translate`
 /// to hide away most of the complexity of `bulloak`'s internal compiler.
-pub fn translate(tree: &str) -> anyhow::Result<Hir> {
-    let asts = crate::syntax::parse(tree)?;
+pub fn translate(text: &str) -> anyhow::Result<Hir> {
     let combiner = combiner::Combiner::new();
-    match combiner.verify(&asts) {
-        Err(_e) => {
-            // @follow-up - propagate this error
-        }
-        _ => {}
-    }
-    let mut hirs = Vec::new();
+    let trees = combiner.split(text);
+
     let mut discoverer = crate::scaffold::modifiers::ModifierDiscoverer::new();
     let translator = translator::Translator::new();
-    for ast in &asts {
-        // @follow-up - use `map` instead of `for _ in`, here and elsewhere?
-        let modifiers = discoverer.discover(ast).unwrap();
-        hirs.push(translator.clone().translate(ast, modifiers));
-    }
 
-    Ok(combiner.combine(hirs))
+    let mut errors = Vec::new();
+    let asts: Vec<crate::syntax::ast::Ast> = trees
+        .iter()
+        .filter_map(|&tree| {
+            crate::syntax::parse(tree)
+                .map_err(|error| errors.push(error))
+                .ok()
+        }) // @follow-up - how do we combine and report errors?
+        .collect();
+
+    let hirs: Vec<hir::Hir> = asts
+        .iter()
+        .map(|ast| {
+            let modifiers = discoverer.discover(ast);
+            translator.translate(ast, modifiers)
+        })
+        .collect();
+
+    combiner.verify(&asts).unwrap(); // @follow-up - a lot of this code is duplicated from the `scaffold` module, how best do we DRY it up?
+
+    Ok(combiner.combine(&hirs))
 }

@@ -117,6 +117,8 @@ fn checks_invalid_tree() {
     let output = cmd(&binary_path, "check", &tree_path, &[]);
     let actual = String::from_utf8(output.stderr).unwrap();
 
+    println!("{}", actual); // the tree is missing its matching Solidity file
+
     assert!(actual.contains(r#"an error occurred while parsing the tree: unexpected token '├'"#));
 }
 

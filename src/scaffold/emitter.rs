@@ -246,24 +246,39 @@ mod tests {
     use crate::error::Result;
     use crate::hir::combiner::Combiner;
     use crate::hir::translator::Translator;
+    use crate::hir::Hir;
     use crate::scaffold::emitter;
     use crate::scaffold::modifiers;
+    use crate::syntax::ast::Ast;
     use crate::syntax::parser::Parser;
     use crate::syntax::tokenizer::Tokenizer;
 
     fn scaffold_with_flags(text: &str, indent: usize, version: &str) -> Result<String> {
-        let tokens = Tokenizer::new().tokenize(&text)?;
-        let asts = Parser::new().parse(&text, &tokens)?;
         let combiner = Combiner::new();
-        combiner.verify(&asts).unwrap();
+        let trees = combiner.split(text);
+
+        let mut parser = Parser::new();
         let mut discoverer = modifiers::ModifierDiscoverer::new();
         let translator = Translator::new();
-        let mut hirs = Vec::new();
-        for ast in &asts {
-            let modifiers = discoverer.discover(ast).unwrap();
-            hirs.push(translator.clone().translate(ast, modifiers));
-        }
-        let hir = combiner.combine(hirs);
+
+        let asts: Vec<Ast> = trees
+            .iter()
+            .map(|&tree| {
+                let tokens = Tokenizer::new().tokenize(tree).unwrap();
+                parser.parse(tree, &tokens).unwrap()
+            })
+            .collect();
+
+        let hirs: Vec<Hir> = asts
+            .iter()
+            .map(|ast| {
+                let modifiers = discoverer.discover(ast);
+                translator.translate(ast, modifiers)
+            })
+            .collect();
+
+        combiner.verify(&asts).unwrap();
+        let hir = combiner.combine(&hirs);
         Ok(emitter::Emitter::new(indent, version).emit(&hir))
     }
 

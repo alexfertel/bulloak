@@ -13,7 +13,7 @@ use crate::utils::{capitalize_first_letter, sanitize};
 ///
 /// It visits an AST in depth-first order an generates a HIR
 /// as a result.
-#[derive(Default, Clone)]
+#[derive(Default)]
 pub struct Translator;
 
 impl Translator {
@@ -27,7 +27,7 @@ impl Translator {
     ///
     /// This function is the entry point of the translator.
     #[must_use]
-    pub fn translate(self, ast: &ast::Ast, modifiers: &IndexMap<String, String>) -> Hir {
+    pub fn translate(&self, ast: &ast::Ast, modifiers: &IndexMap<String, String>) -> Hir {
         TranslatorI::new(modifiers).translate(ast)
     }
 }
@@ -289,18 +289,13 @@ mod tests {
     use crate::syntax::parser::Parser;
     use crate::syntax::tokenizer::Tokenizer;
 
-    fn translate(text: &str) -> Result<Vec<hir::Hir>> {
+    fn translate(text: &str) -> Result<hir::Hir> {
         let tokens = Tokenizer::new().tokenize(&text)?;
-        let asts = Parser::new().parse(&text, &tokens)?;
+        let ast = Parser::new().parse(&text, &tokens)?;
         let mut discoverer = modifiers::ModifierDiscoverer::new();
-        let translator = hir::translator::Translator::new();
-        let mut hirs = Vec::new();
-        for ast in &asts {
-            let modifiers = discoverer.discover(ast).unwrap();
-            hirs.push(translator.clone().translate(ast, modifiers));
-        }
+        let modifiers = discoverer.discover(&ast);
 
-        Ok(hirs)
+        Ok(hir::translator::Translator::new().translate(&ast, modifiers))
     }
 
     fn root(children: Vec<Hir>) -> Hir {
@@ -337,9 +332,7 @@ mod tests {
     #[test]
     fn one_child() {
         assert_eq!(
-            translate("Foo_Test\n└── when something bad happens\n   └── it should revert").unwrap()
-                [0]
-            .to_owned(),
+            translate("Foo_Test\n└── when something bad happens\n   └── it should revert").unwrap(),
             root(vec![contract(
                 "Foo_Test".to_owned(),
                 vec![function(
@@ -363,8 +356,7 @@ mod tests {
 └── given not stuff called
    └── it should revert"
             )
-            .unwrap()[0]
-                .to_owned(),
+            .unwrap(),
             root(vec![contract(
                 "FooBarTheBest_Test".to_owned(),
                 vec![
@@ -402,7 +394,7 @@ Foo_Test
         );
 
         assert_eq!(
-            translate(&file_contents).unwrap()[0].to_owned(),
+            translate(&file_contents)?,
             root(vec![contract(
                 "Foo_Test".to_owned(),
                 vec![
