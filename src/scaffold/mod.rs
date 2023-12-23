@@ -9,6 +9,7 @@ use forge_fmt::fmt;
 use owo_colors::OwoColorize;
 
 use crate::constants::INTERNAL_DEFAULT_SOL_VERSION;
+use crate::utils::split_trees;
 use crate::{hir, sol, syntax};
 
 pub mod emitter;
@@ -111,7 +112,7 @@ impl<'s> Scaffolder<'s> {
     /// Generates Solidity code from a `.tree` file.
     pub fn scaffold(&self, text: &str) -> crate::error::Result<String> {
         let combiner = hir::combiner::Combiner::new();
-        let trees = combiner.split(text);
+        let trees = split_trees(text);
 
         let mut discoverer = modifiers::ModifierDiscoverer::new();
         let translator = hir::translator::Translator::new();

@@ -252,10 +252,11 @@ mod tests {
     use crate::syntax::ast::Ast;
     use crate::syntax::parser::Parser;
     use crate::syntax::tokenizer::Tokenizer;
+    use crate::utils::split_trees;
 
     fn scaffold_with_flags(text: &str, indent: usize, version: &str) -> Result<String> {
         let combiner = Combiner::new();
-        let trees = combiner.split(text);
+        let trees = split_trees(text);
 
         let mut parser = Parser::new();
         let mut discoverer = modifiers::ModifierDiscoverer::new();

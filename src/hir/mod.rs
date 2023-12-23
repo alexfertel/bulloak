@@ -8,13 +8,15 @@ pub mod visitor;
 
 pub use hir::*;
 
+use super::utils::split_trees;
+
 /// High-level function that returns a HIR given the contents of a `.tree` file.
 ///
 /// This function leverages `crate::syntax::parse` and `translator::Translator::translate`
 /// to hide away most of the complexity of `bulloak`'s internal compiler.
 pub fn translate(text: &str) -> anyhow::Result<Hir> {
     let combiner = combiner::Combiner::new();
-    let trees = combiner.split(text);
+    let trees = split_trees(text);
 
     let mut discoverer = crate::scaffold::modifiers::ModifierDiscoverer::new();
     let translator = translator::Translator::new();

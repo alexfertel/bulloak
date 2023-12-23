@@ -19,14 +19,6 @@ impl Combiner {
         Combiner {}
     }
 
-    /// Splits the input text into distinct trees,
-    /// delimited by two successive newlines
-    ///
-    /// This function is called before the tokenization and parsing steps.
-    pub fn split<'a>(&'a self, text: &'a str) -> Vec<&str> {
-        text.split("\n\n").collect::<Vec<&str>>()
-    }
-
     /// Verifies that the ASTs are valid.
     ///
     /// This function is called before the translation to HIR.
