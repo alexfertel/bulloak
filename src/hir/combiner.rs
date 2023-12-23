@@ -2,7 +2,7 @@
 
 use std::collections::HashSet;
 
-use crate::syntax::ast::Ast;
+use crate::{syntax::ast::Ast, constants::CONTRACT_PART_SEPARATOR};
 
 use super::{Hir, Root};
 
@@ -34,13 +34,13 @@ impl Combiner {
         if let Some(Ast::Root(first_root)) = asts.first() {
             let first_contract_name = &first_root.contract_name;
             let first_parts: Vec<&str> = first_contract_name
-                .split(|c| c == '.' || c == ':')
+                .split(CONTRACT_PART_SEPARATOR)
                 .collect();
 
             for ast in asts {
                 if let Ast::Root(root) = ast {
                     let parts: Vec<&str> =
-                        root.contract_name.split(|c| c == '.' || c == ':').collect();
+                        root.contract_name.split(CONTRACT_PART_SEPARATOR).collect();
                     if parts[0] != first_parts[0] {
                         return Err(format!(
                             "Contract name mismatch: expected '{}', found '{}'",
