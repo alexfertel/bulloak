@@ -1,10 +1,72 @@
 //! The implementation of a high-level intermediate representation (HIR) combiner.
 
-use std::collections::HashSet;
+use std::{collections::HashSet, fmt, result};
 
-use crate::utils::get_contract_name_from_identifier;
+use crate::{utils::get_contract_name_from_identifier, span::Span};
 
 use super::{Hir, Root, ContractDefinition};
+
+type Result<T> = result::Result<T, Error>;
+
+/// An error that occurred while combining HIRs.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct Error {
+    /// The kind of error.
+    kind: ErrorKind,
+    /// The original text that the parser generated the error from. Every
+    /// span in an error is a valid range into this string.
+    text: String,
+    /// The span of this error.
+    span: Span,
+}
+
+impl std::error::Error for Error {}
+
+impl Error {
+    /// Return the type of this error.
+    #[must_use]
+    pub fn kind(&self) -> &ErrorKind {
+        &self.kind
+    }
+
+    /// The original text string in which this error occurred.
+    #[must_use]
+    pub fn text(&self) -> &str {
+        &self.text
+    }
+
+    /// Return the span at which this error occurred.
+    #[must_use]
+    pub fn span(&self) -> &Span {
+        &self.span
+    }
+}
+
+type Identifier = String;
+
+/// The type of an error that occurred while combining HIRs.
+#[derive(Clone, Debug, Eq, PartialEq)]
+#[non_exhaustive]
+pub enum ErrorKind {
+    /// This happens when the contract name in the identifier of one HIR does
+    /// not match the contract name in the identifier of another HIR.
+    ContractNameMismatch(Identifier, Identifier),
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        crate::error::Formatter::from(self).fmt(f)
+    }
+}
+
+impl fmt::Display for ErrorKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use self::ErrorKind::ContractNameMismatch;
+        match self {
+            ContractNameMismatch(actual, expected) => write!(f, "Contract name mismatch: expected '{expected}', found '{actual}'"),
+        }
+    }
+}
 
 /// A high-level intermediate representation (HIR) combiner.
 ///
@@ -19,13 +81,22 @@ impl Combiner {
         Combiner {}
     }
 
+    /// Create a new error with the given span and error type.
+    fn error(&self, text: String, span: Span, kind: ErrorKind) -> Error {
+        Error {
+            kind,
+            text,
+            span,
+        }
+    }
+
     /// Combines the translated HIRs into a single HIR. HIRs are merged by
     /// iterating over each HIR and merging their children into the contract
     /// definition of the first HIR, while verifying the contract identifiers
     /// match and filtering out duplicate modifiers.
     ///
     /// This function is called after the ASTs are translated to HIR.
-    pub fn combine(&self, hirs: &Vec<Hir>) -> Option<Hir> {
+    pub fn combine(&self, hirs: &Vec<Hir>) -> Result<Hir> {
         let mut root: Root = Root::default();
         let mut contract_definition: &ContractDefinition;
         let mut added_modifiers = HashSet::new();
@@ -44,11 +115,12 @@ impl Combiner {
                                     root.children.push(Hir::ContractDefinition(child_contract));
                                     contract_definition = &child_contract;
                                 } else {
-                                    if let identifier = get_contract_name_from_identifier(&contract_def.identifier) != contract_definition.identifier {
-                                        Some(format!(
-                                            "Contract name mismatch: expected '{}', found '{}'",
-                                            identifier, contract_definition.identifier
-                                        ));
+                                    let identifier = get_contract_name_from_identifier(&contract_def.identifier);
+                                    if identifier != contract_definition.identifier {
+                                        let (text, span) = (String::new(), Span::default()); // @follow-up - how can we get the text and span from the HIR? Is it even necessary? This would be easier to do with verification of the AST. One option is to use the index of the HIR in the vector of HIRs since we know the identifier is the start of a give tree.
+                                        Err(self.error(text, span, ErrorKind::ContractNameMismatch(
+                                            identifier, contract_definition.identifier)
+                                        ))?
                                     }
                                     for child in &contract_def.children {
                                         // If child is of type FunctionDefinition with the same identifier as a child of another ContractDefinition of ty
@@ -82,6 +154,6 @@ impl Combiner {
             }
         }
 
-        Some(Hir::Root(root))
+        Ok(Hir::Root(root))
     }
 }
