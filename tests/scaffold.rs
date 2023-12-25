@@ -58,7 +58,6 @@ fn errors_when_tree_is_empty() {
         let output = cmd(&binary_path, "scaffold", &tree_path, &[]);
         let actual = String::from_utf8(output.stderr).unwrap();
 
-        println!("{}", actual);
         assert!(actual.contains("found an empty tree"));
     }
 }

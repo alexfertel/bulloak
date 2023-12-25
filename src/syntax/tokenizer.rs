@@ -331,9 +331,7 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
                 }
                 _ => {
                     let token = self.scan_word()?;
-                    if token.kind == TokenKind::When || token.kind == TokenKind::Given
-                    // || token.kind == TokenKind::It // @follow-up - I think this is needed, but it breaks the tests because of invalid {} character in emit event statement
-                    {
+                    if token.kind == TokenKind::When || token.kind == TokenKind::Given {
                         self.enter_identifier_mode();
                     };
                     tokens.push(token);
