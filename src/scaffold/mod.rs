@@ -9,8 +9,8 @@ use forge_fmt::fmt;
 use owo_colors::OwoColorize;
 
 use crate::constants::INTERNAL_DEFAULT_SOL_VERSION;
-use crate::utils::split_trees;
-use crate::{hir, sol, syntax};
+use crate::utils::translate_and_combine_trees;
+use crate::sol;
 
 pub mod emitter;
 pub mod modifiers;
@@ -111,28 +111,7 @@ impl<'s> Scaffolder<'s> {
 
     /// Generates Solidity code from a `.tree` file.
     pub fn scaffold(&self, text: &str) -> crate::error::Result<String> {
-        let combiner = hir::combiner::Combiner::new();
-        let trees = split_trees(text);
-
-        let mut discoverer = modifiers::ModifierDiscoverer::new();
-        let translator = hir::translator::Translator::new();
-
-        let mut errors = Vec::new();
-        let asts: Vec<syntax::ast::Ast> = trees
-            .iter()
-            .filter_map(|&tree| syntax::parse(tree).map_err(|error| errors.push(error)).ok()) // @follow-up - how do we combine and report errors?
-            .collect();
-
-        let hirs: Vec<hir::Hir> = asts
-            .iter()
-            .map(|ast| {
-                let modifiers = discoverer.discover(ast);
-                translator.translate(ast, modifiers)
-            })
-            .collect();
-
-        combiner.verify(&asts).unwrap();
-        let hir = combiner.combine(&hirs);
+        let hir = translate_and_combine_trees(text)?;
         let pt = sol::Translator::new(self.solidity_version).translate(&hir);
         let source = sol::Formatter::new().emit(pt);
         let formatted = fmt(&source).expect("should format the emitted solidity code");
