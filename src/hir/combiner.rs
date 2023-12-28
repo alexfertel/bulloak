@@ -118,10 +118,11 @@ impl Combiner {
                                         _ => unreachable!(),
                                     }
                                 } else {
-                                    let identifier = get_contract_name_from_identifier(&contract_def.identifier);
+                                    let text = contract_def.identifier.clone();
+                                    let identifier = get_contract_name_from_identifier(&text);
                                     let accumulated_identifier = contract_definition.identifier.clone();
                                     if identifier != accumulated_identifier {
-                                        let (text, span) = (String::new(), Span::default()); // @follow-up - how can we get the text and span from the HIR? Is it even necessary? This would be easier to do with verification of the AST. One option is to use the index of the HIR in the vector of HIRs since we know the identifier is the start of a give tree.
+                                        let span = Span::default(); // @follow-up - how can we get the span from the HIR? Is it even necessary? This would be easier to do with verification of the AST. One option is to use the index of the HIR in the vector of HIRs since we know the identifier is the start of a given tree.
                                         Err(self.error(text, span, ErrorKind::ContractNameMismatch(
                                             identifier, accumulated_identifier)
                                         ))?
