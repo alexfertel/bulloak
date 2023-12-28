@@ -9,7 +9,8 @@ use forge_fmt::fmt;
 use owo_colors::OwoColorize;
 
 use crate::constants::INTERNAL_DEFAULT_SOL_VERSION;
-use crate::{hir, sol, syntax};
+use crate::hir::translate_and_combine_trees;
+use crate::sol;
 
 pub mod emitter;
 pub mod modifiers;
@@ -110,10 +111,7 @@ impl<'s> Scaffolder<'s> {
 
     /// Generates Solidity code from a `.tree` file.
     pub fn scaffold(&self, text: &str) -> crate::error::Result<String> {
-        let ast = syntax::parse(text)?;
-        let mut discoverer = modifiers::ModifierDiscoverer::new();
-        let modifiers = discoverer.discover(&ast);
-        let hir = hir::translator::Translator::new().translate(&ast, modifiers);
+        let hir = translate_and_combine_trees(text)?;
         let pt = sol::Translator::new(self.solidity_version).translate(&hir);
         let source = sol::Formatter::new().emit(pt);
         let formatted = fmt(&source).expect("should format the emitted solidity code");

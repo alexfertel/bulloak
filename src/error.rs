@@ -2,6 +2,7 @@ use std::cmp;
 use std::fmt;
 use std::result;
 
+use crate::hir::combiner;
 use crate::span;
 use crate::syntax::parser;
 use crate::syntax::semantics;
@@ -20,6 +21,8 @@ pub enum Error {
     /// An error that occurred while translating concrete syntax into abstract
     /// syntax.
     Parse(parser::Error),
+    /// An error that occurred while combining HIRs.
+    Combine(combiner::Error),
     /// An error that occurred while doing semantic analysis on the abstract
     /// syntax tree.
     Semantic(Vec<semantics::Error>),
@@ -39,6 +42,12 @@ impl From<tokenizer::Error> for Error {
     }
 }
 
+impl From<combiner::Error> for Error {
+    fn from(err: combiner::Error) -> Self {
+        Self::Combine(err)
+    }
+}
+
 impl From<Vec<semantics::Error>> for Error {
     fn from(errors: Vec<semantics::Error>) -> Self {
         Self::Semantic(errors)
@@ -50,6 +59,7 @@ impl fmt::Display for Error {
         match self {
             Self::Parse(x) => x.fmt(f),
             Self::Tokenize(x) => x.fmt(f),
+            Self::Combine(x) => x.fmt(f),
             Self::Semantic(errors) => {
                 for x in errors {
                     x.fmt(f)?;
@@ -86,6 +96,16 @@ impl<'e> From<&'e parser::Error> for Formatter<'e, parser::ErrorKind> {
 
 impl<'e> From<&'e tokenizer::Error> for Formatter<'e, tokenizer::ErrorKind> {
     fn from(err: &'e tokenizer::Error) -> Self {
+        Formatter {
+            text: err.text(),
+            err: err.kind(),
+            span: err.span(),
+        }
+    }
+}
+
+impl<'e> From<&'e combiner::Error> for Formatter<'e, combiner::ErrorKind> {
+    fn from(err: &'e combiner::Error) -> Self {
         Formatter {
             text: err.text(),
             err: err.kind(),

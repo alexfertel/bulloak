@@ -156,6 +156,11 @@ impl fmt::Display for ViolationKind {
                             "an error occurred while parsing the tree: {}",
                             error.kind()
                         ),
+                        error::Error::Combine(error) => write!(
+                            f,
+                            "an error occurred while parsing the tree: {}",
+                            error.kind()
+                        ),
                         error::Error::Semantic(_) => write!(
                             f,
                             "at least one semantic error occured while parsing the tree"

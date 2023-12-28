@@ -1,3 +1,5 @@
+use crate::constants::{CONTRACT_PART_SEPARATOR, TREES_SEPARATOR};
+
 pub(crate) fn capitalize_first_letter(s: &str) -> String {
     let mut c = s.chars();
     match c.next() {
@@ -46,8 +48,27 @@ pub(crate) fn pluralize<'a>(count: usize, singular: &'a str, plural: &'a str) ->
     }
 }
 
+/// Splits the input text into distinct trees,
+/// delimited by two successive newlines
+///
+/// This function is called before the tokenization and parsing steps.
+#[inline]
+pub(crate) fn split_trees(text: &str) -> Vec<&str> {
+    text.split(TREES_SEPARATOR).collect::<Vec<&str>>()
+}
+
+/// Gets the contract name from the HIR tree identifier.
+///
+/// This function is called during verification of the combined HIR.
+pub(crate) fn get_contract_name_from_identifier(identifier: &String) -> String {
+    let identifier_parts: Vec<&str> = identifier.split(CONTRACT_PART_SEPARATOR).collect();
+    return sanitize(identifier_parts[0]);
+}
+
+
 #[cfg(test)]
 mod tests {
+    use super::split_trees;
     use super::to_pascal_case;
 
     #[test]
@@ -55,5 +76,17 @@ mod tests {
         assert_eq!(to_pascal_case("when only owner"), "WhenOnlyOwner");
         assert_eq!(to_pascal_case("when"), "When");
         assert_eq!(to_pascal_case(""), "");
+    }
+
+    #[test]
+    fn test_split_trees() {
+        assert_eq!(
+            split_trees("Foo_Test\n└── when something bad happens\n   └── it should revert"),
+            vec!["Foo_Test\n└── when something bad happens\n   └── it should revert"]
+        );
+        assert_eq!(
+            split_trees("Foo_Test\n└── when something bad happens\n   └── it should revert\n\nFoo_Test2\n└── when something bad happens\n   └── it should revert"),
+            vec!["Foo_Test\n└── when something bad happens\n   └── it should revert", "Foo_Test2\n└── when something bad happens\n   └── it should revert"]
+        );
     }
 }

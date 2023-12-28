@@ -38,8 +38,9 @@ impl Checker for StructuralMatcher {
     fn check(ctx: &Context) -> Vec<Violation> {
         let mut violations = vec![];
 
-        // We currently only support one tree per .tree file, which
-        // means that there can only be one contract. This is reflected
+        // We support multiple trees per .tree file, but they are combined into
+        // a single HIR during the hir::translate step when creating the context
+        // which means that there can only be one contract. This is reflected
         // in the current tree hierarchy of the HIR.
         let contract_hir = match ctx.hir {
             Hir::Root(ref root) => root
