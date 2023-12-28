@@ -98,7 +98,7 @@ impl Combiner {
     /// This function is called after the ASTs are translated to HIR.
     pub fn combine(&self, hirs: &Vec<Hir>) -> Result<Hir> {
         let mut root: Root = Root::default();
-        let mut contract_definition: &ContractDefinition;
+        let mut contract_definition = &mut ContractDefinition::default();
         let mut added_modifiers = HashSet::new();
 
         for hir in hirs {
@@ -109,17 +109,21 @@ impl Combiner {
                             // check the ith HIR's identifier matches the accumulated ContractDefinition identifier
                             // all the ContractDefinitions should be merged into a single child ContractDefinition with the same identifier
                             Hir::ContractDefinition(contract_def) => {
-                                if root.children.is_empty() {
+                                if contract_definition.identifier.is_empty() {
                                     let mut child_contract = contract_def.clone();
                                     child_contract.identifier = get_contract_name_from_identifier(&contract_def.identifier);
                                     root.children.push(Hir::ContractDefinition(child_contract));
-                                    contract_definition = &child_contract;
+                                    contract_definition = match &mut root.children[0] {
+                                        Hir::ContractDefinition(contract) => contract,
+                                        _ => unreachable!(),
+                                    }
                                 } else {
                                     let identifier = get_contract_name_from_identifier(&contract_def.identifier);
-                                    if identifier != contract_definition.identifier {
+                                    let accumulated_identifier = contract_definition.identifier.clone();
+                                    if identifier != accumulated_identifier {
                                         let (text, span) = (String::new(), Span::default()); // @follow-up - how can we get the text and span from the HIR? Is it even necessary? This would be easier to do with verification of the AST. One option is to use the index of the HIR in the vector of HIRs since we know the identifier is the start of a give tree.
                                         Err(self.error(text, span, ErrorKind::ContractNameMismatch(
-                                            identifier, contract_definition.identifier)
+                                            identifier, accumulated_identifier)
                                         ))?
                                     }
                                     for child in &contract_def.children {
