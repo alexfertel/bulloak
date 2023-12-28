@@ -547,11 +547,11 @@ mod tests {
     #[test]
     fn rootless_tree() {
         assert_eq!(
-            parse("└── It should never revert").unwrap_err(),
+            parse("└── It should never revert.").unwrap_err(),
             e(ErrorKind::TreeRootless, Span::default())
         );
         assert_eq!(
-            parse("├── It should revert").unwrap_err(),
+            parse("├── It should revert.").unwrap_err(),
             e(ErrorKind::TreeRootless, Span::default())
         );
         assert_eq!(

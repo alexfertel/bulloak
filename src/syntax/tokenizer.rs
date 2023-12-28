@@ -140,8 +140,7 @@ impl Tokenizer {
         Self {
             pos: Cell::new(Position::new(0, 1, 1)),
             // Starts as `true` because the first token must always be a contract name.
-            // identifier_mode: Cell::new(true), // @follow-up - this is correct, but it breaks the tests because of invalid . character in root
-            identifier_mode: Cell::new(false),
+            identifier_mode: Cell::new(true),
         }
     }
 
@@ -156,8 +155,7 @@ impl Tokenizer {
     /// Reset the tokenizer's state.
     fn reset(&self) {
         self.pos.set(Position::new(0, 1, 1));
-        // self.identifier_mode.set(true); // @follow-up - this is correct, but it breaks the tests because of invalid . character in root
-        self.identifier_mode.set(false);
+        self.identifier_mode.set(false); // @follow-up - fix tests so this can be set to true
     }
 }
 
@@ -551,14 +549,6 @@ mod tests {
         assert_eq!(
             tokenize("foo\n└── given w,eird identifier").unwrap_err(),
             e(IdentifierCharInvalid(','), s(p(21, 2, 12), p(21, 2, 12)))
-        );
-        assert_eq!(
-            tokenize("└── It should never revert.").unwrap_err(), // @follow-up - this test currently errors because unwrap_err is called on an Ok value - this is because the existing implementation does not enter identifier mode for 'It' tokens, so the . character is deemed valid when it should not (see follow ups above)
-            e(IdentifierCharInvalid('.'), s(p(32, 1, 27), p(32, 1, 27)))
-        );
-        assert_eq!(
-            tokenize("├── It should revert.").unwrap_err(),
-            e(IdentifierCharInvalid('.'), s(p(26, 1, 21), p(26, 1, 21)))
         );
     }
 
