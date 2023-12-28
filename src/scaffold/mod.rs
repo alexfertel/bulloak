@@ -9,7 +9,7 @@ use forge_fmt::fmt;
 use owo_colors::OwoColorize;
 
 use crate::constants::INTERNAL_DEFAULT_SOL_VERSION;
-use crate::utils::translate_and_combine_trees;
+use crate::hir::translate_and_combine_trees;
 use crate::sol;
 
 pub mod emitter;

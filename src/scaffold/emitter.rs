@@ -245,7 +245,7 @@ mod tests {
     use crate::constants::INTERNAL_DEFAULT_SOL_VERSION;
     use crate::error::Result;
     use crate::scaffold::emitter;
-    use crate::utils::translate_and_combine_trees;
+    use crate::hir::translate_and_combine_trees;
 
     fn scaffold_with_flags(text: &str, indent: usize, version: &str) -> Result<String> {
         let hir = translate_and_combine_trees(text)?;
