@@ -127,9 +127,6 @@ pub struct Tokenizer {
     /// In `identifier` mode, the tokenizer will error if it encounters a
     /// a character that is not a valid identifier character.
     /// This is to prevent malformed names when emitting identifiers.
-    ///
-    /// This is `true` by default because the first token must be
-    /// a contract name, which has to be a valid Solidity identifier.
     identifier_mode: Cell<bool>,
 }
 
@@ -139,8 +136,7 @@ impl Tokenizer {
     pub const fn new() -> Self {
         Self {
             pos: Cell::new(Position::new(0, 1, 1)),
-            // Starts as `true` because the first token must always be a contract name.
-            identifier_mode: Cell::new(true),
+            identifier_mode: Cell::new(false),
         }
     }
 
@@ -155,7 +151,7 @@ impl Tokenizer {
     /// Reset the tokenizer's state.
     fn reset(&self) {
         self.pos.set(Position::new(0, 1, 1));
-        self.identifier_mode.set(true); // @follow-up - fix tests so this can be set to true
+        self.identifier_mode.set(false);
     }
 }
 
