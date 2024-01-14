@@ -49,22 +49,20 @@ pub(crate) fn pluralize<'a>(count: usize, singular: &'a str, plural: &'a str) ->
 }
 
 /// Splits the input text into distinct trees,
-/// delimited by two successive newlines
-///
-/// This function is called before the tokenization and parsing steps.
+/// delimited by two successive newlines.
 #[inline]
-pub(crate) fn split_trees(text: &str) -> Vec<&str> {
-    text.split(TREES_SEPARATOR).collect::<Vec<&str>>()
+pub(crate) fn split_trees(text: &str) -> impl Iterator<Item = &str> + '_ {
+    text.split(TREES_SEPARATOR)
 }
 
 /// Gets the contract name from the HIR tree identifier.
-///
-/// This function is called during verification of the combined HIR.
-pub(crate) fn get_contract_name_from_identifier(identifier: &String) -> String {
-    let identifier_parts: Vec<&str> = identifier.split(CONTRACT_PART_SEPARATOR).collect();
-    return sanitize(identifier_parts[0]);
+pub(crate) fn get_contract_name_from_identifier(identifier: &str) -> String {
+    let contract_name = identifier
+        .split(CONTRACT_PART_SEPARATOR)
+        .next()
+        .expect("should not be empty");
+    sanitize(contract_name)
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -79,14 +77,21 @@ mod tests {
     }
 
     #[test]
-    fn test_split_trees() {
+    fn splits_trees() {
+        let trees =
+            split_trees("Foo_Test\n└── when something bad happens\n   └── it should revert");
         assert_eq!(
-            split_trees("Foo_Test\n└── when something bad happens\n   └── it should revert"),
+            trees.collect::<Vec<_>>(),
             vec!["Foo_Test\n└── when something bad happens\n   └── it should revert"]
         );
+        let trees =
+            split_trees("Foo_Test\n└── when something bad happens\n   └── it should revert\n\nFoo_Test2\n└── when something bad happens\n   └── it should revert");
         assert_eq!(
-            split_trees("Foo_Test\n└── when something bad happens\n   └── it should revert\n\nFoo_Test2\n└── when something bad happens\n   └── it should revert"),
-            vec!["Foo_Test\n└── when something bad happens\n   └── it should revert", "Foo_Test2\n└── when something bad happens\n   └── it should revert"]
+            trees.collect::<Vec<_>>(),
+            vec![
+                "Foo_Test\n└── when something bad happens\n   └── it should revert",
+                "Foo_Test2\n└── when something bad happens\n   └── it should revert"
+            ]
         );
     }
 }

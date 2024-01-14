@@ -155,7 +155,7 @@ impl Tokenizer {
     /// Reset the tokenizer's state.
     fn reset(&self) {
         self.pos.set(Position::new(0, 1, 1));
-        self.identifier_mode.set(false); // @follow-up - fix tests so this can be set to true
+        self.identifier_mode.set(true); // @follow-up - fix tests so this can be set to true
     }
 }
 
