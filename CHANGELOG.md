@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.6.2]
+
+### Bug Fixes
+
+- Bump zerocopy to apply security patch
+- Properly handle apostrophes
+
+
+### Features
+
+- *(docs)* Add supported by section to README
+
+
 ## [0.6.1] - 2023-12-09
 
 ### Bug Fixes
