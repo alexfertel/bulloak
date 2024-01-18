@@ -26,6 +26,8 @@ A Solidity test generator based on the
   - [Spec](#spec)
 - [Output](#output)
 - [Contributing](#contributing)
+- [Publishing](#publishing)
+- [Supported By](#supported-by)
 - [License](#license)
 
 > [!WARNING] `bulloak` is still `0.*.*`, so breaking changes
@@ -320,6 +322,12 @@ These are the current steps taken to publish `bulloak`:
 - Create the corresponding git tag named after the version.
 - Push to origin.
 - Run `cargo publish`.
+
+## Supported By
+
+This project has been possible thanks to the support of:
+
+- [Sense Finance](https://sense.finance)
 
 ## License
 
