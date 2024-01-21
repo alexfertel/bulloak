@@ -83,6 +83,15 @@ pub struct Token {
     pub lexeme: String,
 }
 
+impl Token {
+    fn is_branch(&self) -> bool {
+        match self.kind {
+            TokenKind::Tee | TokenKind::Corner => true,
+            TokenKind::Word | TokenKind::When | TokenKind::Given | TokenKind::It => false,
+        }
+    }
+}
+
 impl fmt::Debug for Token {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
@@ -329,7 +338,10 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
                 }
                 _ => {
                     let token = self.scan_word()?;
-                    if token.kind == TokenKind::When || token.kind == TokenKind::Given {
+                    let last_is_branch = tokens.last().is_some_and(Token::is_branch);
+                    if last_is_branch
+                        && (token.kind == TokenKind::When || token.kind == TokenKind::Given)
+                    {
                         self.enter_identifier_mode();
                     };
                     tokens.push(token);
