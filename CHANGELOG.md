@@ -2,7 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.6.2]
+## [0.6.3]
+
+### Bug Fixes
+
+- *(tokenizer)* Enter ident mode when appropriate
+
+
+## [0.6.2] - 2024-01-18
 
 ### Bug Fixes
 
