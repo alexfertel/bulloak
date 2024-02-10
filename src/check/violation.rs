@@ -306,7 +306,7 @@ fn get_insertion_offset(
 /// # Process
 /// The function works in several steps:
 /// 1. It first creates a set of function names present in `contract_hir` to identify the functions
-///    that need ordering.
+///    that need to be sorted.
 /// 2. It then iterates over the `violations` to correct the order of functions in `contract_sol`,
 ///    matching them with `contract_hir`.
 /// 3. Functions not part of `contract_hir` are removed, as their correct position is unknown.
@@ -365,7 +365,7 @@ pub(crate) fn fix_order(
         })
         .collect();
 
-    // 4. a - Add the functions that appear in the tree to a blank
+    // 4. a - Add the functions that appear in the tree to the blank
     // string `source`.
     //    b - Replace them with whitespace in `scratch`.
     //
@@ -383,7 +383,6 @@ pub(crate) fn fix_order(
 
     // 5. Replace the contract's body with the sorted functions and
     // the extra functions contained in the scratch string.
-    let contract_body_len = contract_sol.loc().end() - contract_sol.loc().start();
     // We know there is at least two parts because we found order violations.
     let first_part_loc = contract_sol.parts[0].loc();
     // If the functions in the solidity file are exactly the functions in the
@@ -394,7 +393,7 @@ pub(crate) fn fix_order(
             "{}{}{}{}",
             &ctx.src[..first_part_loc.start()],
             source.join("\n\n"),
-            &scratch[first_part_loc.start()..contract_body_len],
+            &scratch[first_part_loc.start()..contract_sol.loc.end() - 1],
             &ctx.src[contract_sol.loc().end() - 1..]
         )
     } else {
@@ -410,7 +409,7 @@ pub(crate) fn fix_order(
             "{}{}{SEPARATOR}{}{}",
             &ctx.src[..first_part_loc.start()],
             source.join("\n\n"),
-            &scratch[first_part_loc.start()..contract_body_len],
+            &scratch[first_part_loc.start()..contract_sol.loc.end() - 1],
             &ctx.src[contract_sol.loc().end() - 1..]
         )
     };
