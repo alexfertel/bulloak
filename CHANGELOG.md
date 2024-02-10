@@ -2,7 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.6.3]
+## [0.6.4]
+
+### Bug Fixes
+
+- *(check)* Properly measure scratch space length
+
+
+## [0.6.3] - 2024-01-21
 
 ### Bug Fixes
 
