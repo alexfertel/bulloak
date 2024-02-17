@@ -2,7 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.6.4]
+## [0.6.5]
+
+### Bug Fixes
+
+- *(scaffold)* Properly sanitize action titles
+- *(scaffold)* Error when a duplicated top action is found
+
+
+## [0.6.4] - 2024-02-10
 
 ### Bug Fixes
 
