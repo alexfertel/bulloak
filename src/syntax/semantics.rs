@@ -6,7 +6,7 @@ use std::{fmt, result};
 use super::ast::{self, Ast};
 use crate::span::Span;
 use crate::syntax::visitor::Visitor;
-use crate::utils::{lower_first_letter, to_pascal_case};
+use crate::utils::{lower_first_letter, sanitize, to_pascal_case};
 
 type Result<T> = result::Result<T, Vec<Error>>;
 
@@ -54,8 +54,8 @@ impl std::error::Error for Error {}
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[non_exhaustive]
 pub enum ErrorKind {
-    /// Found two conditions with the same title.
-    ConditionDuplicated(Vec<Span>),
+    /// Found two conditions or top-level actions with the same title.
+    IdentifierDuplicated(Vec<Span>),
     /// Found a condition with no children.
     ConditionEmpty,
     /// Found an unexpected node. This is most probably a bug in the
@@ -73,15 +73,15 @@ impl fmt::Display for Error {
 
 impl fmt::Display for ErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        use self::ErrorKind::{ConditionDuplicated, ConditionEmpty, NodeUnexpected, TreeEmpty};
+        use self::ErrorKind::{ConditionEmpty, IdentifierDuplicated, NodeUnexpected, TreeEmpty};
         match *self {
-            ConditionDuplicated(ref spans) => {
+            IdentifierDuplicated(ref spans) => {
                 let lines = spans
                     .iter()
                     .map(|s| s.start.line.to_string())
                     .collect::<Vec<String>>()
                     .join(", ");
-                write!(f, "found a condition more than once in lines: {}", lines)
+                write!(f, "found an identifier more than once in lines: {}", lines)
             }
             ConditionEmpty => write!(f, "found a condition with no children"),
             NodeUnexpected => write!(f, "unexpected child node"),
@@ -98,7 +98,7 @@ pub struct SemanticAnalyzer<'t> {
     /// span in an error is a valid range into this string.
     text: &'t str,
     /// A map from modifier name to it's locations in the input.
-    modifiers: HashMap<String, Vec<Span>>,
+    identifiers: HashMap<String, Vec<Span>>,
 }
 
 impl<'t> SemanticAnalyzer<'t> {
@@ -108,7 +108,7 @@ impl<'t> SemanticAnalyzer<'t> {
         SemanticAnalyzer {
             text,
             errors: Vec::new(),
-            modifiers: HashMap::new(),
+            identifiers: HashMap::new(),
         }
     }
 
@@ -137,14 +137,14 @@ impl<'t> SemanticAnalyzer<'t> {
         .unwrap();
 
         // Check for duplicate conditions.
-        for spans in self.modifiers.clone().into_values() {
+        for spans in self.identifiers.clone().into_values() {
             if spans.len() > 1 {
                 self.error(
                     // FIXME: This is a patch until we start storing locations for
                     // parts of an AST node. In this case, we need the location of
                     // the condition's title.
                     spans[0].with_end(spans[0].start),
-                    ErrorKind::ConditionDuplicated(spans),
+                    ErrorKind::IdentifierDuplicated(spans),
                 );
             }
         }
@@ -173,6 +173,15 @@ impl Visitor for SemanticAnalyzer<'_> {
                     self.visit_condition(condition)?;
                 }
                 Ast::Action(action) => {
+                    // Top-level actions must be checked for duplicates since they will become
+                    // Solidity functions.
+                    let identifier = lower_first_letter(&to_pascal_case(&sanitize(&action.title)));
+                    match self.identifiers.get_mut(&identifier) {
+                        Some(spans) => spans.push(action.span),
+                        None => {
+                            self.identifiers.insert(identifier, vec![action.span]);
+                        }
+                    }
                     self.visit_action(action)?;
                 }
                 node => {
@@ -192,11 +201,11 @@ impl Visitor for SemanticAnalyzer<'_> {
             self.error(condition.span, ErrorKind::ConditionEmpty);
         }
 
-        let modifier = lower_first_letter(&to_pascal_case(&condition.title));
-        match self.modifiers.get_mut(&modifier) {
+        let modifier = lower_first_letter(&to_pascal_case(&sanitize(&condition.title)));
+        match self.identifiers.get_mut(&modifier) {
             Some(spans) => spans.push(condition.span),
             None => {
-                self.modifiers.insert(modifier, vec![condition.span]);
+                self.identifiers.insert(modifier, vec![condition.span]);
             }
         }
 
@@ -233,7 +242,6 @@ impl Visitor for SemanticAnalyzer<'_> {
 
 #[cfg(test)]
 mod tests {
-    use pretty_assertions::assert_eq;
 
     use crate::span::{Position, Span};
     use crate::syntax::ast;
@@ -288,7 +296,7 @@ mod tests {
         )
         .unwrap_err(),
             vec![semantics::Error {
-                kind: ConditionDuplicated(
+                kind: IdentifierDuplicated(
                     vec![
                         Span::new(Position::new(9, 2, 1), Position::new(47, 3, 12)),
                         Span::new(Position::new(49, 4, 1), Position::new(87, 5, 12)),
@@ -297,6 +305,28 @@ mod tests {
                 ),
                 text: "Foo_Test\n├── when dup\n│   └── It 1\n├── when dup\n│   └── It 2\n└── when dup\n    └── It 3".to_owned(),
                 span: Span::new(Position::new(9, 2, 1), Position::new(9, 2, 1)),
+            }]
+        );
+    }
+
+    #[test]
+    fn duplicated_top_level_action() {
+        assert_eq!(
+            analyze(
+                "Foo_Test
+├── It should, match the result.
+└── It should' match the result.",
+            )
+            .unwrap_err(),
+            vec![semantics::Error {
+                kind: IdentifierDuplicated(vec![
+                    Span::new(Position::new(9, 2, 1), Position::new(46, 2, 32)),
+                    Span::new(Position::new(48, 3, 1), Position::new(85, 3, 32))
+                ]),
+                text:
+                    "Foo_Test\n├── It should, match the result.\n└── It should' match the result."
+                        .to_owned(),
+                span: Span::new(Position::new(9, 2, 1), Position::new(9, 2, 1))
             }]
         );
     }
