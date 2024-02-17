@@ -1,3 +1,5 @@
+use unicode_xid::UnicodeXID;
+
 pub(crate) fn capitalize_first_letter(s: &str) -> String {
     let mut c = s.chars();
     match c.next() {
@@ -19,7 +21,7 @@ pub(crate) fn lower_first_letter(s: &str) -> String {
 pub(crate) fn sanitize(identifier: &str) -> String {
     identifier
         .replace('-', "_")
-        .replace(['\'', '"', '.', '{', '}', '’'], "")
+        .replace(|c: char| !c.is_xid_continue() && c != ' ', "")
 }
 
 /// Converts a sentence to pascal case.

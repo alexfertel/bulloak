@@ -13,7 +13,11 @@ fn scaffolds_trees() {
     let cwd = env::current_dir().unwrap();
     let binary_path = get_binary_path();
     let tests_path = cwd.join("tests").join("scaffold");
-    let trees = ["basic.tree", "complex.tree", "apostrophe.tree"];
+    let trees = [
+        "basic.tree",
+        "complex.tree",
+        "removes_invalid_title_chars.tree",
+    ];
 
     for tree_name in trees {
         let tree_path = tests_path.join(tree_name);
