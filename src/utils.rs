@@ -51,9 +51,18 @@ pub(crate) fn pluralize<'a>(count: usize, singular: &'a str, plural: &'a str) ->
 /// Splits the input text into distinct trees,
 /// delimited by two successive newlines.
 #[inline]
-pub(crate) fn split_trees(text: &str) -> impl Iterator<Item = &str> + '_ {
-    text.split(TREES_SEPARATOR)
+pub(crate) fn split_trees(text: &str) -> Box<dyn Iterator<Item = &str> + '_> {
+    if text.trim().is_empty() {
+        Box::new(std::iter::once(""))
+    } else {
+        Box::new(
+            text.split(TREES_SEPARATOR)
+                .map(|s| s.trim())
+                .filter(|s| !s.is_empty())
+        )
+    }
 }
+
 
 /// Gets the contract name from the HIR tree identifier.
 pub(crate) fn get_contract_name_from_identifier(identifier: &str) -> Option<String> {
@@ -78,20 +87,34 @@ mod tests {
 
     #[test]
     fn splits_trees() {
-        let trees =
-            split_trees("Foo_Test\n└── when something bad happens\n   └── it should revert");
-        assert_eq!(
-            trees.collect::<Vec<_>>(),
-            vec!["Foo_Test\n└── when something bad happens\n   └── it should revert"]
-        );
-        let trees =
-            split_trees("Foo_Test\n└── when something bad happens\n   └── it should revert\n\nFoo_Test2\n└── when something bad happens\n   └── it should revert");
-        assert_eq!(
-            trees.collect::<Vec<_>>(),
-            vec![
+        let test_cases = vec![
+            ("Foo_Test\n└── when something bad happens\n   └── it should revert", vec![
                 "Foo_Test\n└── when something bad happens\n   └── it should revert",
-                "Foo_Test2\n└── when something bad happens\n   └── it should revert"
-            ]
-        );
+            ]),
+            ("Foo_Test\n└── when something bad happens\n   └── it should revert\n\nFoo_Test2\n└── when something bad happens\n   └── it should revert", vec![
+                "Foo_Test\n└── when something bad happens\n   └── it should revert",
+                "Foo_Test2\n└── when something bad happens\n   └── it should revert",
+            ]),
+            // Test with varying numbers of newlines between tree splits
+            // Assumes behavior is the same for 2 or more newlines
+            ("Foo_Test\n└── when something bad happens\n   └── it should revert\n\n\nFoo_Test2\n└── when something bad happens\n   └── it should revert", vec![
+                "Foo_Test\n└── when something bad happens\n   └── it should revert",
+                "Foo_Test2\n└── when something bad happens\n   └── it should revert",
+            ]),
+            ("Foo_Test\n└── when something bad happens\n   └── it should revert\n\n\n\nFoo_Test2\n└── when something bad happens\n   └── it should revert", vec![
+                "Foo_Test\n└── when something bad happens\n   └── it should revert",
+                "Foo_Test2\n└── when something bad happens\n   └── it should revert",
+            ]),
+            ("Foo_Test\n└── when something bad happens\n   └── it should revert\n\n\n\n\nFoo_Test2\n└── when something bad happens\n   └── it should revert", vec![
+                "Foo_Test\n└── when something bad happens\n   └── it should revert",
+                "Foo_Test2\n└── when something bad happens\n   └── it should revert",
+            ]),
+        ];
+
+        for (input, expected) in test_cases {
+            let trees = split_trees(input);
+            let results: Vec<_> = trees.collect();
+            assert_eq!(results, expected, "Failed on input: {}", input);
+        }
     }
 }
