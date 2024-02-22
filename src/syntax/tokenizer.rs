@@ -83,6 +83,15 @@ pub struct Token {
     pub lexeme: String,
 }
 
+impl Token {
+    fn is_branch(&self) -> bool {
+        match self.kind {
+            TokenKind::Tee | TokenKind::Corner => true,
+            TokenKind::Word | TokenKind::When | TokenKind::Given | TokenKind::It => false,
+        }
+    }
+}
+
 impl fmt::Debug for Token {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
@@ -325,7 +334,10 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
                 }
                 _ => {
                     let token = self.scan_word()?;
-                    if token.kind == TokenKind::When || token.kind == TokenKind::Given {
+                    let last_is_branch = tokens.last().is_some_and(Token::is_branch);
+                    if last_is_branch
+                        && (token.kind == TokenKind::When || token.kind == TokenKind::Given)
+                    {
                         self.enter_identifier_mode();
                     };
                     tokens.push(token);
@@ -436,7 +448,7 @@ mod tests {
     }
 
     #[test]
-    fn test_only_contract_name() -> Result<()> {
+    fn only_contract_name() -> Result<()> {
         let simple_name = String::from("Foo");
         let starts_whitespace = String::from(" Foo");
         let ends_whitespace = String::from("Foo ");
@@ -460,7 +472,7 @@ mod tests {
     }
 
     #[test]
-    fn test_comments() -> Result<()> {
+    fn comments() -> Result<()> {
         let file_contents = String::from(
             "Foo_Test\n└── when something bad happens // some comments \n   └── it should revert",
         );
@@ -505,7 +517,7 @@ mod tests {
     }
 
     #[test]
-    fn test_invalid_characters() {
+    fn invalid_characters() {
         assert_eq!(
             tokenize("foo\n└── when |weird identifier").unwrap_err(),
             e(IdentifierCharInvalid('|'), s(p(19, 2, 10), p(19, 2, 10)))
@@ -549,7 +561,7 @@ mod tests {
     }
 
     #[test]
-    fn test_only_filename_and_newline() {
+    fn only_filename_and_newline() {
         let simple_name = String::from("foo\n");
         let starts_whitespace = String::from(" foo\n");
         let ends_whitespace = String::from("foo \n");
@@ -566,7 +578,7 @@ mod tests {
     }
 
     #[test]
-    fn test_one_child() {
+    fn one_child() {
         // Test parsing a when.
         let file_contents =
             String::from("Foo_Test\n└── when something bad happens\n   └── it should revert");
@@ -609,7 +621,7 @@ mod tests {
     }
 
     #[test]
-    fn test_multiple_children() {
+    fn multiple_children() {
         let file_contents = String::from(
             r#"multiple_children.t.sol
 ├── when stuff called
@@ -785,7 +797,7 @@ mod tests {
     }
 
     #[test]
-    fn test_case_insensitive_keywords() {
+    fn case_insensitive_keywords() {
         let file_contents =
             String::from("Foo_Test\n└── GIVEN something bad happens\n   └── whEN stuff is true\n   └── It should revert.");
 

@@ -1,4 +1,5 @@
 use crate::constants::{CONTRACT_PART_SEPARATOR, TREES_SEPARATOR};
+use unicode_xid::UnicodeXID;
 
 pub(crate) fn capitalize_first_letter(s: &str) -> String {
     let mut c = s.chars();
@@ -16,12 +17,12 @@ pub(crate) fn lower_first_letter(s: &str) -> String {
     }
 }
 
-/// This functions makes the appropriate changes to a string to
+/// This function makes the appropriate changes to a string to
 /// make it a valid identifier.
 pub(crate) fn sanitize(identifier: &str) -> String {
     identifier
         .replace('-', "_")
-        .replace(['\'', '"', '.', '{', '}'], "")
+        .replace(|c: char| !c.is_xid_continue() && c != ' ', "")
 }
 
 /// Converts a sentence to pascal case.
@@ -58,11 +59,10 @@ pub(crate) fn split_trees(text: &str) -> Box<dyn Iterator<Item = &str> + '_> {
         Box::new(
             text.split(TREES_SEPARATOR)
                 .map(|s| s.trim())
-                .filter(|s| !s.is_empty())
+                .filter(|s| !s.is_empty()),
         )
     }
 }
-
 
 /// Gets the contract name from the HIR tree identifier.
 pub(crate) fn get_contract_name_from_identifier(identifier: &str) -> Option<String> {

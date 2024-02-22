@@ -1,0 +1,6 @@
+// https://github.com/alexfertel/bulloak/issues/56
+Foo
+├── when b
+│   └── it Y
+└── when a
+    └── it X

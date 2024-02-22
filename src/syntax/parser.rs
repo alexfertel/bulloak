@@ -789,6 +789,27 @@ mod tests {
         );
     }
 
+    // https://github.com/alexfertel/bulloak/issues/54
+    #[test]
+    fn parses_top_level_actions() {
+        assert_eq!(
+            parse(
+                r#"Foo
+└── It reverts when X."#
+            )
+            .unwrap(),
+            Ast::Root(Root {
+                contract_name: String::from("Foo"),
+                span: s(p(0, 1, 1), p(31, 2, 22)),
+                children: vec![Ast::Action(Action {
+                    title: String::from("It reverts when X."),
+                    span: s(p(4, 2, 1), p(31, 2, 22)),
+                    children: vec![]
+                })],
+            })
+        );
+    }
+
     #[test]
     fn unsanitized_input() {
         assert_eq!(

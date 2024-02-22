@@ -2,6 +2,41 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.6.5]
+
+### Bug Fixes
+
+- *(scaffold)* Properly sanitize action titles
+- *(scaffold)* Error when a duplicated top action is found
+
+
+## [0.6.4] - 2024-02-10
+
+### Bug Fixes
+
+- *(check)* Properly measure scratch space length
+
+
+## [0.6.3] - 2024-01-21
+
+### Bug Fixes
+
+- *(tokenizer)* Enter ident mode when appropriate
+
+
+## [0.6.2] - 2024-01-18
+
+### Bug Fixes
+
+- Bump zerocopy to apply security patch
+- Properly handle apostrophes
+
+
+### Features
+
+- *(docs)* Add supported by section to README
+
+
 ## [0.6.1] - 2023-12-09
 
 ### Bug Fixes
