@@ -56,12 +56,12 @@ pub(crate) fn split_trees(text: &str) -> impl Iterator<Item = &str> + '_ {
 }
 
 /// Gets the contract name from the HIR tree identifier.
-pub(crate) fn get_contract_name_from_identifier(identifier: &str) -> String {
-    let contract_name = identifier
+pub(crate) fn get_contract_name_from_identifier(identifier: &str) -> Option<String> {
+    identifier
         .split(CONTRACT_PART_SEPARATOR)
         .next()
-        .expect("should not be empty");
-    sanitize(contract_name)
+        .map(sanitize)
+        .filter(|s| !s.trim().is_empty())
 }
 
 #[cfg(test)]
