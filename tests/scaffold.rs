@@ -13,7 +13,7 @@ fn scaffolds_trees() {
     let cwd = env::current_dir().unwrap();
     let binary_path = get_binary_path();
     let tests_path = cwd.join("tests").join("scaffold");
-    let trees = ["basic.tree", "complex.tree"];
+    let trees = ["basic.tree", "complex.tree", "multiple_roots.tree"];
 
     for tree_name in trees {
         let tree_path = tests_path.join(tree_name);
@@ -34,7 +34,7 @@ fn skips_trees_when_file_exists() {
     let cwd = env::current_dir().unwrap();
     let binary_path = get_binary_path();
     let tests_path = cwd.join("tests").join("scaffold");
-    let trees = ["basic.tree", "complex.tree"];
+    let trees = ["basic.tree", "complex.tree", "multiple_roots.tree"];
 
     for tree_name in trees {
         let tree_path = tests_path.join(tree_name);
@@ -75,5 +75,41 @@ fn errors_when_condition_appears_multiple_times() {
         let actual = String::from_utf8(output.stderr).unwrap();
 
         assert!(actual.contains("found a condition more than once"));
+    }
+}
+
+#[test]
+fn panics_when_root_contract_identifier_is_missing_multiple_roots() {
+    let cwd = env::current_dir().unwrap();
+    let binary_path = get_binary_path();
+    let tests_path = cwd.join("tests").join("scaffold");
+    let trees = ["contract_name_missing_multiple_roots.tree"];
+
+    for tree_name in trees {
+        let tree_path = tests_path.join(tree_name);
+        let output = cmd(&binary_path, "scaffold", &tree_path, &[]);
+        let actual = String::from_utf8(output.stderr).unwrap();
+
+        assert!(actual.contains("expected contract identifier at tree root"));
+    }
+}
+
+#[test]
+fn errors_when_contract_names_mismatch_multiple_roots() {
+    let cwd = env::current_dir().unwrap();
+    let binary_path = get_binary_path();
+    let tests_path = cwd.join("tests").join("scaffold");
+    let trees = ["contract_names_mismatch_multiple_roots.tree"];
+
+    for tree_name in trees {
+        let tree_path = tests_path.join(tree_name);
+        let output = cmd(&binary_path, "scaffold", &tree_path, &[]);
+        let actual = String::from_utf8(output.stderr).unwrap();
+
+        let formatted_message = format!(
+            "bulloak error: contract name mismatch: expected 'ContractName', found ''\nfile: {}",
+            &tree_path.display()
+        );
+        assert!(actual.contains(&formatted_message));
     }
 }
