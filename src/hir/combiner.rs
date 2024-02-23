@@ -2,7 +2,13 @@
 
 use std::{collections::HashSet, fmt, result};
 
-use crate::{span::Span, utils::get_contract_name_from_identifier};
+use crate::{
+    span::Span,
+    utils::{
+        capitalize_first_letter, get_contract_name_from_identifier,
+        get_function_name_from_identifier, split_and_retain_delimiter,
+    },
+};
 
 use super::{ContractDefinition, FunctionTy, Hir, Root};
 
@@ -112,62 +118,104 @@ impl Combiner {
                 // Check the ith HIR's identifier matches the accumulated ContractDefinition identifier
                 // all the ContractDefinitions should be merged into a single child ContractDefinition with the same identifier
                 if contract_definition.identifier.is_empty() {
-                    let mut child_contract = contract_def.clone();
-                    let text = contract_def.identifier.clone();
-                    let identifier = get_contract_name_from_identifier(&text)
-                        .expect("expected contract identifier at tree root");
-                    child_contract.identifier = identifier;
+                    let (mut child_contract, contract_identifier_option, function_identifier) = self.prepare_contract_definition(contract_def);
+                    let contract_identifier = contract_identifier_option.expect("expected contract identifier at tree root");
+                    child_contract.identifier = contract_identifier.to_owned();
 
-                    // Add modifiers to the list of added modifiers
-                    for child in &child_contract.children {
-                        let Hir::FunctionDefinition(func_def) = child else {
-                            continue;
-                        };
-
-                        if let FunctionTy::Modifier = func_def.ty {
-                            added_modifiers.insert(func_def.identifier.clone());
-                        }
-                    }
-
-                    root.children.push(Hir::ContractDefinition(child_contract));
+                    // Add modifiers to the list of added modifiers and prefix test names
+                    let modified_children = self.process_contract_definition(
+                        &child_contract,
+                        &function_identifier,
+                        &mut added_modifiers,
+                    );
+                    root.children.push(Hir::ContractDefinition(modified_children));
                     contract_definition = match &mut root.children[0] {
                         Hir::ContractDefinition(contract) => contract,
                         _ => unreachable!(),
                     };
                 } else {
-                    let text = contract_def.identifier.clone();
-                    let identifier = get_contract_name_from_identifier(&text).unwrap_or_default();
+                    let (child_contract, contract_identifier_option, function_identifier) = self.prepare_contract_definition(contract_def);
+                    let contract_identifier = contract_identifier_option.unwrap_or_default();
                     let accumulated_identifier = contract_definition.identifier.clone();
-                    if identifier != accumulated_identifier {
+                    if contract_identifier != accumulated_identifier {
                         Err(self.error(
-                            text,
+                            contract_def.identifier.to_owned(),
                             Span::default(),
-                            ErrorKind::ContractNameMismatch(identifier, accumulated_identifier),
+                            ErrorKind::ContractNameMismatch(
+                                contract_identifier,
+                                accumulated_identifier,
+                            ),
                         ))?
                     }
 
-                    for child in &contract_def.children {
-                        // If the child isn't a function then don't push it to the ContractDefinition.
-                        let Hir::FunctionDefinition(func_def) = child else {
-                            continue;
-                        };
-
-                        if let FunctionTy::Modifier = func_def.ty {
-                            // If child is of type FunctionDefinition with the same identifier as a child of another ContractDefinition of ty
-                            // Modifier, then they are duplicates. Traverse all children of the ContractDefinition and remove the duplicates.
-                            if added_modifiers.contains(&func_def.identifier) {
-                                continue;
-                            }
-                            added_modifiers.insert(func_def.identifier.clone());
-                        };
-
-                        contract_definition.children.push(child.clone());
-                    }
+                    let tmp = self.process_contract_definition(
+                        &child_contract,
+                        &function_identifier,
+                        &mut added_modifiers,
+                    );
+                    let mut b = tmp.children;
+                    contract_definition.children.append(&mut b);
                 }
             }
         }
 
         Ok(Hir::Root(root))
+    }
+
+    /// Helper function to prepare a contract definition by cloning it and setting its identifier correctly.
+    fn prepare_contract_definition(&self, contract_def: &ContractDefinition) -> (ContractDefinition, Option<String>, String) {
+        let child_contract = contract_def.clone();
+        let contract_identifier =
+            get_contract_name_from_identifier(&child_contract.identifier);
+        let function_identifier =
+            get_function_name_from_identifier(&child_contract.identifier).unwrap_or_default();
+
+        (child_contract, contract_identifier, function_identifier)
+    }
+
+    /// Helper function to process a contract definition and return a modified version of it.
+    /// It prefixes function identifiers and filters modifiers.
+    fn process_contract_definition(
+        &self,
+        contract_def: &ContractDefinition,
+        function_identifier: &str,
+        added_modifiers: &mut HashSet<String>,
+    ) -> ContractDefinition {
+        let mut child_contract = contract_def.clone();
+        let mut modified_children = Vec::new();
+        for child in &child_contract.children {
+            // If the child isn't a function then don't push it to the ContractDefinition.
+            let Hir::FunctionDefinition(func_def) = child else {
+                continue;
+            };
+
+            let mut modified_child = child.clone();
+            match func_def.ty {
+                FunctionTy::Modifier => {
+                    // If child is of type FunctionDefinition with the same identifier as a child of another ContractDefinition of ty
+                    // Modifier, then they are duplicates. Traverse all children of the ContractDefinition and remove the duplicates.
+                    if added_modifiers.contains(&func_def.identifier) {
+                        continue;
+                    }
+                    added_modifiers.insert(func_def.identifier.clone());
+                }
+                FunctionTy::Function => {
+                    let split_identifier = split_and_retain_delimiter(&func_def.identifier, "test_");
+                    let prefixed_identifier = format!(
+                        "{}{}{}",
+                        split_identifier[0],
+                        capitalize_first_letter(function_identifier),
+                        split_identifier[1]
+                    );
+                    if let Hir::FunctionDefinition(modified_func_def) = &mut modified_child {
+                        modified_func_def.identifier = prefixed_identifier;
+                    }
+                }
+            }
+            modified_children.push(modified_child);
+        }
+        child_contract.children = modified_children;
+        child_contract
     }
 }
 
@@ -309,14 +357,14 @@ bulloak error: contract name mismatch: expected 'Contract', found ''";
                         None
                     ),
                     function(
-                        "test_RevertWhen_SomethingBadHappens".to_owned(),
+                        "test_Function1RevertWhen_SomethingBadHappens".to_owned(),
                         hir::FunctionTy::Function,
                         Span::new(Position::new(20, 2, 1), Position::new(128, 4, 23)),
                         Some(vec!["whenSomethingBadHappens".to_owned()]),
                         Some(vec![comment("it should revert".to_owned())])
                     ),
                     function(
-                        "test_RevertWhen_SomethingBadHappens".to_owned(),
+                        "test_Function2RevertWhen_SomethingBadHappens".to_owned(),
                         hir::FunctionTy::Function,
                         Span::new(Position::new(20, 2, 1), Position::new(126, 4, 23)),
                         Some(vec!["whenSomethingBadHappens".to_owned()]),
