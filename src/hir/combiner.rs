@@ -118,8 +118,10 @@ impl Combiner {
                 // Check the ith HIR's identifier matches the accumulated ContractDefinition identifier
                 // all the ContractDefinitions should be merged into a single child ContractDefinition with the same identifier
                 if contract_definition.identifier.is_empty() {
-                    let (mut child_contract, contract_identifier_option, function_identifier) = self.prepare_contract_definition(contract_def);
-                    let contract_identifier = contract_identifier_option.expect("expected contract identifier at tree root");
+                    let (mut child_contract, contract_identifier_option, function_identifier) =
+                        self.prepare_contract_definition(contract_def);
+                    let contract_identifier = contract_identifier_option
+                        .expect("expected contract identifier at tree root");
                     child_contract.identifier = contract_identifier.to_owned();
 
                     // Add modifiers to the list of added modifiers and prefix test names
@@ -128,13 +130,15 @@ impl Combiner {
                         &function_identifier,
                         &mut added_modifiers,
                     );
-                    root.children.push(Hir::ContractDefinition(modified_children));
+                    root.children
+                        .push(Hir::ContractDefinition(modified_children));
                     contract_definition = match &mut root.children[0] {
                         Hir::ContractDefinition(contract) => contract,
                         _ => unreachable!(),
                     };
                 } else {
-                    let (child_contract, contract_identifier_option, function_identifier) = self.prepare_contract_definition(contract_def);
+                    let (child_contract, contract_identifier_option, function_identifier) =
+                        self.prepare_contract_definition(contract_def);
                     let contract_identifier = contract_identifier_option.unwrap_or_default();
                     let accumulated_identifier = contract_definition.identifier.clone();
                     if contract_identifier != accumulated_identifier {
@@ -163,10 +167,12 @@ impl Combiner {
     }
 
     /// Helper function to prepare a contract definition by cloning it and setting its identifier correctly.
-    fn prepare_contract_definition(&self, contract_def: &ContractDefinition) -> (ContractDefinition, Option<String>, String) {
+    fn prepare_contract_definition(
+        &self,
+        contract_def: &ContractDefinition,
+    ) -> (ContractDefinition, Option<String>, String) {
         let child_contract = contract_def.clone();
-        let contract_identifier =
-            get_contract_name_from_identifier(&child_contract.identifier);
+        let contract_identifier = get_contract_name_from_identifier(&child_contract.identifier);
         let function_identifier =
             get_function_name_from_identifier(&child_contract.identifier).unwrap_or_default();
 
@@ -200,7 +206,8 @@ impl Combiner {
                     added_modifiers.insert(func_def.identifier.clone());
                 }
                 FunctionTy::Function => {
-                    let split_identifier = split_and_retain_delimiter(&func_def.identifier, "test_");
+                    let split_identifier =
+                        split_and_retain_delimiter(&func_def.identifier, "test_");
                     let prefixed_identifier = format!(
                         "{}{}{}",
                         split_identifier[0],
