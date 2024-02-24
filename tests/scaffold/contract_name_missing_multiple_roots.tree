@@ -1,0 +1,5 @@
+::function1
+└── It should have a name mismatch in the contracts.
+
+ContractName::function2
+└── It should have a name mismatch in the contracts.

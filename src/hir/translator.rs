@@ -27,7 +27,7 @@ impl Translator {
     ///
     /// This function is the entry point of the translator.
     #[must_use]
-    pub fn translate(self, ast: &ast::Ast, modifiers: &IndexMap<String, String>) -> Hir {
+    pub fn translate(&self, ast: &ast::Ast, modifiers: &IndexMap<String, String>) -> Hir {
         TranslatorI::new(modifiers).translate(ast)
     }
 }

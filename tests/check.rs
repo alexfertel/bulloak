@@ -1,5 +1,6 @@
 use std::env;
 
+use owo_colors::OwoColorize;
 use pretty_assertions::assert_eq;
 
 use common::cmd;
@@ -92,6 +93,28 @@ fn checks_missing_contract() {
 }
 
 #[test]
+fn checks_missing_contract_identifier() {
+    let cwd = env::current_dir().unwrap();
+    let binary_path = get_binary_path();
+    let tree_path = cwd
+        .join("tests")
+        .join("check")
+        .join("missing_contract_identifier.tree");
+
+    let output = cmd(&binary_path, "check", &tree_path, &[]);
+    let actual = String::from_utf8(output.stderr).unwrap();
+
+    let formatted_message = format!(
+        "{}: an error occurred while parsing the tree: contract name mismatch: expected 'ContractName', found ''\n   {} {}",
+        "warn".yellow(),
+        "-->".blue(),
+        tree_path.display()
+    );
+
+    assert!(actual.contains(&formatted_message));
+}
+
+#[test]
 fn checks_contract_name_mismatch() {
     let cwd = env::current_dir().unwrap();
     let binary_path = get_binary_path();
@@ -106,6 +129,28 @@ fn checks_contract_name_mismatch() {
     assert!(actual.contains(
         r#"contract "ContractName" is missing in .sol -- found "ADifferentName" instead"#
     ));
+}
+
+#[test]
+fn checks_contract_name_mismatch_multiple_roots() {
+    let cwd = env::current_dir().unwrap();
+    let binary_path = get_binary_path();
+    let tree_path = cwd
+        .join("tests")
+        .join("check")
+        .join("contract_names_mismatch_multiple_roots.tree");
+
+    let output = cmd(&binary_path, "check", &tree_path, &[]);
+    let actual = String::from_utf8(output.stderr).unwrap();
+
+    let formatted_message = format!(
+        "{}: an error occurred while parsing the tree: contract name mismatch: expected 'ContractName', found 'MismatchedContractName'\n   {} {}",
+        "warn".yellow(),
+        "-->".blue(),
+        tree_path.display()
+    );
+
+    assert!(actual.contains(&formatted_message));
 }
 
 #[test]

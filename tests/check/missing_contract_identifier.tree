@@ -1,0 +1,5 @@
+ContractName
+└── It should find a contract identifier.
+
+::orphanedFunction
+└── It should not find a contract identifier.

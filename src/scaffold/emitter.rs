@@ -244,18 +244,11 @@ mod tests {
 
     use crate::constants::INTERNAL_DEFAULT_SOL_VERSION;
     use crate::error::Result;
-    use crate::hir::translator::Translator;
+    use crate::hir::translate_and_combine_trees;
     use crate::scaffold::emitter;
-    use crate::scaffold::modifiers;
-    use crate::syntax::parser::Parser;
-    use crate::syntax::tokenizer::Tokenizer;
 
     fn scaffold_with_flags(text: &str, indent: usize, version: &str) -> Result<String> {
-        let tokens = Tokenizer::new().tokenize(&text)?;
-        let ast = Parser::new().parse(&text, &tokens)?;
-        let mut discoverer = modifiers::ModifierDiscoverer::new();
-        let modifiers = discoverer.discover(&ast);
-        let hir = Translator::new().translate(&ast, modifiers);
+        let hir = translate_and_combine_trees(text)?;
         Ok(emitter::Emitter::new(indent, version).emit(&hir))
     }
 

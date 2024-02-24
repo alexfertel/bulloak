@@ -1,0 +1,8 @@
+MultipleRootsTreeTest::function1
+├── It should never revert.
+└── When first arg is bigger than second arg
+    └── It is all good
+
+MultipleRootsTreeTest::function2
+└── When stuff happens
+    └── It should do something simple

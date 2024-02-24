@@ -243,10 +243,10 @@ description of the current implementation of the compiler.
 
 ### Spec
 
-Each `tree` file should describe a function under test. Trees follow these
+Each `tree` file should describe at least one function under test. Trees follow these
 rules:
 
-- The line at the top of the file is the name of the contract.
+- The first line is the root tree identifier, composed of the contract and function names which should be delimited by a double colon.
 - `bulloak` expects you to use `├` and `└` characters to denote branches.
 - If a branch starts with either `when` or `given`, it is a condition.
   - `when` and `given` are interchangeable.
@@ -255,6 +255,7 @@ rules:
 - Keywords are case-insensitive: `it` is the same as `It` and `IT`.
 - Anything starting with a `//` is a comment and will be stripped from the
   output.
+- Multiple trees can be defined in the same file to describe different functions by following the same rules, separating them with two newlines.
 
 Take the following Solidity function:
 
@@ -275,7 +276,7 @@ HashPairTest
     └── It should match the result of `keccak256(abi.encodePacked(b,a))`.
 ```
 
-There is a top-level action which will generate a test to check the function
+There is a top-level action that will generate a test to check the function
 invariant that it should never revert.
 
 Then, we have the two possible preconditions: `a < b` and `a >= b`. Both
@@ -293,13 +294,59 @@ Note the following things:
   [discussion](https://github.com/alexfertel/bulloak/issues/22).
 - The root of the tree will be emitted as the name of the test contract.
 
+Suppose you have additional Solidity functions that you want to test in the same test contract, say `Utils` within `utils.t.sol`:
+
+```solidity
+function min(uint256 a, uint256 b) private pure returns (uint256) {
+    return a < b ? a : b;
+}
+
+function max(uint256 a, uint256 b) private pure returns (uint256) {
+    return a > b ? a : b;
+}
+```
+
+The full spec for all the above functions would be:
+
+```tree
+Utils::hashPair
+├── It should never revert.
+├── When first arg is smaller than second arg
+│   └── It should match the result of `keccak256(abi.encodePacked(a,b))`.
+└── When first arg is bigger than second arg
+    └── It should match the result of `keccak256(abi.encodePacked(b,a))`.
+
+
+Utils::min
+├── It should never revert.
+├── When first arg is smaller than second arg
+│   └── It should match the value of `a`.
+└── When first arg is bigger than second arg
+    └── It should match the value of `b`.
+
+
+Utils::max
+├── It should never revert.
+├── When first arg is smaller than second arg
+│   └── It should match the value of `b`.
+└── When first arg is bigger than second arg
+    └── It should match the value of `a`.
+```
+
+Note the following things:
+
+- A contract identifier missing from the first tree root will cause `bulloak` to panic.
+- Contract identifiers that are missing from subsequent trees, or otherwise mismatched from the first tree root identifier, will cause `bulloak` to error. This violation is not currently fixable with `bulloak check --fix` so will need to be manually corrected.
+- Duplicate conditions between separate trees will be deduplicated when transformed into Solidity modifiers.
+- The function part of the root identifier for each tree will be emitted as part of the name of the Solidity test (e.g. `test_MinShouldNeverRevert`).
+
 ## Output
 
 There are a few things to keep in mind about the scaffolded Solidity test:
 
 - The contract filename is the same as the `.tree` but with a `.t.sol`
   extension. E.g. `test.tree` would correspond to `test.t.sol`.
-- Test are emitted in the order their corresponding actions appear in the
+- Tests are emitted in the order their corresponding actions appear in the
   `.tree` file.
 - We generate one modifier per condition, except for leaf condition nodes.
 - Test names follow
