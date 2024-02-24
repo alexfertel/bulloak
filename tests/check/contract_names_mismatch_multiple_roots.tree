@@ -1,5 +1,5 @@
-ContractName
+ContractName::func1
 └── It should have a name mismatch in the contracts.
 
-MismatchedContractName
+MismatchedContractName::func2
 └── It should have a name mismatch in the contracts.

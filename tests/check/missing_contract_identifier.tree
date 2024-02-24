@@ -1,4 +1,4 @@
-ContractName
+ContractName::func1
 └── It should find a contract identifier.
 
 ::orphanedFunction

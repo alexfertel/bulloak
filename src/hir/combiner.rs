@@ -1,14 +1,8 @@
 //! The implementation of a high-level intermediate representation (HIR) combiner.
 
-use std::{collections::HashSet, fmt, result};
+use std::{collections::HashSet, fmt, mem, result};
 
-use crate::{
-    span::Span,
-    utils::{
-        capitalize_first_letter, get_contract_name_from_identifier,
-        get_function_name_from_identifier, split_and_retain_delimiter,
-    },
-};
+use crate::{constants::CONTRACT_IDENTIFIER_SEPARATOR, span::Span, utils::capitalize_first_letter};
 
 use super::{ContractDefinition, FunctionTy, Hir, Root};
 
@@ -49,6 +43,7 @@ impl Error {
 }
 
 type Identifier = String;
+type Index = usize;
 
 /// The type of an error that occurred while combining HIRs.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -57,6 +52,10 @@ pub enum ErrorKind {
     /// This happens when the contract name in the identifier of one HIR does
     /// not match the contract name in the identifier of another HIR.
     ContractNameMismatch(Identifier, Identifier),
+    /// No contract name was found in one of the tree roots.
+    ContractNameMissing(Index),
+    /// A `CONTRACT_IDENTIFIER_SEPARATOR` was missing in one of the tree roots.
+    SeparatorMissing(Index),
 }
 
 impl fmt::Display for Error {
@@ -67,11 +66,19 @@ impl fmt::Display for Error {
 
 impl fmt::Display for ErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        use self::ErrorKind::ContractNameMismatch;
+        use self::ErrorKind::{ContractNameMismatch, ContractNameMissing, SeparatorMissing};
         match self {
             ContractNameMismatch(actual, expected) => write!(
                 f,
                 "contract name mismatch: expected '{expected}', found '{actual}'"
+            ),
+            ContractNameMissing(index) => write!(
+                f,
+                "contract name missing at tree root #{index}"
+            ),
+            SeparatorMissing(index) => write!(
+                f,
+                "separator missing at tree root #{index}. Expected to find a `::` between the contract name and the function name when multiple roots exist"
             ),
         }
     }
@@ -90,21 +97,46 @@ impl Combiner {
         Combiner {}
     }
 
-    /// Create a new error with the given span and error type.
-    fn error(&self, text: String, span: Span, kind: ErrorKind) -> Error {
-        Error { kind, text, span }
-    }
-
     /// Combines the translated HIRs into a single HIR. HIRs are merged by
     /// iterating over each HIR and merging their children into the contract
     /// definition of the first HIR, while verifying the contract identifiers
     /// match and filtering out duplicate modifiers.
-    pub fn combine(&self, hirs: &Vec<Hir>) -> Result<Hir> {
-        let mut root = Root::default();
-        let mut contract_definition = &mut ContractDefinition::default();
-        let mut added_modifiers = HashSet::new();
+    pub fn combine(self, text: &str, hirs: &[Hir]) -> Result<Hir> {
+        CombinerI::new(text).combine(hirs)
+    }
+}
 
-        for hir in hirs {
+struct CombinerI<'t> {
+    /// The input text.
+    text: &'t str,
+}
+
+impl<'t> CombinerI<'t> {
+    /// Creates a new combiner.
+    fn new(text: &'t str) -> Self {
+        CombinerI { text }
+    }
+
+    /// Create a new error with the given span and error type.
+    fn error(&self, span: Span, kind: ErrorKind) -> Error {
+        Error {
+            kind,
+            text: self.text.to_owned(),
+            span,
+        }
+    }
+
+    /// Internal implementation of `Combiner::combine`.
+    fn combine(&self, hirs: &[Hir]) -> Result<Hir> {
+        // For `.tree` files with a single root, we don't need to do any work.
+        if hirs.len() == 1 {
+            return Ok(hirs[0].clone());
+        }
+
+        let acc_contract = &mut ContractDefinition::default();
+        let mut unique_modifiers = HashSet::new();
+
+        for (idx, hir) in hirs.into_iter().enumerate() {
             let Hir::Root(r) = hir else {
                 unreachable!();
             };
@@ -115,122 +147,105 @@ impl Combiner {
                     continue;
                 };
 
-                // Check the ith HIR's identifier matches the accumulated ContractDefinition identifier
-                // all the ContractDefinitions should be merged into a single child ContractDefinition with the same identifier
-                if contract_definition.identifier.is_empty() {
-                    let (mut child_contract, contract_identifier_option, function_identifier) =
-                        self.prepare_contract_definition(contract_def);
-                    let contract_identifier = contract_identifier_option
-                        .expect("expected contract identifier at tree root");
-                    child_contract.identifier = contract_identifier.to_owned();
+                // ContractName::function_name -> (ContractName, function_name)
+                //
+                // Errors if `::` isn't present.
+                let (contract_name, function_name) = contract_def
+                    .identifier
+                    .split_once(CONTRACT_IDENTIFIER_SEPARATOR)
+                    .ok_or(self.error(Span::default(), ErrorKind::SeparatorMissing(idx + 1)))?;
 
-                    // Add modifiers to the list of added modifiers and prefix test names
-                    let modified_children = self.process_contract_definition(
-                        &child_contract,
-                        &function_identifier,
-                        &mut added_modifiers,
+                if contract_name.trim().is_empty() {
+                    return Err(
+                        self.error(Span::default(), ErrorKind::ContractNameMissing(idx + 1))
                     );
-                    root.children
-                        .push(Hir::ContractDefinition(modified_children));
-                    contract_definition = match &mut root.children[0] {
-                        Hir::ContractDefinition(contract) => contract,
-                        _ => unreachable!(),
-                    };
-                } else {
-                    let (child_contract, contract_identifier_option, function_identifier) =
-                        self.prepare_contract_definition(contract_def);
-                    let contract_identifier = contract_identifier_option.unwrap_or_default();
-                    let accumulated_identifier = contract_definition.identifier.clone();
-                    if contract_identifier != accumulated_identifier {
-                        Err(self.error(
-                            contract_def.identifier.to_owned(),
-                            Span::default(),
-                            ErrorKind::ContractNameMismatch(
-                                contract_identifier,
-                                accumulated_identifier,
-                            ),
-                        ))?
-                    }
-
-                    let tmp = self.process_contract_definition(
-                        &child_contract,
-                        &function_identifier,
-                        &mut added_modifiers,
-                    );
-                    let mut b = tmp.children;
-                    contract_definition.children.append(&mut b);
                 }
+
+                // If the accumulated identifier is empty, we're on the first contract.
+                if acc_contract.identifier.is_empty() {
+                    // Add modifiers to the list of added modifiers and prefix test names.
+                    let children =
+                        extract_children(&contract_def, &function_name, &mut unique_modifiers);
+                    let first_contract = ContractDefinition {
+                        identifier: contract_name.to_owned(),
+                        children,
+                    };
+                    *acc_contract = first_contract;
+                    continue;
+                }
+
+                // If the current contract name doesn't match, we error.
+                if contract_name != acc_contract.identifier {
+                    return Err(self.error(
+                        Span::default(),
+                        ErrorKind::ContractNameMismatch(
+                            contract_name.to_owned(),
+                            acc_contract.identifier.clone(),
+                        ),
+                    ));
+                }
+
+                let children =
+                    extract_children(&contract_def, &function_name, &mut unique_modifiers);
+                acc_contract.children.extend(children);
             }
         }
 
+        let root = Root {
+            children: vec![Hir::ContractDefinition(mem::take(acc_contract))],
+        };
         Ok(Hir::Root(root))
     }
+}
 
-    /// Helper function to prepare a contract definition by cloning it and setting its identifier correctly.
-    fn prepare_contract_definition(
-        &self,
-        contract_def: &ContractDefinition,
-    ) -> (ContractDefinition, Option<String>, String) {
-        let child_contract = contract_def.clone();
-        let contract_identifier = get_contract_name_from_identifier(&child_contract.identifier);
-        let function_identifier =
-            get_function_name_from_identifier(&child_contract.identifier).unwrap_or_default();
+/// Prefix the suffix of a test name.
+fn prefix_test_with(test_name: &str, text: &str) -> String {
+    let capitalized_fn_name = capitalize_first_letter(text);
+    let test_suffix = test_name.trim_start_matches("test_");
+    format!("test_{}{}", capitalized_fn_name, test_suffix)
+}
 
-        (child_contract, contract_identifier, function_identifier)
-    }
+/// Prefix function names and filter modifiers.
+fn extract_children(
+    contract_def: &ContractDefinition,
+    function_identifier: &str,
+    unique_modifiers: &mut HashSet<String>,
+) -> Vec<Hir> {
+    let mut new_children = Vec::with_capacity(contract_def.children.len());
+    for child in &contract_def.children {
+        // Ignore children that aren't functions.
+        let Hir::FunctionDefinition(test_or_modifier) = child else {
+            continue;
+        };
 
-    /// Helper function to process a contract definition and return a modified version of it.
-    /// It prefixes function identifiers and filters modifiers.
-    fn process_contract_definition(
-        &self,
-        contract_def: &ContractDefinition,
-        function_identifier: &str,
-        added_modifiers: &mut HashSet<String>,
-    ) -> ContractDefinition {
-        let mut child_contract = contract_def.clone();
-        let mut modified_children = Vec::new();
-        for child in &child_contract.children {
-            // If the child isn't a function then don't push it to the ContractDefinition.
-            let Hir::FunctionDefinition(func_def) = child else {
-                continue;
-            };
-
-            let mut modified_child = child.clone();
-            match func_def.ty {
-                FunctionTy::Modifier => {
-                    // If child is of type FunctionDefinition with the same identifier as a child of another ContractDefinition of ty
-                    // Modifier, then they are duplicates. Traverse all children of the ContractDefinition and remove the duplicates.
-                    if added_modifiers.contains(&func_def.identifier) {
-                        continue;
-                    }
-                    added_modifiers.insert(func_def.identifier.clone());
+        match test_or_modifier.ty {
+            FunctionTy::Modifier => {
+                // If child is of type `FunctionDefinition` with the same identifier
+                // as a child of another `ContractDefinition` of ty `Modifier`, then
+                // they are duplicates.
+                if unique_modifiers.contains(&test_or_modifier.identifier) {
+                    continue;
                 }
-                FunctionTy::Function => {
-                    let split_identifier =
-                        split_and_retain_delimiter(&func_def.identifier, "test_");
-                    let prefixed_identifier = format!(
-                        "{}{}{}",
-                        split_identifier[0],
-                        capitalize_first_letter(function_identifier),
-                        split_identifier[1]
-                    );
-                    if let Hir::FunctionDefinition(modified_func_def) = &mut modified_child {
-                        modified_func_def.identifier = prefixed_identifier;
-                    }
-                }
+
+                unique_modifiers.insert(test_or_modifier.identifier.clone());
+                new_children.push(Hir::FunctionDefinition(test_or_modifier.clone()));
             }
-            modified_children.push(modified_child);
-        }
-        child_contract.children = modified_children;
-        child_contract
+            FunctionTy::Function => {
+                let mut test_or_modifier = test_or_modifier.clone();
+                test_or_modifier.identifier =
+                    prefix_test_with(&test_or_modifier.identifier, function_identifier);
+                new_children.push(Hir::FunctionDefinition(test_or_modifier));
+            }
+        };
     }
+
+    new_children
 }
 
 #[cfg(test)]
 mod tests {
     use anyhow::{Error, Result};
     use pretty_assertions::assert_eq;
-    use std::panic::catch_unwind;
 
     use crate::hir::{self, Hir};
     use crate::scaffold::modifiers;
@@ -247,8 +262,8 @@ mod tests {
         Ok(hir::translator::Translator::new().translate(&ast, modifiers))
     }
 
-    fn combine(hirs: &Vec<Hir>) -> Result<Hir, Error> {
-        Ok(crate::hir::combiner::Combiner::new().combine(&hirs)?)
+    fn combine(text: &str, hirs: &Vec<Hir>) -> Result<Hir, Error> {
+        Ok(crate::hir::combiner::Combiner::new().combine(text, &hirs)?)
     }
 
     fn root(children: Vec<Hir>) -> Hir {
@@ -283,70 +298,91 @@ mod tests {
     }
 
     #[test]
-    fn panics_when_root_contract_identifier_is_missing() -> Result<()> {
+    fn errors_when_root_contract_identifier_is_missing() {
         let trees = vec![
             "::orphanedFunction\n└── when something bad happens\n   └── it should revert",
             "Contract::function\n└── when something bad happens\n   └── it should revert",
         ];
-        let hirs = trees
-            .iter()
-            .map(|tree| translate(tree))
-            .collect::<Result<Vec<Hir>>>()?;
+        let hirs = trees.iter().map(|tree| translate(tree).unwrap()).collect();
+        let text = trees.join("\n\n");
+        let result = combine(&text, &hirs);
 
-        let result = catch_unwind(|| combine(&hirs));
         assert!(result.is_err());
-        assert_eq!(
-            result
-                .unwrap_err()
-                .downcast_ref::<String>()
-                .unwrap()
-                .as_str(),
-            "expected contract identifier at tree root"
-        );
-
-        Ok(())
     }
 
     #[test]
-    fn errors_when_contract_names_mismatch() -> Result<()> {
+    fn errors_when_contract_names_mismatch() {
         let trees = vec![
             "Contract::function\n└── when something bad happens\n   └── it should revert",
             "::orphanedFunction\n└── when something bad happens\n   └── it should revert",
         ];
-        let hirs = trees
-            .iter()
-            .map(|tree| translate(tree))
-            .collect::<Result<Vec<Hir>>>()?;
+        let hirs = trees.iter().map(|tree| translate(tree).unwrap()).collect();
 
         let expected = r"•••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••
-bulloak error: contract name mismatch: expected 'Contract', found ''";
+bulloak error: contract name missing at tree root #2";
 
-        match combine(&hirs) {
+        let text = trees.join("\n\n");
+        match combine(&text, &hirs) {
             Err(e) => assert_eq!(e.to_string(), expected),
             _ => unreachable!("expected an error"),
         }
-
-        Ok(())
     }
 
     #[test]
-    fn duplicate_and_non_function_type_children() -> Result<()> {
-        // non-function children aren't pushed to the ContractDefinition
-        // duplicate modifiers are deduplicated
-
+    fn skips_non_function_children() {
         let trees = vec![
-            "Contract::function1\n└── when something bad happens\n    └── given something else happens\n   └── it should revert",
-            "Contract::function2\n└── when something bad happens\n    └── given the caller is 0x1337\n   └── it should revert",
+            "Contract::function1\n└── when something bad happens\n    └── it should revert",
+            "Contract::function2\n└── when something shit happens\n    └── it should revert",
         ];
-        let mut hirs = trees
-            .iter()
-            .map(|tree| translate(tree))
-            .collect::<Result<Vec<Hir>>>()?;
+        let mut hirs: Vec<_> = trees.iter().map(|tree| translate(tree).unwrap()).collect();
 
-        // append a comment HIR to the hirs
+        // Append a comment HIR to the hirs.
         hirs.push(root(vec![comment("this is a random comment".to_owned())]));
 
-        let children = match combine(&hirs)? {
+        let text = trees.join("\n\n");
+        let children = match combine(&text, &hirs).unwrap() {
+            Hir::Root(root) => root.children,
+            _ => unreachable!(),
+        };
+
+        assert_eq!(
+            children,
+            vec![contract(
+                "Contract".to_owned(),
+                vec![
+                    function(
+                        "test_Function1RevertWhen_SomethingBadHappens".to_owned(),
+                        hir::FunctionTy::Function,
+                        Span::new(Position::new(20, 2, 1), Position::new(86, 3, 24)),
+                        None,
+                        Some(vec![comment("it should revert".to_owned())])
+                    ),
+                    function(
+                        "test_Function2RevertWhen_SomethingShitHappens".to_owned(),
+                        hir::FunctionTy::Function,
+                        Span::new(Position::new(20, 2, 1), Position::new(87, 3, 24)),
+                        None,
+                        Some(vec![comment("it should revert".to_owned())])
+                    ),
+                ]
+            )]
+        );
+    }
+
+    #[test]
+    fn dedups_cross_root_modifiers() {
+        let trees = vec![
+            "Contract::function1\n└── when something bad happens\n    └── given something else happens\n        └── it should revert",
+            "Contract::function2\n└── when something bad happens\n    └── given the caller is 0x1337\n        └── it should revert",
+        ];
+        let mut hirs: Vec<_> = trees.iter().map(|tree| translate(tree).unwrap()).collect();
+
+        // Append a comment HIR to the hirs.
+        hirs.push(root(vec![comment("this is a random comment".to_owned())]));
+
+        println!("{:#?}", hirs);
+        let text = trees.join("\n\n");
+        let children = match combine(&text, &hirs).unwrap() {
             Hir::Root(root) => root.children,
             _ => unreachable!(),
         };
@@ -359,28 +395,26 @@ bulloak error: contract name mismatch: expected 'Contract', found ''";
                     function(
                         "whenSomethingBadHappens".to_owned(),
                         hir::FunctionTy::Modifier,
-                        Span::new(Position::new(20, 2, 1), Position::new(128, 4, 23)),
+                        Span::new(Position::new(20, 2, 1), Position::new(133, 4, 28)),
                         None,
                         None
                     ),
                     function(
-                        "test_Function1RevertWhen_SomethingBadHappens".to_owned(),
+                        "test_Function1RevertGiven_SomethingElseHappens".to_owned(),
                         hir::FunctionTy::Function,
-                        Span::new(Position::new(20, 2, 1), Position::new(128, 4, 23)),
+                        Span::new(Position::new(61, 3, 5), Position::new(133, 4, 28)),
                         Some(vec!["whenSomethingBadHappens".to_owned()]),
                         Some(vec![comment("it should revert".to_owned())])
                     ),
                     function(
-                        "test_Function2RevertWhen_SomethingBadHappens".to_owned(),
+                        "test_Function2RevertGiven_TheCallerIs0x1337".to_owned(),
                         hir::FunctionTy::Function,
-                        Span::new(Position::new(20, 2, 1), Position::new(126, 4, 23)),
+                        Span::new(Position::new(61, 3, 5), Position::new(131, 4, 28)),
                         Some(vec!["whenSomethingBadHappens".to_owned()]),
                         Some(vec![comment("it should revert".to_owned())])
                     ),
                 ]
             )]
         );
-
-        Ok(())
     }
 }

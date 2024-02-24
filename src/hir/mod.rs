@@ -36,5 +36,5 @@ pub(crate) fn translate_and_combine_trees(text: &str) -> crate::error::Result<cr
     let hirs = trees
         .map(|tree| translate_tree_to_hir(tree))
         .collect::<crate::error::Result<Vec<crate::hir::Hir>>>()?;
-    Ok(crate::hir::combiner::Combiner::new().combine(&hirs)?)
+    Ok(crate::hir::combiner::Combiner::new().combine(text, &hirs)?)
 }

@@ -105,7 +105,7 @@ fn checks_missing_contract_identifier() {
     let actual = String::from_utf8(output.stderr).unwrap();
 
     let formatted_message = format!(
-        "{}: an error occurred while parsing the tree: contract name mismatch: expected 'ContractName', found ''\n   {} {}",
+        "{}: an error occurred while parsing the tree: contract name missing at tree root #2\n   {} {}",
         "warn".yellow(),
         "-->".blue(),
         tree_path.display()
