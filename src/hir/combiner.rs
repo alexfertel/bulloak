@@ -4,7 +4,7 @@ use std::{collections::HashSet, fmt, mem, result};
 
 use crate::{constants::CONTRACT_IDENTIFIER_SEPARATOR, span::Span, utils::capitalize_first_letter};
 
-use super::{ContractDefinition, FunctionTy, Hir, Root};
+use super::{ContractDefinition, Hir, Root};
 
 type Result<T> = result::Result<T, Error>;
 
@@ -101,7 +101,7 @@ impl Combiner {
     /// iterating over each HIR and merging their children into the contract
     /// definition of the first HIR, while verifying the contract identifiers
     /// match and filtering out duplicate modifiers.
-    pub fn combine(self, text: &str, hirs: &[Hir]) -> Result<Hir> {
+    pub fn combine(self, text: &str, hirs: Vec<Hir>) -> Result<Hir> {
         CombinerI::new(text).combine(hirs)
     }
 }
@@ -127,7 +127,7 @@ impl<'t> CombinerI<'t> {
     }
 
     /// Internal implementation of `Combiner::combine`.
-    fn combine(&self, hirs: &[Hir]) -> Result<Hir> {
+    fn combine(&self, hirs: Vec<Hir>) -> Result<Hir> {
         // For `.tree` files with a single root, we don't need to do any work.
         if hirs.len() == 1 {
             return Ok(hirs[0].clone());
@@ -141,8 +141,8 @@ impl<'t> CombinerI<'t> {
                 unreachable!();
             };
 
-            for child in &r.children {
-                let Hir::ContractDefinition(contract_def) = child else {
+            for child in r.children {
+                let Hir::ContractDefinition(contract) = child else {
                     // For now we ignore everything that isn't a contract.
                     continue;
                 };
@@ -150,7 +150,7 @@ impl<'t> CombinerI<'t> {
                 // ContractName::function_name -> (ContractName, function_name)
                 //
                 // Errors if `::` isn't present.
-                let (contract_name, function_name) = contract_def
+                let (contract_name, function_name) = contract
                     .identifier
                     .split_once(CONTRACT_IDENTIFIER_SEPARATOR)
                     .ok_or(self.error(Span::default(), ErrorKind::SeparatorMissing(idx + 1)))?;
@@ -164,8 +164,12 @@ impl<'t> CombinerI<'t> {
                 // If the accumulated identifier is empty, we're on the first contract.
                 if acc_contract.identifier.is_empty() {
                     // Add modifiers to the list of added modifiers and prefix test names.
-                    let children =
-                        extract_children(&contract_def, &function_name, &mut unique_modifiers);
+                    let children = contract
+                        .children
+                        .into_iter()
+                        .map(|c| prefix_test(c, &function_name))
+                        .filter_map(|c| collect_modifier(c, &mut unique_modifiers))
+                        .collect();
                     let first_contract = ContractDefinition {
                         identifier: contract_name.to_owned(),
                         children,
@@ -186,7 +190,7 @@ impl<'t> CombinerI<'t> {
                 }
 
                 let children =
-                    extract_children(&contract_def, &function_name, &mut unique_modifiers);
+                    update_children(contract.children, &function_name, &mut unique_modifiers);
                 acc_contract.children.extend(children);
             }
         }
@@ -198,48 +202,52 @@ impl<'t> CombinerI<'t> {
     }
 }
 
+fn prefix_test(child: Hir, prefix: &str) -> Hir {
+    let Hir::FunctionDefinition(mut test_or_modifier) = child else {
+        return child;
+    };
+
+    if test_or_modifier.is_function() {
+        test_or_modifier.identifier = prefix_test_with(&test_or_modifier.identifier, prefix);
+    }
+
+    Hir::FunctionDefinition(test_or_modifier)
+}
+
+/// Prefix function names and filter modifiers.
+fn update_children(
+    children: Vec<Hir>,
+    function_identifier: &str,
+    mut unique_modifiers: &mut HashSet<String>,
+) -> Vec<Hir> {
+    children
+        .into_iter()
+        .map(|c| prefix_test(c, function_identifier))
+        .filter_map(|c| collect_modifier(c, &mut unique_modifiers))
+        .collect()
+}
+
 /// Prefix the suffix of a test name.
-fn prefix_test_with(test_name: &str, text: &str) -> String {
-    let capitalized_fn_name = capitalize_first_letter(text);
+fn prefix_test_with(test_name: &str, prefix: &str) -> String {
+    let capitalized_fn_name = capitalize_first_letter(prefix);
     let test_suffix = test_name.trim_start_matches("test_");
     format!("test_{}{}", capitalized_fn_name, test_suffix)
 }
 
-/// Prefix function names and filter modifiers.
-fn extract_children(
-    contract_def: &ContractDefinition,
-    function_identifier: &str,
-    unique_modifiers: &mut HashSet<String>,
-) -> Vec<Hir> {
-    let mut new_children = Vec::with_capacity(contract_def.children.len());
-    for child in &contract_def.children {
-        // Ignore children that aren't functions.
-        let Hir::FunctionDefinition(test_or_modifier) = child else {
-            continue;
-        };
+fn collect_modifier(child: Hir, unique_modifiers: &mut HashSet<String>) -> Option<Hir> {
+    let Hir::FunctionDefinition(test_or_modifier) = child else {
+        return Some(child);
+    };
 
-        match test_or_modifier.ty {
-            FunctionTy::Modifier => {
-                // If child is of type `FunctionDefinition` with the same identifier
-                // as a child of another `ContractDefinition` of ty `Modifier`, then
-                // they are duplicates.
-                if unique_modifiers.contains(&test_or_modifier.identifier) {
-                    continue;
-                }
-
-                unique_modifiers.insert(test_or_modifier.identifier.clone());
-                new_children.push(Hir::FunctionDefinition(test_or_modifier.clone()));
-            }
-            FunctionTy::Function => {
-                let mut test_or_modifier = test_or_modifier.clone();
-                test_or_modifier.identifier =
-                    prefix_test_with(&test_or_modifier.identifier, function_identifier);
-                new_children.push(Hir::FunctionDefinition(test_or_modifier));
-            }
-        };
+    // If child is of type `FunctionDefinition` with the same identifier
+    // as a child of another `ContractDefinition` of ty `Modifier`, then
+    // they are duplicates.
+    if unique_modifiers.contains(&test_or_modifier.identifier) {
+        return None;
     }
 
-    new_children
+    unique_modifiers.insert(test_or_modifier.identifier.clone());
+    Some(Hir::FunctionDefinition(test_or_modifier.clone()))
 }
 
 #[cfg(test)]
@@ -262,8 +270,8 @@ mod tests {
         Ok(hir::translator::Translator::new().translate(&ast, modifiers))
     }
 
-    fn combine(text: &str, hirs: &Vec<Hir>) -> Result<Hir, Error> {
-        Ok(crate::hir::combiner::Combiner::new().combine(text, &hirs)?)
+    fn combine(text: &str, hirs: Vec<Hir>) -> Result<Hir, Error> {
+        Ok(crate::hir::combiner::Combiner::new().combine(text, hirs)?)
     }
 
     fn root(children: Vec<Hir>) -> Hir {
@@ -305,7 +313,7 @@ mod tests {
         ];
         let hirs = trees.iter().map(|tree| translate(tree).unwrap()).collect();
         let text = trees.join("\n\n");
-        let result = combine(&text, &hirs);
+        let result = combine(&text, hirs);
 
         assert!(result.is_err());
     }
@@ -322,7 +330,7 @@ mod tests {
 bulloak error: contract name missing at tree root #2";
 
         let text = trees.join("\n\n");
-        match combine(&text, &hirs) {
+        match combine(&text, hirs) {
             Err(e) => assert_eq!(e.to_string(), expected),
             _ => unreachable!("expected an error"),
         }
@@ -340,7 +348,7 @@ bulloak error: contract name missing at tree root #2";
         hirs.push(root(vec![comment("this is a random comment".to_owned())]));
 
         let text = trees.join("\n\n");
-        let children = match combine(&text, &hirs).unwrap() {
+        let children = match combine(&text, hirs).unwrap() {
             Hir::Root(root) => root.children,
             _ => unreachable!(),
         };
@@ -382,7 +390,7 @@ bulloak error: contract name missing at tree root #2";
 
         println!("{:#?}", hirs);
         let text = trees.join("\n\n");
-        let children = match combine(&text, &hirs).unwrap() {
+        let children = match combine(&text, hirs).unwrap() {
             Hir::Root(root) => root.children,
             _ => unreachable!(),
         };
