@@ -25,7 +25,7 @@ pub fn run() -> anyhow::Result<()> {
         Commands::Check(command) => {
             command.run();
             Ok(())
-        },
+        }
     }?;
 
     Ok(())

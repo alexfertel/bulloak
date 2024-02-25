@@ -111,12 +111,14 @@ pub struct FunctionDefinition {
 
 impl FunctionDefinition {
     /// Whether a function's type is `Modifier`.
-    #[must_use] pub fn is_modifier(&self) -> bool {
+    #[must_use]
+    pub fn is_modifier(&self) -> bool {
         matches!(self.ty, FunctionTy::Modifier)
     }
 
     /// Whether a function's type is `Modifier`.
-    #[must_use] pub fn is_function(&self) -> bool {
+    #[must_use]
+    pub fn is_function(&self) -> bool {
         matches!(self.ty, FunctionTy::Function)
     }
 }
