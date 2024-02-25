@@ -2,7 +2,30 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.6.5]
+## [0.7.0]
+
+### Bug Fixes
+
+- *(combine)* Properly handle a few edge cases
+
+
+### Documentation
+
+- *(README)* Update multiple-roots rules
+
+
+### Features
+
+- *(combine)* Optimize allocations during the combine pass
+- Add support for multiple trees per file (#51)
+
+
+### Lint
+
+- Fix addressable clippy warnings
+
+
+## [0.6.5] - 2024-02-17
 
 ### Bug Fixes
 
