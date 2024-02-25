@@ -83,8 +83,8 @@ impl Visitor for Formatter {
         }
 
         let mut parts = vec![];
-        for mut p in &mut contract.parts {
-            parts.push(self.visit_contract_part(&mut p)?);
+        for p in &mut contract.parts {
+            parts.push(self.visit_contract_part(p)?);
         }
         result.push('{');
         result.push_str(&parts.join("\n\n"));

@@ -143,8 +143,7 @@ fn exit(violations: &[Violation]) {
         if fixable_count > 0 {
             let fix_literal = pluralize(fixable_count, "fix", "fixes");
             eprintln!(
-                " (run `bulloak check --fix <.tree files>` to apply {} {})",
-                fixable_count, fix_literal
+                " (run `bulloak check --fix <.tree files>` to apply {fixable_count} {fix_literal})"
             );
         } else {
             eprintln!();

@@ -34,7 +34,7 @@ pub fn translate_tree_to_hir(tree: &str) -> crate::error::Result<crate::hir::Hir
 pub(crate) fn translate_and_combine_trees(text: &str) -> crate::error::Result<crate::hir::Hir> {
     let trees = crate::utils::split_trees(text);
     let hirs = trees
-        .map(|tree| translate_tree_to_hir(tree))
+        .map(translate_tree_to_hir)
         .collect::<crate::error::Result<Vec<crate::hir::Hir>>>()?;
     Ok(crate::hir::combiner::Combiner::new().combine(text, hirs)?)
 }

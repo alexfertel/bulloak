@@ -176,7 +176,7 @@ impl<'a> Visitor for TranslatorI<'a> {
             // If the only action is `it should revert`, we slightly change the function name
             // to reflect this.
             let is_revert = actions.len() == 1
-                && actions.get(0).is_some_and(|action| {
+                && actions.first().is_some_and(|action| {
                     if let hir::Hir::Comment(comment) = action {
                         comment.lexeme == "it should revert"
                     } else {

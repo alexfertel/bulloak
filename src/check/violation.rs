@@ -37,13 +37,13 @@ impl Violation {
 
     /// Determines whether a given violation is fixable.
     pub(crate) fn is_fixable(&self) -> bool {
-        return matches!(
+        matches!(
             self.kind,
             ViolationKind::ContractMissing(_)
                 | ViolationKind::ContractNameNotMatches(_, _)
                 | ViolationKind::FunctionOrderMismatch(_, _, _)
                 | ViolationKind::MatchingFunctionMissing(_, _)
-        );
+        )
     }
 
     /// Optionally returns a help text to be used when displaying the violation kind.
@@ -277,7 +277,7 @@ fn get_insertion_offset(
         let offset = contract_start + opening_brace_pos + 1;
         return Some(offset);
     } else if let Hir::FunctionDefinition(ref pre_fn_hir) = contract_hir.children[index - 1] {
-        let prev_fn = find_matching_fn(&contract_sol, pre_fn_hir);
+        let prev_fn = find_matching_fn(contract_sol, pre_fn_hir);
         if let Some((_, prev_fn)) = prev_fn {
             let offset = prev_fn.loc().end();
             return Some(offset);

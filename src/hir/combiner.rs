@@ -90,6 +90,12 @@ impl fmt::Display for ErrorKind {
 /// by appending the function nodes to the root contract node.
 pub struct Combiner;
 
+impl Default for Combiner {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Combiner {
     /// Creates a new combiner.
     #[must_use]
@@ -167,7 +173,7 @@ impl<'t> CombinerI<'t> {
                     let children = contract
                         .children
                         .into_iter()
-                        .map(|c| prefix_test(c, &function_name))
+                        .map(|c| prefix_test(c, function_name))
                         .filter_map(|c| collect_modifier(c, &mut unique_modifiers))
                         .collect();
                     let first_contract = ContractDefinition {
@@ -190,7 +196,7 @@ impl<'t> CombinerI<'t> {
                 }
 
                 let children =
-                    update_children(contract.children, &function_name, &mut unique_modifiers);
+                    update_children(contract.children, function_name, &mut unique_modifiers);
                 acc_contract.children.extend(children);
             }
         }
@@ -218,12 +224,12 @@ fn prefix_test(child: Hir, prefix: &str) -> Hir {
 fn update_children(
     children: Vec<Hir>,
     function_identifier: &str,
-    mut unique_modifiers: &mut HashSet<String>,
+    unique_modifiers: &mut HashSet<String>,
 ) -> Vec<Hir> {
     children
         .into_iter()
         .map(|c| prefix_test(c, function_identifier))
-        .filter_map(|c| collect_modifier(c, &mut unique_modifiers))
+        .filter_map(|c| collect_modifier(c, unique_modifiers))
         .collect()
 }
 
@@ -231,7 +237,7 @@ fn update_children(
 fn prefix_test_with(test_name: &str, prefix: &str) -> String {
     let capitalized_fn_name = capitalize_first_letter(prefix);
     let test_suffix = test_name.trim_start_matches("test_");
-    format!("test_{}{}", capitalized_fn_name, test_suffix)
+    format!("test_{capitalized_fn_name}{test_suffix}")
 }
 
 fn collect_modifier(child: Hir, unique_modifiers: &mut HashSet<String>) -> Option<Hir> {

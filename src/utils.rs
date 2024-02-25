@@ -58,7 +58,7 @@ pub(crate) fn split_trees(text: &str) -> Box<dyn Iterator<Item = &str> + '_> {
     } else {
         Box::new(
             text.split(TREES_SEPARATOR)
-                .map(|s| s.trim())
+                .map(str::trim)
                 .filter(|s| !s.is_empty()),
         )
     }

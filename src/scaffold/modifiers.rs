@@ -36,7 +36,7 @@ impl ModifierDiscoverer {
 
     /// Discover modifiers in the given AST.
     ///
-    /// `discover` is the entry point of the ModifierDiscoverer.
+    /// `discover` is the entry point of the `ModifierDiscoverer`.
     /// It takes an abstract syntax tree (AST) and returns a map of modifiers.
     pub fn discover(&mut self, ast: &Ast) -> &IndexMap<String, String> {
         match ast {

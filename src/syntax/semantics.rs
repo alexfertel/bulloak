@@ -81,7 +81,7 @@ impl fmt::Display for ErrorKind {
                     .map(|s| s.start.line.to_string())
                     .collect::<Vec<String>>()
                     .join(", ");
-                write!(f, "found an identifier more than once in lines: {}", lines)
+                write!(f, "found an identifier more than once in lines: {lines}")
             }
             ConditionEmpty => write!(f, "found a condition with no children"),
             NodeUnexpected => write!(f, "unexpected child node"),
