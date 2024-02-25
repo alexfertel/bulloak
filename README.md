@@ -243,10 +243,11 @@ description of the current implementation of the compiler.
 
 ### Spec
 
-Each `tree` file should describe at least one function under test. Trees follow these
-rules:
+Each `tree` file should describe at least one function under test. Trees follow
+these rules:
 
-- The first line is the root tree identifier, composed of the contract and function names which should be delimited by a double colon.
+- The first line is the root tree identifier, composed of the contract and
+  function names which should be delimited by a double colon.
 - `bulloak` expects you to use `├` and `└` characters to denote branches.
 - If a branch starts with either `when` or `given`, it is a condition.
   - `when` and `given` are interchangeable.
@@ -255,7 +256,8 @@ rules:
 - Keywords are case-insensitive: `it` is the same as `It` and `IT`.
 - Anything starting with a `//` is a comment and will be stripped from the
   output.
-- Multiple trees can be defined in the same file to describe different functions by following the same rules, separating them with two newlines.
+- Multiple trees can be defined in the same file to describe different functions
+  by following the same rules, separating them with two newlines.
 
 Take the following Solidity function:
 
@@ -294,7 +296,8 @@ Note the following things:
   [discussion](https://github.com/alexfertel/bulloak/issues/22).
 - The root of the tree will be emitted as the name of the test contract.
 
-Suppose you have additional Solidity functions that you want to test in the same test contract, say `Utils` within `utils.t.sol`:
+Suppose you have additional Solidity functions that you want to test in the same
+test contract, say `Utils` within `utils.t.sol`:
 
 ```solidity
 function min(uint256 a, uint256 b) private pure returns (uint256) {
@@ -335,10 +338,15 @@ Utils::max
 
 Note the following things:
 
-- A contract identifier missing from the first tree root will cause `bulloak` to panic.
-- Contract identifiers that are missing from subsequent trees, or otherwise mismatched from the first tree root identifier, will cause `bulloak` to error. This violation is not currently fixable with `bulloak check --fix` so will need to be manually corrected.
-- Duplicate conditions between separate trees will be deduplicated when transformed into Solidity modifiers.
-- The function part of the root identifier for each tree will be emitted as part of the name of the Solidity test (e.g. `test_MinShouldNeverRevert`).
+- Contract identifiers must be present in all roots.
+- Contract identifiers that are missing from subsequent trees, or otherwise
+  mismatched from the first tree root identifier, will cause `bulloak` to error.
+  This violation is not currently fixable with `bulloak check --fix` so will
+  need to be manually corrected.
+- Duplicate conditions between separate trees will be deduplicated when
+  transformed into Solidity modifiers.
+- The function part of the root identifier for each tree will be emitted as part
+  of the name of the Solidity test (e.g. `test_MinShouldNeverRevert`).
 
 ## Output
 
