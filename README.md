@@ -46,8 +46,7 @@ cargo install bulloak
 The following VSCode extensions are not essential but they are recommended for a
 better user experience:
 
-- [Tree](https://marketplace.visualstudio.com/items?itemName=CTC.vscode-tree-extension):
-  syntax highlighting for `.tree` files
+- [Solidity Inspector](https://marketplace.visualstudio.com/items?itemName=PraneshASP.vscode-solidity-inspector) - syntax highlighting for `.tree` files
 - [Ascii Tree Generator](https://marketplace.visualstudio.com/items?itemName=aprilandjan.ascii-tree-generator):
   convenient way to generate ASCII trees
 
