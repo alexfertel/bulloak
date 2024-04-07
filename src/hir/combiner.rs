@@ -307,6 +307,12 @@ mod tests {
         })
     }
 
+    fn expression(content: String) -> Hir {
+        Hir::Expression(hir::Expression {
+            expression: content,
+        })
+    }
+
     fn comment(lexeme: String) -> Hir {
         Hir::Comment(hir::Comment { lexeme })
     }
@@ -369,14 +375,20 @@ bulloak error: contract name missing at tree root #2";
                         hir::FunctionTy::Function,
                         Span::new(Position::new(20, 2, 1), Position::new(86, 3, 24)),
                         None,
-                        Some(vec![comment("it should revert".to_owned())])
+                        Some(vec![
+                            expression("vm.skip(true)".to_string()),
+                            comment("it should revert".to_owned())
+                        ])
                     ),
                     function(
                         "test_Function2RevertWhen_SomethingShitHappens".to_owned(),
                         hir::FunctionTy::Function,
                         Span::new(Position::new(20, 2, 1), Position::new(87, 3, 24)),
                         None,
-                        Some(vec![comment("it should revert".to_owned())])
+                        Some(vec![
+                            expression("vm.skip(true)".to_string()),
+                            comment("it should revert".to_owned())
+                        ])
                     ),
                 ]
             )]
@@ -418,14 +430,20 @@ bulloak error: contract name missing at tree root #2";
                         hir::FunctionTy::Function,
                         Span::new(Position::new(61, 3, 5), Position::new(133, 4, 28)),
                         Some(vec!["whenSomethingBadHappens".to_owned()]),
-                        Some(vec![comment("it should revert".to_owned())])
+                        Some(vec![
+                            expression("vm.skip(true)".to_string()),
+                            comment("it should revert".to_owned())
+                        ])
                     ),
                     function(
                         "test_Function2RevertGiven_TheCallerIs0x1337".to_owned(),
                         hir::FunctionTy::Function,
                         Span::new(Position::new(61, 3, 5), Position::new(131, 4, 28)),
                         Some(vec!["whenSomethingBadHappens".to_owned()]),
-                        Some(vec![comment("it should revert".to_owned())])
+                        Some(vec![
+                            expression("vm.skip(true)".to_string()),
+                            comment("it should revert".to_owned())
+                        ])
                     ),
                 ]
             )]
