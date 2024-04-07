@@ -1,6 +1,5 @@
 //! The implementation of a translator between a bulloak tree AST and a
 //! high-level intermediate representation (HIR) -- AST -> HIR.
-
 use indexmap::IndexMap;
 
 use crate::hir::{self, Hir};
@@ -108,6 +107,7 @@ impl<'a> Visitor for TranslatorI<'a> {
                     let test_name = format!("test_{test_name}");
 
                     let hirs = self.visit_action(action)?;
+
                     let hir = Hir::FunctionDefinition(hir::FunctionDefinition {
                         identifier: test_name,
                         ty: hir::FunctionTy::Function,
@@ -231,7 +231,13 @@ impl<'a> Visitor for TranslatorI<'a> {
                 ty: hir::FunctionTy::Function,
                 span: condition.span,
                 modifiers,
-                children: Some(actions),
+                children: Some(
+                    std::iter::once(hir::Hir::Expression(hir::Expression {
+                        expression: "vm.skip(true)".to_string(),
+                    }))
+                    .chain(actions)
+                    .collect(),
+                ),
             });
             children.push(hir);
         }
@@ -325,6 +331,12 @@ mod tests {
         })
     }
 
+    fn expression(content: String) -> Hir {
+        Hir::Expression(hir::Expression {
+            expression: content,
+        })
+    }
+
     fn comment(lexeme: String) -> Hir {
         Hir::Comment(hir::Comment { lexeme })
     }
@@ -340,7 +352,10 @@ mod tests {
                     hir::FunctionTy::Function,
                     Span::new(Position::new(9, 2, 1), Position::new(74, 3, 23)),
                     None,
-                    Some(vec![comment("it should revert".to_owned())])
+                    Some(vec![
+                        expression("vm.skip(true)".to_string()),
+                        comment("it should revert".to_owned())
+                    ])
                 ),]
             )])
         );
@@ -365,14 +380,20 @@ mod tests {
                         hir::FunctionTy::Function,
                         Span::new(Position::new(19, 2, 1), Position::new(77, 3, 23)),
                         None,
-                        Some(vec![comment("it should revert".to_owned())])
+                        Some(vec![
+                            expression("vm.skip(true)".to_string()),
+                            comment("it should revert".to_owned())
+                        ])
                     ),
                     function(
                         "test_RevertGiven_NotStuffCalled".to_owned(),
                         hir::FunctionTy::Function,
                         Span::new(Position::new(79, 4, 1), Position::new(140, 5, 23)),
                         None,
-                        Some(vec![comment("it should revert".to_owned())])
+                        Some(vec![
+                            expression("vm.skip(true)".to_string()),
+                            comment("it should revert".to_owned())
+                        ])
                     ),
                 ]
             )])
@@ -411,6 +432,7 @@ Foo_Test
                         Span::new(Position::new(10, 3, 1), Position::new(235, 9, 32)),
                         Some(vec!["whenStuffCalled".to_owned()]),
                         Some(vec![
+                            expression("vm.skip(true)".to_string()),
                             comment("It should do stuff.".to_owned()),
                             comment("It should do more.".to_owned())
                         ])
@@ -420,14 +442,20 @@ Foo_Test
                         hir::FunctionTy::Function,
                         Span::new(Position::new(76, 5, 5), Position::new(135, 6, 28)),
                         Some(vec!["whenStuffCalled".to_owned()]),
-                        Some(vec![comment("it should revert".to_owned())])
+                        Some(vec![
+                            expression("vm.skip(true)".to_string()),
+                            comment("it should revert".to_owned())
+                        ])
                     ),
                     function(
                         "test_WhenBCalled".to_owned(),
                         hir::FunctionTy::Function,
                         Span::new(Position::new(174, 8, 5), Position::new(235, 9, 32)),
                         Some(vec!["whenStuffCalled".to_owned()]),
-                        Some(vec![comment("it should not revert".to_owned())])
+                        Some(vec![
+                            expression("vm.skip(true)".to_string()),
+                            comment("it should not revert".to_owned())
+                        ])
                     ),
                 ]
             )])

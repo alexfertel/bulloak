@@ -66,6 +66,7 @@ impl<'s> EmitterI<'s> {
             Hir::ContractDefinition(ref inner) => self.visit_contract(inner).unwrap(),
             Hir::FunctionDefinition(ref inner) => self.visit_function(inner).unwrap(),
             Hir::Comment(ref inner) => self.visit_comment(inner).unwrap(),
+            Hir::Expression(ref inner) => self.visit_expression(inner).unwrap(),
         }
     }
 
@@ -154,6 +155,7 @@ impl<'s> Visitor for EmitterI<'s> {
     type ContractDefinitionOutput = String;
     type FunctionDefinitionOutput = String;
     type CommentOutput = String;
+    type ExpressionOutput = String;
     type Error = ();
 
     fn visit_root(&mut self, root: &hir::Root) -> result::Result<Self::RootOutput, Self::Error> {
@@ -233,6 +235,17 @@ impl<'s> Visitor for EmitterI<'s> {
         let mut emitted = String::new();
         let indentation = self.emitter.indent().repeat(2);
         emitted.push_str(format!("{}// {}\n", indentation, comment.lexeme).as_str());
+
+        Ok(emitted)
+    }
+
+    fn visit_expression(
+        &mut self,
+        expression: &hir::Expression,
+    ) -> result::Result<Self::ExpressionOutput, Self::Error> {
+        let mut emitted = String::new();
+        let indentation = self.emitter.indent().repeat(2);
+        emitted.push_str(format!("{}{}\n", indentation, expression.expression).as_str());
 
         Ok(emitted)
     }

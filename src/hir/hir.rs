@@ -22,6 +22,8 @@ pub enum Hir {
     FunctionDefinition(FunctionDefinition),
     /// A comment.
     Comment(Comment),
+    /// An expression.
+    Expression(Expression),
 }
 
 impl Default for Hir {
@@ -128,4 +130,11 @@ impl FunctionDefinition {
 pub struct Comment {
     /// The contract name.
     pub lexeme: String,
+}
+
+/// An expression node
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Expression {
+    /// The expression as a string
+    pub expression: String,
 }

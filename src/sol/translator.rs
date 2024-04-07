@@ -290,6 +290,7 @@ impl Visitor for TranslatorI {
     type ContractDefinitionOutput = SourceUnitPart;
     type FunctionDefinitionOutput = ContractPart;
     type CommentOutput = Statement;
+    type ExpressionOutput = Statement;
     type Error = ();
 
     /// Visits the root node of a High-Level Intermediate Representation (HIR) and translates
@@ -490,6 +491,31 @@ impl Visitor for TranslatorI {
         let definition = Statement::VariableDefinition(
             Loc::File(0, definition_start, self.offset.get()),
             variable,
+            string_literal,
+        );
+
+        Ok(definition)
+    }
+
+    fn visit_expression(
+        &mut self,
+        expression: &hir::Expression,
+    ) -> Result<Self::ExpressionOutput, Self::Error> {
+        // Use Solang Statement::Expression for future compatibility, if more
+        // expressions were to be supported
+        let definition_start = self.offset.get();
+
+        let expression_loc = self.bump(&format!(r#""{}""#, &expression.expression));
+        let string_literal = Expression::StringLiteral(vec![StringLiteral {
+            loc: expression_loc,
+            unicode: false,
+            string: expression.expression.clone(),
+        }]);
+
+        self.bump(";"); // `;` after string literal.
+
+        let definition = Statement::Expression(
+            Loc::File(0, definition_start, self.offset.get()),
             string_literal,
         );
 
