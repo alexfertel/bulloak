@@ -7,6 +7,9 @@ use crate::syntax::ast;
 use crate::syntax::visitor::Visitor;
 use crate::utils::{capitalize_first_letter, sanitize};
 
+use std::fs;
+use serde::Deserialize;
+
 /// A translator between a bulloak tree abstract syntax tree (AST)
 /// and a high-level intermediate representation (HIR) -- AST -> HIR.
 ///
@@ -71,6 +74,11 @@ impl<'a> TranslatorI<'a> {
         // is a Root HIR node.
         std::mem::take(&mut hirs[0])
     }
+}
+
+#[derive(Debug, Deserialize)]
+struct BulloakToml {
+    NO_SKIP: bool,
 }
 
 impl<'a> Visitor for TranslatorI<'a> {
@@ -138,6 +146,13 @@ impl<'a> Visitor for TranslatorI<'a> {
         &mut self,
         condition: &crate::syntax::ast::Condition,
     ) -> Result<Self::Output, Self::Error> {
+        let toml_str = match fs::read_to_string("bulloak.toml") {
+            Ok(content) => content,
+            Err(_) => String::from("NO_SKIP = false"),
+        };
+
+        let bulloak_toml = toml::from_str::<BulloakToml>(&toml_str).expect("Invalid TOML format");
+
         let mut children = Vec::new();
 
         let action_count = condition
@@ -226,17 +241,19 @@ impl<'a> Visitor for TranslatorI<'a> {
                 Some(self.modifier_stack.iter().map(|&m| m.to_owned()).collect())
             };
 
+            if bulloak_toml.NO_SKIP {
+                actions.insert(0, Hir::Expression(hir::Expression {
+                    expression: "vm.skip(true)".to_string(),
+                }));
+            }
+
             let hir = Hir::FunctionDefinition(hir::FunctionDefinition {
                 identifier: function_name,
                 ty: hir::FunctionTy::Function,
                 span: condition.span,
                 modifiers,
                 children: Some(
-                    std::iter::once(hir::Hir::Expression(hir::Expression {
-                        expression: "vm.skip(true)".to_string(),
-                    }))
-                    .chain(actions)
-                    .collect(),
+                    actions
                 ),
             });
             children.push(hir);
