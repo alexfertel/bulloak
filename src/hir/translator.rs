@@ -7,8 +7,8 @@ use crate::syntax::ast;
 use crate::syntax::visitor::Visitor;
 use crate::utils::{capitalize_first_letter, sanitize};
 
-use std::fs;
 use serde::Deserialize;
+use std::fs;
 
 /// A translator between a bulloak tree abstract syntax tree (AST)
 /// and a high-level intermediate representation (HIR) -- AST -> HIR.
@@ -78,7 +78,7 @@ impl<'a> TranslatorI<'a> {
 
 #[derive(Debug, Deserialize)]
 struct BulloakToml {
-    NO_SKIP: bool,
+    no_skip: bool,
 }
 
 impl<'a> Visitor for TranslatorI<'a> {
@@ -148,7 +148,7 @@ impl<'a> Visitor for TranslatorI<'a> {
     ) -> Result<Self::Output, Self::Error> {
         let toml_str = match fs::read_to_string("bulloak.toml") {
             Ok(content) => content,
-            Err(_) => String::from("NO_SKIP = false"),
+            Err(_) => String::from("no_skip = false"),
         };
 
         let bulloak_toml = toml::from_str::<BulloakToml>(&toml_str).expect("Invalid TOML format");
@@ -241,10 +241,13 @@ impl<'a> Visitor for TranslatorI<'a> {
                 Some(self.modifier_stack.iter().map(|&m| m.to_owned()).collect())
             };
 
-            if bulloak_toml.NO_SKIP {
-                actions.insert(0, Hir::Expression(hir::Expression {
-                    expression: "vm.skip(true)".to_string(),
-                }));
+            if !bulloak_toml.no_skip {
+                actions.insert(
+                    0,
+                    Hir::Expression(hir::Expression {
+                        expression: "vm.skip(true)".to_string(),
+                    }),
+                );
             }
 
             let hir = Hir::FunctionDefinition(hir::FunctionDefinition {
@@ -252,9 +255,7 @@ impl<'a> Visitor for TranslatorI<'a> {
                 ty: hir::FunctionTy::Function,
                 span: condition.span,
                 modifiers,
-                children: Some(
-                    actions
-                ),
+                children: Some(actions),
             });
             children.push(hir);
         }
