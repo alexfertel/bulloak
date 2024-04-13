@@ -261,7 +261,7 @@ mod tests {
     use crate::scaffold::emitter;
 
     fn scaffold_with_flags(text: &str, indent: usize, version: &str) -> Result<String> {
-        let hir = translate_and_combine_trees(text)?;
+        let hir = translate_and_combine_trees(text, &false)?;
         Ok(emitter::Emitter::new(indent, version).emit(&hir))
     }
 

@@ -39,11 +39,14 @@ pub struct Scaffold {
     /// Sets a Solidity version for the test contracts.
     #[arg(short = 's', long, default_value = INTERNAL_DEFAULT_SOL_VERSION)]
     solidity_version: String,
+    /// Whether to add vm.skip(true) at the begining of each test
+    #[arg(short = 'S', long = "vm-skip", default_value = "false")]
+    add_vm_skip: bool,
 }
 
 impl Scaffold {
     pub fn run(self) -> anyhow::Result<()> {
-        let scaffolder = Scaffolder::new(&self.solidity_version);
+        let scaffolder = Scaffolder::new(&self.solidity_version, &self.add_vm_skip);
 
         // For each input file, compile it and print it or write it
         // to the filesystem.
@@ -100,18 +103,20 @@ impl Scaffold {
 pub struct Scaffolder<'s> {
     /// Sets a Solidity version for the test contracts.
     solidity_version: &'s str,
+    /// Whether to add vm.skip(true) at the begining of each test
+    add_vm_skip: &'s bool,
 }
 
 impl<'s> Scaffolder<'s> {
     /// Creates a new scaffolder with the provided configuration.
     #[must_use]
-    pub fn new(solidity_version: &'s str) -> Self {
-        Scaffolder { solidity_version }
+    pub fn new(solidity_version: &'s str, add_vm_skip: &'s bool) -> Self {
+        Scaffolder { solidity_version, add_vm_skip }
     }
 
     /// Generates Solidity code from a `.tree` file.
     pub fn scaffold(&self, text: &str) -> crate::error::Result<String> {
-        let hir = translate_and_combine_trees(text)?;
+        let hir = translate_and_combine_trees(text, self.add_vm_skip)?;
         let pt = sol::Translator::new(self.solidity_version).translate(&hir);
         let source = sol::Formatter::new().emit(pt);
         let formatted = fmt(&source).expect("should format the emitted solidity code");
