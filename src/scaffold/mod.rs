@@ -47,51 +47,79 @@ impl Scaffold {
 
         // For each input file, compile it and print it or write it
         // to the filesystem.
+        let mut errors = Vec::with_capacity(self.files.len());
         for file in &self.files {
             let text = fs::read_to_string(file)?;
             match scaffolder.scaffold(&text) {
                 Ok(emitted) => {
-                    let emitted = fmt(&emitted).unwrap_or_else(|e| {
-                        eprintln!("{}: {}", "WARN".yellow(), e);
+                    let emitted = fmt(&emitted).unwrap_or_else(|err| {
+                        eprintln!("{}: {}", "WARN".yellow(), err);
                         emitted
                     });
 
-                    if self.write_files {
-                        let mut output_path = file.clone();
-
-                        // Get the path to the output file.
-                        output_path.set_extension("t.sol");
-
-                        // Don't overwrite files unless `--force-write` was passed.
-                        if output_path.exists() && !self.force_write {
-                            eprintln!(
-                                "{}: Skipped emitting {:?}",
-                                "warn".yellow(),
-                                file.as_path().blue()
-                            );
-                            eprintln!(
-                                "    {} The corresponding `.t.sol` file already exists",
-                                "=".blue()
-                            );
-                            continue;
-                        }
-
-                        if let Err(e) = fs::write(output_path, emitted) {
-                            eprintln!("{}: {e}", "error".red());
-                        };
-                    } else {
+                    if !self.write_files {
                         println!("{emitted}");
+                        continue;
                     }
+
+                    let file = self.to_test_file(file);
+                    self.write_file(&emitted, &file);
                 }
                 Err(err) => {
-                    eprintln!("{err}");
-                    eprintln!("file: {}", file.display());
-                    std::process::exit(1);
+                    errors.push((file, err));
                 }
             };
         }
 
+        if !errors.is_empty() {
+            let error_count = errors.len();
+            for (file, err) in errors {
+                eprintln!("{err}");
+                eprintln!("file: {}", file.display());
+            }
+
+            eprintln!(
+                "\n{}: Could not scaffold {} files. Check the output above or run {}, which might prove helpful.",
+                "warn".yellow(),
+                error_count.yellow(),
+                "bulloak check".blue()
+            );
+
+            std::process::exit(1);
+        }
+
         Ok(())
+    }
+
+    /// Gets the `t.sol` path equivalent of `file`.
+    fn to_test_file(&self, file: &PathBuf) -> PathBuf {
+        let mut file = file.clone();
+        file.set_extension("t.sol");
+        file
+    }
+
+    /// Writes the provided `text` to `file`.
+    ///
+    /// If the file doesn't exist it will create it. If it exists,
+    /// and `--force-write` was not passed, it will skip writing to the file.
+    fn write_file(&self, text: &str, file: &PathBuf) {
+        // Don't overwrite files unless `--force-write` was passed.
+        if file.exists() && !self.force_write {
+            eprintln!(
+                "{}: Skipped emitting {:?}",
+                "warn".yellow(),
+                file.as_path().blue()
+            );
+            eprintln!(
+                "    {} The corresponding `.t.sol` file already exists",
+                "=".blue()
+            );
+            return;
+        }
+
+        if let Err(err) = fs::write(file, text) {
+            eprintln!("{}: {err}", "error".red());
+        };
     }
 }
 

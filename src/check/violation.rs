@@ -163,7 +163,7 @@ impl fmt::Display for ViolationKind {
                         ),
                         error::Error::Semantic(_) => write!(
                             f,
-                            "at least one semantic error occured while parsing the tree"
+                            "at least one semantic error occurred while parsing the tree"
                         ),
                     }
                 } else {
@@ -374,7 +374,7 @@ pub(crate) fn fix_order(
     // string `source`.
     //    b - Replace them with whitespace in `scratch`.
     //
-    // Since we sorted in a previos step, they'll appear sorted in
+    // Since we sorted in a previous step, they'll appear sorted in
     // the string. We do 4.b because we want to append the remaining
     // functions after the sorted functions.
     let mut scratch = ctx.src.clone();

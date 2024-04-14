@@ -18,6 +18,7 @@ fn scaffolds_trees() {
         "complex.tree",
         "multiple_roots.tree",
         "removes_invalid_title_chars.tree",
+        "hash_pair.tree",
     ];
 
     for tree_name in trees {
