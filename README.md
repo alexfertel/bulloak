@@ -146,7 +146,7 @@ contract HashPairTest {
 
 This Solidity file is missing the tests for the branch
 `When first arg is bigger than second arg`, which would be reported after
-running `bulloak check`, like so:
+running `bulloak check tests/scaffold/basic.tree`, like so:
 
 ```text
 warn: function "test_WhenFirstArgIsBiggerThanSecondArg" is missing in .sol
