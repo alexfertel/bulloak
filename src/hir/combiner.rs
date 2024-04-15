@@ -267,13 +267,13 @@ mod tests {
     use crate::syntax::parser::Parser;
     use crate::syntax::tokenizer::Tokenizer;
 
-    fn translate(text: &str, add_vm_skip: &bool) -> Result<Hir> {
+    fn translate(text: &str, with_vm_skip: &bool) -> Result<Hir> {
         let tokens = Tokenizer::new().tokenize(&text)?;
         let ast = Parser::new().parse(&text, &tokens)?;
         let mut discoverer = modifiers::ModifierDiscoverer::new();
         let modifiers = discoverer.discover(&ast);
 
-        Ok(hir::translator::Translator::new().translate(&ast, modifiers, add_vm_skip))
+        Ok(hir::translator::Translator::new().translate(&ast, modifiers, with_vm_skip))
     }
 
     fn combine(text: &str, hirs: Vec<Hir>) -> Result<Hir, Error> {
@@ -307,10 +307,9 @@ mod tests {
         })
     }
 
-    fn expression(content: String, ty: hir::SupportedExpressionType) -> Hir {
-        Hir::Expression(hir::Expression {
+    fn statement(ty: hir::SupportedStatement) -> Hir {
+        Hir::Statement(hir::Statement {
             ty,
-            expression: content,
         })
     }
 
@@ -324,7 +323,10 @@ mod tests {
             "::orphanedFunction\n└── when something bad happens\n   └── it should revert",
             "Contract::function\n└── when something bad happens\n   └── it should revert",
         ];
-        let hirs = trees.iter().map(|tree| translate(tree, &true).unwrap()).collect();
+        let hirs = trees
+            .iter()
+            .map(|tree| translate(tree, &true).unwrap())
+            .collect();
         let text = trees.join("\n\n");
         let result = combine(&text, hirs);
 
@@ -337,7 +339,10 @@ mod tests {
             "Contract::function\n└── when something bad happens\n   └── it should revert",
             "::orphanedFunction\n└── when something bad happens\n   └── it should revert",
         ];
-        let hirs = trees.iter().map(|tree| translate(tree, &true).unwrap()).collect();
+        let hirs = trees
+            .iter()
+            .map(|tree| translate(tree, &true).unwrap())
+            .collect();
 
         let expected = r"•••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••
 bulloak error: contract name missing at tree root #2";
@@ -355,7 +360,10 @@ bulloak error: contract name missing at tree root #2";
             "Contract::function1\n└── when something bad happens\n    └── it should revert",
             "Contract::function2\n└── when something shit happens\n    └── it should revert",
         ];
-        let mut hirs: Vec<_> = trees.iter().map(|tree| translate(tree, &true).unwrap()).collect();
+        let mut hirs: Vec<_> = trees
+            .iter()
+            .map(|tree| translate(tree, &true).unwrap())
+            .collect();
 
         // Append a comment HIR to the hirs.
         hirs.push(root(vec![comment("this is a random comment".to_owned())]));
@@ -377,7 +385,9 @@ bulloak error: contract name missing at tree root #2";
                         Span::new(Position::new(20, 2, 1), Position::new(86, 3, 24)),
                         None,
                         Some(vec![
-                            expression("vm.skip(true)".to_string(), hir::SupportedExpressionType::MemberAccess),
+                            statement(
+                                hir::SupportedStatement::VmSkip
+                            ),
                             comment("it should revert".to_owned())
                         ])
                     ),
@@ -387,7 +397,9 @@ bulloak error: contract name missing at tree root #2";
                         Span::new(Position::new(20, 2, 1), Position::new(87, 3, 24)),
                         None,
                         Some(vec![
-                            expression("vm.skip(true)".to_string(), hir::SupportedExpressionType::MemberAccess),
+                            statement(
+                                hir::SupportedStatement::VmSkip
+                            ),
                             comment("it should revert".to_owned())
                         ])
                     ),
@@ -402,7 +414,10 @@ bulloak error: contract name missing at tree root #2";
             "Contract::function1\n└── when something bad happens\n    └── given something else happens\n        └── it should revert",
             "Contract::function2\n└── when something bad happens\n    └── given the caller is 0x1337\n        └── it should revert",
         ];
-        let mut hirs: Vec<_> = trees.iter().map(|tree| translate(tree, &true).unwrap()).collect();
+        let mut hirs: Vec<_> = trees
+            .iter()
+            .map(|tree| translate(tree, &true).unwrap())
+            .collect();
 
         // Append a comment HIR to the hirs.
         hirs.push(root(vec![comment("this is a random comment".to_owned())]));
@@ -432,7 +447,9 @@ bulloak error: contract name missing at tree root #2";
                         Span::new(Position::new(61, 3, 5), Position::new(133, 4, 28)),
                         Some(vec!["whenSomethingBadHappens".to_owned()]),
                         Some(vec![
-                            expression("vm.skip(true)".to_string(), hir::SupportedExpressionType::MemberAccess),
+                            statement(
+                                hir::SupportedStatement::VmSkip
+                            ),
                             comment("it should revert".to_owned())
                         ])
                     ),
@@ -442,7 +459,9 @@ bulloak error: contract name missing at tree root #2";
                         Span::new(Position::new(61, 3, 5), Position::new(131, 4, 28)),
                         Some(vec!["whenSomethingBadHappens".to_owned()]),
                         Some(vec![
-                            expression("vm.skip(true)".to_string(), hir::SupportedExpressionType::MemberAccess),
+                            statement(
+                                hir::SupportedStatement::VmSkip
+                            ),
                             comment("it should revert".to_owned())
                         ])
                     ),

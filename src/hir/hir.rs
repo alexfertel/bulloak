@@ -23,7 +23,7 @@ pub enum Hir {
     /// A comment.
     Comment(Comment),
     /// An expression.
-    Expression(Expression),
+    Statement(Statement),
 }
 
 impl Default for Hir {
@@ -132,19 +132,16 @@ pub struct Comment {
     pub lexeme: String,
 }
 
-
 /// The type of expression that is supported.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum SupportedExpressionType {
-    /// Member access x.y
-    MemberAccess,
+pub enum SupportedStatement {
+    /// vm.skip(true);
+    VmSkip,
 }
 
 /// An expression node
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Expression {
-    /// The type of the expression (must be supported)
-    pub ty: SupportedExpressionType,
-    /// The expression as a string
-    pub expression: String,
+pub struct Statement {
+    /// The statement
+    pub ty: SupportedStatement,
 }

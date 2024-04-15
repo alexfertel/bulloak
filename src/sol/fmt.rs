@@ -208,7 +208,8 @@ impl Visitor for Formatter {
                     Ok(format!("{identifier}"))
                 }
             }
-            expression => Ok(format!("{expression}")),
+            Expression::FunctionCall(_, _, _) => Ok(format!("{expression};")),
+            expression => Ok(format!("{expression}"))
         }
     }
 

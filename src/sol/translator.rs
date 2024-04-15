@@ -229,9 +229,12 @@ impl TranslatorI {
     fn gen_function_statements(&mut self, children: &Vec<Hir>) -> Result<Vec<Statement>, ()> {
         let mut stmts = Vec::with_capacity(children.len());
         for child in children {
+            if let Hir::Statement(statement) = child {
+                stmts.push(self.visit_statement(statement)?);
+            }
             if let Hir::Comment(comment) = child {
                 stmts.push(self.visit_comment(comment)?);
-            };
+            }
         }
 
         // If there is at least one child, we add a '\n'
@@ -290,7 +293,7 @@ impl Visitor for TranslatorI {
     type ContractDefinitionOutput = SourceUnitPart;
     type FunctionDefinitionOutput = ContractPart;
     type CommentOutput = Statement;
-    type ExpressionOutput = Statement;
+    type StatementOutput = Statement;
     type Error = ();
 
     /// Visits the root node of a High-Level Intermediate Representation (HIR) and translates
@@ -497,28 +500,48 @@ impl Visitor for TranslatorI {
         Ok(definition)
     }
 
-    fn visit_expression(
+    /// Visits a statement node and match based on its type.
+    fn visit_statement(
         &mut self,
-        expression: &hir::Expression,
-    ) -> Result<Self::ExpressionOutput, Self::Error> {
-        // Use Solang Statement::Expression for future compatibility, if more
-        // expressions were to be supported
-        let definition_start = self.offset.get();
+        statement: &hir::Statement,
+    ) -> Result<Self::StatementOutput, Self::Error> {
+        let start_offset = self.offset.get();
 
-        let expression_loc = self.bump(&format!(r#""{}""#, &expression.expression));
-        let string_literal = Expression::StringLiteral(vec![StringLiteral {
-            loc: expression_loc,
-            unicode: false,
-            string: expression.expression.clone(),
-        }]);
+        match statement.ty {
+            hir::SupportedStatement::VmSkip => {
+                let loc_vm = self.bump("vm");
+                self.bump(".");
+                let loc_skip = self.bump("skip");
+                self.bump("(");
+                let loc_arg = self.bump("true");
+                self.bump(");");
 
-        self.bump(";"); // `;` after string literal.
+                let vm_interface = Expression::MemberAccess(
+                    Loc::File(0, start_offset, loc_skip.end()),                    
+                    Box::new(
+                        Expression::Variable(
+                            solang_parser::pt::Identifier {
+                                loc: loc_vm,
+                                name: "vm".to_owned()
+                            }
+                        )),
+                        
+                    solang_parser::pt::Identifier {
+                        loc: loc_skip,
+                        name: "skip".to_owned()
+                    },
+                );
 
-        let definition = Statement::Expression(
-            Loc::File(0, definition_start, self.offset.get()),
-            string_literal,
-        );
+                let vm_skip_arg = vec![Expression::BoolLiteral(loc_arg, true)];
 
-        Ok(definition)
+                let vm_skip_call = Expression::FunctionCall(
+                    Loc::File(0, loc_skip.start(), loc_arg.end()),
+                    Box::new(vm_interface),
+                    vm_skip_arg,
+                );
+        
+                Ok(Statement::Expression(Loc::File(0, start_offset, self.offset.get()), vm_skip_call))
+            }
+        }
     }
 }

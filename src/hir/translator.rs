@@ -26,8 +26,13 @@ impl Translator {
     ///
     /// This function is the entry point of the translator.
     #[must_use]
-    pub fn translate(&self, ast: &ast::Ast, modifiers: &IndexMap<String, String>, add_vm_skip: &bool) -> Hir {
-        TranslatorI::new(modifiers, add_vm_skip).translate(ast)
+    pub fn translate(
+        &self,
+        ast: &ast::Ast,
+        modifiers: &IndexMap<String, String>,
+        with_vm_skip: &bool,
+    ) -> Hir {
+        TranslatorI::new(modifiers, with_vm_skip).translate(ast)
     }
 }
 
@@ -50,16 +55,16 @@ struct TranslatorI<'a> {
     /// to a modifier every time it is used.
     modifiers: &'a IndexMap<String, String>,
     /// Whether to add `vm.skip(true)` at the beginning of each test.
-    add_vm_skip: &'a bool,
+    with_vm_skip: &'a bool,
 }
 
 impl<'a> TranslatorI<'a> {
     /// Creates a new internal translator.
-    fn new(modifiers: &'a IndexMap<String, String>, add_vm_skip: &'a bool) -> Self {
+    fn new(modifiers: &'a IndexMap<String, String>, with_vm_skip: &'a bool) -> Self {
         Self {
             modifier_stack: Vec::new(),
             modifiers,
-            add_vm_skip
+            with_vm_skip,
         }
     }
 
@@ -75,7 +80,6 @@ impl<'a> TranslatorI<'a> {
         std::mem::take(&mut hirs[0])
     }
 }
-
 
 impl<'a> Visitor for TranslatorI<'a> {
     type Output = Vec<Hir>;
@@ -110,7 +114,16 @@ impl<'a> Visitor for TranslatorI<'a> {
                     let test_name = sanitize(&test_name);
                     let test_name = format!("test_{test_name}");
 
-                    let hirs = self.visit_action(action)?;
+                    let mut hirs = self.visit_action(action)?;
+
+                    if *self.with_vm_skip {
+                        hirs.insert(
+                            0,
+                            Hir::Statement(hir::Statement {
+                                ty: hir::SupportedStatement::VmSkip,
+                            }),
+                        );
+                    }
 
                     let hir = Hir::FunctionDefinition(hir::FunctionDefinition {
                         identifier: test_name,
@@ -230,12 +243,11 @@ impl<'a> Visitor for TranslatorI<'a> {
                 Some(self.modifier_stack.iter().map(|&m| m.to_owned()).collect())
             };
 
-            if *self.add_vm_skip {
+            if *self.with_vm_skip {
                 actions.insert(
                     0,
-                    Hir::Expression(hir::Expression {
-                        ty: hir::SupportedExpressionType::MemberAccess,
-                        expression: "vm.skip(true)".to_string(),
+                    Hir::Statement(hir::Statement {
+                        ty: hir::SupportedStatement::VmSkip,
                     }),
                 );
             }
@@ -303,13 +315,13 @@ mod tests {
     use crate::syntax::parser::Parser;
     use crate::syntax::tokenizer::Tokenizer;
 
-    fn translate(text: &str, add_vm_skip: &bool) -> Result<hir::Hir> {
+    fn translate(text: &str, with_vm_skip: &bool) -> Result<hir::Hir> {
         let tokens = Tokenizer::new().tokenize(&text)?;
         let ast = Parser::new().parse(&text, &tokens)?;
         let mut discoverer = modifiers::ModifierDiscoverer::new();
         let modifiers = discoverer.discover(&ast);
 
-        Ok(hir::translator::Translator::new().translate(&ast, modifiers, add_vm_skip))
+        Ok(hir::translator::Translator::new().translate(&ast, modifiers, with_vm_skip))
     }
 
     fn root(children: Vec<Hir>) -> Hir {
@@ -339,10 +351,9 @@ mod tests {
         })
     }
 
-    fn expression(content: String, ty: hir::SupportedExpressionType) -> Hir {
-        Hir::Expression(hir::Expression {
+    fn statement(ty: hir::SupportedStatement) -> Hir {
+        Hir::Statement(hir::Statement {
             ty,
-            expression: content,
         })
     }
 
@@ -353,7 +364,11 @@ mod tests {
     #[test]
     fn one_child() {
         assert_eq!(
-            translate("Foo_Test\n└── when something bad happens\n   └── it should revert", &true).unwrap(),
+            translate(
+                "Foo_Test\n└── when something bad happens\n   └── it should revert",
+                &true
+            )
+            .unwrap(),
             root(vec![contract(
                 "Foo_Test".to_owned(),
                 vec![function(
@@ -362,7 +377,9 @@ mod tests {
                     Span::new(Position::new(9, 2, 1), Position::new(74, 3, 23)),
                     None,
                     Some(vec![
-                        expression("vm.skip(true)".to_string(), hir::SupportedExpressionType::MemberAccess),
+                        statement(
+                            hir::SupportedStatement::VmSkip
+                        ),
                         comment("it should revert".to_owned())
                     ])
                 ),]
@@ -378,7 +395,8 @@ mod tests {
 ├── when stuff called
 │  └── it should revert
 └── given not stuff called
-   └── it should revert", &true
+   └── it should revert",
+                &true
             )
             .unwrap(),
             root(vec![contract(
@@ -390,7 +408,9 @@ mod tests {
                         Span::new(Position::new(19, 2, 1), Position::new(77, 3, 23)),
                         None,
                         Some(vec![
-                            expression("vm.skip(true)".to_string(), hir::SupportedExpressionType::MemberAccess),
+                            statement(
+                                hir::SupportedStatement::VmSkip
+                            ),
                             comment("it should revert".to_owned())
                         ])
                     ),
@@ -400,7 +420,9 @@ mod tests {
                         Span::new(Position::new(79, 4, 1), Position::new(140, 5, 23)),
                         None,
                         Some(vec![
-                            expression("vm.skip(true)".to_string(), hir::SupportedExpressionType::MemberAccess),
+                            statement(
+                                hir::SupportedStatement::VmSkip
+                            ),
                             comment("it should revert".to_owned())
                         ])
                     ),
@@ -441,7 +463,9 @@ Foo_Test
                         Span::new(Position::new(10, 3, 1), Position::new(235, 9, 32)),
                         Some(vec!["whenStuffCalled".to_owned()]),
                         Some(vec![
-                            expression("vm.skip(true)".to_string(), hir::SupportedExpressionType::MemberAccess),
+                            statement(
+                                hir::SupportedStatement::VmSkip
+                            ),
                             comment("It should do stuff.".to_owned()),
                             comment("It should do more.".to_owned())
                         ])
@@ -452,7 +476,9 @@ Foo_Test
                         Span::new(Position::new(76, 5, 5), Position::new(135, 6, 28)),
                         Some(vec!["whenStuffCalled".to_owned()]),
                         Some(vec![
-                            expression("vm.skip(true)".to_string(), hir::SupportedExpressionType::MemberAccess),
+                            statement(
+                                hir::SupportedStatement::VmSkip
+                            ),
                             comment("it should revert".to_owned())
                         ])
                     ),
@@ -462,7 +488,9 @@ Foo_Test
                         Span::new(Position::new(174, 8, 5), Position::new(235, 9, 32)),
                         Some(vec!["whenStuffCalled".to_owned()]),
                         Some(vec![
-                            expression("vm.skip(true)".to_string(), hir::SupportedExpressionType::MemberAccess),
+                            statement(
+                                hir::SupportedStatement::VmSkip
+                            ),
                             comment("it should not revert".to_owned())
                         ])
                     ),
