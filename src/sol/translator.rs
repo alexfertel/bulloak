@@ -18,8 +18,8 @@ use std::cell::Cell;
 
 use solang_parser::pt::{
     Base, ContractDefinition, ContractPart, ContractTy, Expression, FunctionAttribute,
-    FunctionDefinition, FunctionTy, Identifier, IdentifierPath, Loc, SourceUnit, SourceUnitPart,
-    Statement, StringLiteral, Type, VariableDeclaration, Visibility,
+    FunctionDefinition, FunctionTy, Identifier, IdentifierPath, Import, ImportPath, Loc,
+    SourceUnit, SourceUnitPart, Statement, StringLiteral, Type, VariableDeclaration, Visibility,
 };
 
 use crate::hir::visitor::Visitor;
@@ -35,14 +35,17 @@ use crate::utils::sanitize;
 pub(crate) struct Translator {
     /// The Solidity version to be used in the pragma directive.
     sol_version: String,
+    /// A flag indicating if there is a forge-std dependency
+    with_forge_std: bool,
 }
 
 impl Translator {
     /// Create a new translator.
     #[must_use]
-    pub(crate) fn new(sol_version: &str) -> Self {
+    pub(crate) fn new(sol_version: &str, with_forge_std: &bool) -> Self {
         Self {
             sol_version: sol_version.to_owned(),
+            with_forge_std: with_forge_std.to_owned(),
         }
     }
 
@@ -341,6 +344,33 @@ impl Visitor for TranslatorI {
         ));
         self.bump(";\n");
 
+        if self.translator.with_forge_std {
+            // Getting the relevant offsets for `import {Test} from "forge-std/Test.sol"`
+            let loc_import_start = self.offset.get();
+            self.bump("import { ");
+            let loc_identifier = self.bump("Test");
+            self.bump(" } from \"");
+            let loc_path = self.bump("forge-std/Test.sol");
+
+            source_unit.push(SourceUnitPart::ImportDirective(Import::Rename(
+                ImportPath::Filename(StringLiteral {
+                    loc: loc_path,
+                    unicode: false,
+                    string: "forge-std/Test.sol".to_string(),
+                }),
+                vec![(
+                    Identifier {
+                        loc: loc_identifier,
+                        name: "Test".to_string(),
+                    },
+                    None,
+                )],
+                Loc::File(0, loc_import_start, loc_path.end()),
+            )));
+
+            self.bump("\";\n");
+        }
+
         for child in &root.children {
             if let Hir::ContractDefinition(contract) = child {
                 source_unit.push(self.visit_contract(contract)?);
@@ -379,7 +409,28 @@ impl Visitor for TranslatorI {
             loc: self.bump(&contract_name),
             name: contract.identifier.clone(),
         });
-        self.bump(" {"); // `{` after contract identifier.
+
+        let mut contract_base = vec![];
+
+        if self.translator.with_forge_std {
+            let base_start = self.offset.get();
+            self.bump(" is ");
+            let base_loc = self.bump("Test");
+            let base_identifier_path = IdentifierPath {
+                loc: base_loc,
+                identifiers: vec![Identifier {
+                    loc: base_loc,
+                    name: "Test".to_string(),
+                }],
+            };
+
+            contract_base = vec![Base {
+                loc: Loc::File(0, base_start, base_loc.end()),
+                name: base_identifier_path,
+                args: None,
+            }];
+        }
+        self.bump(" {"); // `{` after contract identifier and base.
 
         let mut parts = Vec::with_capacity(contract.children.len());
         for child in &contract.children {
@@ -392,7 +443,7 @@ impl Visitor for TranslatorI {
             loc: Loc::File(0, contract_start, self.offset.get()),
             name: contract_name,
             ty: contract_ty,
-            base: vec![],
+            base: contract_base,
             parts,
         };
 
@@ -517,18 +568,14 @@ impl Visitor for TranslatorI {
                 self.bump(");");
 
                 let vm_interface = Expression::MemberAccess(
-                    Loc::File(0, start_offset, loc_skip.end()),                    
-                    Box::new(
-                        Expression::Variable(
-                            solang_parser::pt::Identifier {
-                                loc: loc_vm,
-                                name: "vm".to_owned()
-                            }
-                        )),
-                        
+                    Loc::File(0, start_offset, loc_skip.end()),
+                    Box::new(Expression::Variable(solang_parser::pt::Identifier {
+                        loc: loc_vm,
+                        name: "vm".to_owned(),
+                    })),
                     solang_parser::pt::Identifier {
                         loc: loc_skip,
-                        name: "skip".to_owned()
+                        name: "skip".to_owned(),
                     },
                 );
 
@@ -539,8 +586,11 @@ impl Visitor for TranslatorI {
                     Box::new(vm_interface),
                     vm_skip_arg,
                 );
-        
-                Ok(Statement::Expression(Loc::File(0, start_offset, self.offset.get()), vm_skip_call))
+
+                Ok(Statement::Expression(
+                    Loc::File(0, start_offset, self.offset.get()),
+                    vm_skip_call,
+                ))
             }
         }
     }

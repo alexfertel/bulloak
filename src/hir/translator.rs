@@ -352,9 +352,7 @@ mod tests {
     }
 
     fn statement(ty: hir::SupportedStatement) -> Hir {
-        Hir::Statement(hir::Statement {
-            ty,
-        })
+        Hir::Statement(hir::Statement { ty })
     }
 
     fn comment(lexeme: String) -> Hir {
@@ -377,9 +375,7 @@ mod tests {
                     Span::new(Position::new(9, 2, 1), Position::new(74, 3, 23)),
                     None,
                     Some(vec![
-                        statement(
-                            hir::SupportedStatement::VmSkip
-                        ),
+                        statement(hir::SupportedStatement::VmSkip),
                         comment("it should revert".to_owned())
                     ])
                 ),]
@@ -408,9 +404,7 @@ mod tests {
                         Span::new(Position::new(19, 2, 1), Position::new(77, 3, 23)),
                         None,
                         Some(vec![
-                            statement(
-                                hir::SupportedStatement::VmSkip
-                            ),
+                            statement(hir::SupportedStatement::VmSkip),
                             comment("it should revert".to_owned())
                         ])
                     ),
@@ -420,9 +414,7 @@ mod tests {
                         Span::new(Position::new(79, 4, 1), Position::new(140, 5, 23)),
                         None,
                         Some(vec![
-                            statement(
-                                hir::SupportedStatement::VmSkip
-                            ),
+                            statement(hir::SupportedStatement::VmSkip),
                             comment("it should revert".to_owned())
                         ])
                     ),
@@ -463,9 +455,7 @@ Foo_Test
                         Span::new(Position::new(10, 3, 1), Position::new(235, 9, 32)),
                         Some(vec!["whenStuffCalled".to_owned()]),
                         Some(vec![
-                            statement(
-                                hir::SupportedStatement::VmSkip
-                            ),
+                            statement(hir::SupportedStatement::VmSkip),
                             comment("It should do stuff.".to_owned()),
                             comment("It should do more.".to_owned())
                         ])
@@ -476,9 +466,7 @@ Foo_Test
                         Span::new(Position::new(76, 5, 5), Position::new(135, 6, 28)),
                         Some(vec!["whenStuffCalled".to_owned()]),
                         Some(vec![
-                            statement(
-                                hir::SupportedStatement::VmSkip
-                            ),
+                            statement(hir::SupportedStatement::VmSkip),
                             comment("it should revert".to_owned())
                         ])
                     ),
@@ -488,9 +476,7 @@ Foo_Test
                         Span::new(Position::new(174, 8, 5), Position::new(235, 9, 32)),
                         Some(vec!["whenStuffCalled".to_owned()]),
                         Some(vec![
-                            statement(
-                                hir::SupportedStatement::VmSkip
-                            ),
+                            statement(hir::SupportedStatement::VmSkip),
                             comment("it should not revert".to_owned())
                         ])
                     ),

@@ -57,10 +57,10 @@ fn scaffolds_trees_with_vm_skip() {
 
         let mut output_file_str = trimmed_extension.into_os_string();
         output_file_str.push("_vm_skip");
-        
+
         let mut output_file: std::path::PathBuf = output_file_str.into();
         output_file.set_extension("t.sol");
-        
+
         let expected = fs::read_to_string(output_file).unwrap();
 
         // We trim here because we don't care about ending newlines.

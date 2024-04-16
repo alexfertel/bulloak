@@ -20,7 +20,10 @@ pub fn translate(text: &str, add_vm_skip: &bool) -> anyhow::Result<Hir> {
 ///
 /// This function leverages `crate::syntax::parse` and `crate::hir::translator::Translator::translate`
 /// to hide away most of the complexity of `bulloak`'s internal compiler.
-pub fn translate_tree_to_hir(tree: &str, add_vm_skip: &bool) -> crate::error::Result<crate::hir::Hir> {
+pub fn translate_tree_to_hir(
+    tree: &str,
+    add_vm_skip: &bool,
+) -> crate::error::Result<crate::hir::Hir> {
     let ast = crate::syntax::parse(tree)?;
     let mut discoverer = crate::scaffold::modifiers::ModifierDiscoverer::new();
     let modifiers = discoverer.discover(&ast);
@@ -31,7 +34,10 @@ pub fn translate_tree_to_hir(tree: &str, add_vm_skip: &bool) -> crate::error::Re
 ///
 /// This function leverages `translate_tree_to_hir` to generate the HIR for each tree,
 /// and `crate::hir::combiner::Combiner::combine` to combine the HIRs into a single HIR.
-pub(crate) fn translate_and_combine_trees(text: &str, add_vm_skip: &bool) -> crate::error::Result<crate::hir::Hir> {
+pub(crate) fn translate_and_combine_trees(
+    text: &str,
+    add_vm_skip: &bool,
+) -> crate::error::Result<crate::hir::Hir> {
     let trees = crate::utils::split_trees(text);
     let hirs = trees
         .map(|tree| translate_tree_to_hir(tree, add_vm_skip))

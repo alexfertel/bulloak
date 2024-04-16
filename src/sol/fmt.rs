@@ -74,9 +74,12 @@ impl Visitor for Formatter {
         }
 
         if !contract.base.is_empty() {
+            result.push_str("is ");
+
             let mut bases = vec![];
             for b in &mut contract.base {
-                bases.push(format!("{b}"));
+                let base_name = &b.name.identifiers[0].name;
+                bases.push(base_name.to_string());
             }
             result.push_str(&bases.join(", "));
             result.push(' ');
@@ -209,7 +212,7 @@ impl Visitor for Formatter {
                 }
             }
             Expression::FunctionCall(_, _, _) => Ok(format!("{expression};")),
-            expression => Ok(format!("{expression}"))
+            expression => Ok(format!("{expression}")),
         }
     }
 

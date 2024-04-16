@@ -308,9 +308,7 @@ mod tests {
     }
 
     fn statement(ty: hir::SupportedStatement) -> Hir {
-        Hir::Statement(hir::Statement {
-            ty,
-        })
+        Hir::Statement(hir::Statement { ty })
     }
 
     fn comment(lexeme: String) -> Hir {
@@ -385,9 +383,7 @@ bulloak error: contract name missing at tree root #2";
                         Span::new(Position::new(20, 2, 1), Position::new(86, 3, 24)),
                         None,
                         Some(vec![
-                            statement(
-                                hir::SupportedStatement::VmSkip
-                            ),
+                            statement(hir::SupportedStatement::VmSkip),
                             comment("it should revert".to_owned())
                         ])
                     ),
@@ -397,9 +393,7 @@ bulloak error: contract name missing at tree root #2";
                         Span::new(Position::new(20, 2, 1), Position::new(87, 3, 24)),
                         None,
                         Some(vec![
-                            statement(
-                                hir::SupportedStatement::VmSkip
-                            ),
+                            statement(hir::SupportedStatement::VmSkip),
                             comment("it should revert".to_owned())
                         ])
                     ),
@@ -447,9 +441,7 @@ bulloak error: contract name missing at tree root #2";
                         Span::new(Position::new(61, 3, 5), Position::new(133, 4, 28)),
                         Some(vec!["whenSomethingBadHappens".to_owned()]),
                         Some(vec![
-                            statement(
-                                hir::SupportedStatement::VmSkip
-                            ),
+                            statement(hir::SupportedStatement::VmSkip),
                             comment("it should revert".to_owned())
                         ])
                     ),
@@ -459,9 +451,7 @@ bulloak error: contract name missing at tree root #2";
                         Span::new(Position::new(61, 3, 5), Position::new(131, 4, 28)),
                         Some(vec!["whenSomethingBadHappens".to_owned()]),
                         Some(vec![
-                            statement(
-                                hir::SupportedStatement::VmSkip
-                            ),
+                            statement(hir::SupportedStatement::VmSkip),
                             comment("it should revert".to_owned())
                         ])
                     ),

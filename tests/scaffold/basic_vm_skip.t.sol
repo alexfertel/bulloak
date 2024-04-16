@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.0;
 
-contract HashPairTestSanitize {
+import {Test} from "forge-std/Test.sol";
+
+contract HashPairTestSanitize is Test {
     function test_ShouldNeverRevert() external {
         vm.skip(true);
         // It should never revert.

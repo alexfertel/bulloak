@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.0;
 
-contract CancelTest {
+import {Test} from "forge-std/Test.sol";
+
+contract CancelTest is Test {
     function test_RevertWhen_DelegateCalled() external {
         vm.skip(true);
         // it should revert
