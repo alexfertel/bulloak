@@ -414,7 +414,7 @@ impl Visitor for TranslatorI {
 
         let mut contract_base = vec![];
 
-        // If there is an import, inherit it as well
+        // If there is an import, inherit the base contract as well
         if self.translator.with_forge_std {
             let base_start = self.offset.get();
             self.bump(" is ");

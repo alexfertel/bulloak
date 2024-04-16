@@ -132,10 +132,10 @@ pub struct Comment {
     pub lexeme: String,
 }
 
-/// The type of expression that is supported.
+/// The statements which are currently supported.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SupportedStatement {
-    /// vm.skip(true);
+    /// The `vm.skip(true);` statement
     VmSkip,
 }
 

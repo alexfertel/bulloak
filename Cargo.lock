@@ -341,9 +341,7 @@ dependencies = [
  "owo-colors",
  "pretty_assertions",
  "regex",
- "serde",
  "solang-parser",
- "toml 0.8.12",
  "unicode-xid",
  "zerocopy",
 ]

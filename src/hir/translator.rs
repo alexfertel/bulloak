@@ -115,7 +115,7 @@ impl<'a> Visitor for TranslatorI<'a> {
                     let test_name = format!("test_{test_name}");
 
                     let mut hirs = self.visit_action(action)?;
-                    
+
                     // Include any optional statement for the first function node
                     if *self.with_vm_skip {
                         hirs.insert(

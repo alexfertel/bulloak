@@ -208,8 +208,8 @@ contract MissingContract {
         // It should not find a contract in the Solidity file.
     }
 }";
-    let actual = String::from_utf8(output.stdout).unwrap();
 
+    let actual = String::from_utf8(output.stdout).unwrap();
     assert!(actual.contains(expected));
     assert!(actual.contains("1 issue fixed."));
 }
