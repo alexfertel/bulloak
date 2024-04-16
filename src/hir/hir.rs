@@ -22,7 +22,7 @@ pub enum Hir {
     FunctionDefinition(FunctionDefinition),
     /// A comment.
     Comment(Comment),
-    /// An expression.
+    /// A Statement.
     Statement(Statement),
 }
 
@@ -139,7 +139,7 @@ pub enum SupportedStatement {
     VmSkip,
 }
 
-/// An expression node
+/// A statement node
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Statement {
     /// The statement

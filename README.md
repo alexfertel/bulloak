@@ -112,6 +112,11 @@ contents of the file.
 $ bulloak scaffold -wf ./**/*.tree
 ```
 
+Note all tests are showing as passing when their body is empty. To prevent this,
+you can use the `-S` (or `--vm-skip`) option to add a `vm.skip(true);` at the
+beginning of each test function. This option will also add an import for 
+forge-std's Test.sol and all test contract will inherit it.
+
 ### Check That Your Code And Spec Match
 
 You can use `bulloak check` to make sure that your Solidity files match your

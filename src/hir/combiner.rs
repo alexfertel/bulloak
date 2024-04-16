@@ -267,13 +267,13 @@ mod tests {
     use crate::syntax::parser::Parser;
     use crate::syntax::tokenizer::Tokenizer;
 
-    fn translate(text: &str, with_vm_skip: &bool) -> Result<Hir> {
+    fn translate(text: &str, with_vm_skip: bool) -> Result<Hir> {
         let tokens = Tokenizer::new().tokenize(&text)?;
         let ast = Parser::new().parse(&text, &tokens)?;
         let mut discoverer = modifiers::ModifierDiscoverer::new();
         let modifiers = discoverer.discover(&ast);
 
-        Ok(hir::translator::Translator::new().translate(&ast, modifiers, with_vm_skip))
+        Ok(hir::translator::Translator::new().translate(&ast, modifiers, &with_vm_skip))
     }
 
     fn combine(text: &str, hirs: Vec<Hir>) -> Result<Hir, Error> {
@@ -323,7 +323,7 @@ mod tests {
         ];
         let hirs = trees
             .iter()
-            .map(|tree| translate(tree, &true).unwrap())
+            .map(|tree| translate(tree, true).unwrap())
             .collect();
         let text = trees.join("\n\n");
         let result = combine(&text, hirs);
@@ -339,7 +339,7 @@ mod tests {
         ];
         let hirs = trees
             .iter()
-            .map(|tree| translate(tree, &true).unwrap())
+            .map(|tree| translate(tree, true).unwrap())
             .collect();
 
         let expected = r"•••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••
@@ -360,7 +360,7 @@ bulloak error: contract name missing at tree root #2";
         ];
         let mut hirs: Vec<_> = trees
             .iter()
-            .map(|tree| translate(tree, &true).unwrap())
+            .map(|tree| translate(tree, true).unwrap())
             .collect();
 
         // Append a comment HIR to the hirs.
@@ -410,7 +410,7 @@ bulloak error: contract name missing at tree root #2";
         ];
         let mut hirs: Vec<_> = trees
             .iter()
-            .map(|tree| translate(tree, &true).unwrap())
+            .map(|tree| translate(tree, true).unwrap())
             .collect();
 
         // Append a comment HIR to the hirs.

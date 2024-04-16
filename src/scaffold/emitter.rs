@@ -246,6 +246,7 @@ impl<'s> Visitor for EmitterI<'s> {
         let mut emitted = String::new();
         let indentation = self.emitter.indent().repeat(2);
 
+        // Match any supported statement to its string representation
         match statement.ty {
             hir::SupportedStatement::VmSkip => {
                 emitted.push_str(format!("{}vm.skip(true);\n", indentation).as_str());

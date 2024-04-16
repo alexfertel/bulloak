@@ -305,9 +305,9 @@ impl Visitor for TranslatorI {
     /// of the HIR into a corresponding PT structure.
     ///
     /// The translation involves creating a `SourceUnit`, starting with a pragma directive
-    /// based on the translator's Solidity version, and then iterating over each child node
-    /// within the root. Each contract definition, is translated and incorporated into the
-    /// `SourceUnit`.
+    /// based on the translator's Solidity version as well as optional file imports (e.g. forge-std),
+    /// if required. It then iterate over each child node within the root.
+    /// Each contract definition, is translated and incorporated into the `SourceUnit`.
     ///
     /// # Arguments
     /// * `root` - A reference to the root of the HIR structure, representing the highest level
@@ -344,6 +344,7 @@ impl Visitor for TranslatorI {
         ));
         self.bump(";\n");
 
+        // Add the forge-std's Test import, if needed
         if self.translator.with_forge_std {
             // Getting the relevant offsets for `import {Test} from "forge-std/Test.sol"`
             let loc_import_start = self.offset.get();
@@ -352,6 +353,7 @@ impl Visitor for TranslatorI {
             self.bump(" } from \"");
             let loc_path = self.bump("forge-std/Test.sol");
 
+            // The import directive `Rename` corresponds to `import {x} from y.sol`
             source_unit.push(SourceUnitPart::ImportDirective(Import::Rename(
                 ImportPath::Filename(StringLiteral {
                     loc: loc_path,
@@ -412,6 +414,7 @@ impl Visitor for TranslatorI {
 
         let mut contract_base = vec![];
 
+        // If there is an import, inherit it as well
         if self.translator.with_forge_std {
             let base_start = self.offset.get();
             self.bump(" is ");
@@ -551,7 +554,7 @@ impl Visitor for TranslatorI {
         Ok(definition)
     }
 
-    /// Visits a statement node and match based on its type.
+    /// Visits a supported statement node and match based on its type.
     fn visit_statement(
         &mut self,
         statement: &hir::Statement,
