@@ -10,6 +10,16 @@ use crate::utils::sanitize;
 
 use super::visitor::Visitor;
 
+trait Identified {
+    fn name(&self) -> String;
+}
+
+impl Identified for Base {
+    fn name(&self) -> String {
+        self.name.identifiers[0].name.clone()
+    }
+}
+
 pub(crate) struct Formatter;
 
 impl Formatter {
@@ -79,7 +89,7 @@ impl Visitor for Formatter {
 
             let mut bases = vec![];
             for b in &mut contract.base {
-                let base_name = &b.identifier_name();
+                let base_name = &b.name();
                 bases.push(base_name.to_string());
             }
             result.push_str(&bases.join(", "));
@@ -284,16 +294,6 @@ fn cleanup_comments(source: &str) -> String {
     static RE_BULLOAK_COMMENT: Lazy<Regex> =
         Lazy::new(|| Regex::new(r#"string __bulloak_comment__ = "(.*)";"#).unwrap());
     RE_BULLOAK_COMMENT.replace_all(source, "// $1").to_string()
-}
-
-trait BaseIdentifierName {
-    fn identifier_name(&self) -> String;
-}
-
-impl BaseIdentifierName for Base {
-    fn identifier_name(&self) -> String {
-        self.name.identifiers[0].name.clone()
-    }
 }
 
 #[cfg(test)]

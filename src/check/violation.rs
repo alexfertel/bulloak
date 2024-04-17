@@ -179,7 +179,7 @@ impl ViolationKind {
         match self {
             ViolationKind::ContractMissing(_) => {
                 let pt =
-                    sol::Translator::new(INTERNAL_DEFAULT_SOL_VERSION, &false).translate(&ctx.hir);
+                    sol::Translator::new(INTERNAL_DEFAULT_SOL_VERSION, false).translate(&ctx.hir);
                 let source = sol::Formatter::new().emit(pt.clone());
                 let parsed = parse(&source).expect("should parse solidity string");
                 ctx.from_parsed(parsed)

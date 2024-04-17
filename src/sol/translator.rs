@@ -42,7 +42,7 @@ pub(crate) struct Translator {
 impl Translator {
     /// Create a new translator.
     #[must_use]
-    pub(crate) fn new(sol_version: &str, with_forge_std: &bool) -> Self {
+    pub(crate) fn new(sol_version: &str, with_forge_std: bool) -> Self {
         Self {
             sol_version: sol_version.to_owned(),
             with_forge_std: with_forge_std.to_owned(),
@@ -344,7 +344,7 @@ impl Visitor for TranslatorI {
         ));
         self.bump(";\n");
 
-        // Add the forge-std's Test import, if needed
+        // Add the forge-std's Test import, if needed.
         if self.translator.with_forge_std {
             // Getting the relevant offsets for `import {Test} from "forge-std/Test.sol"`
             let loc_import_start = self.offset.get();
@@ -562,7 +562,7 @@ impl Visitor for TranslatorI {
         let start_offset = self.offset.get();
 
         match statement.ty {
-            hir::SupportedStatement::VmSkip => {
+            hir::StatementType::VmSkip => {
                 let loc_vm = self.bump("vm");
                 self.bump(".");
                 let loc_skip = self.bump("skip");

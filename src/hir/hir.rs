@@ -143,5 +143,5 @@ pub enum StatementType {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Statement {
     /// The statement
-    pub ty: SupportedStatement,
+    pub ty: StatementType,
 }

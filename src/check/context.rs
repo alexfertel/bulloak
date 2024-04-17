@@ -38,7 +38,7 @@ impl Context {
     pub(crate) fn new(tree: PathBuf) -> Result<Self, Violation> {
         let tree_path_cow = tree.to_string_lossy();
         let tree_contents = try_read_to_string(&tree)?;
-        let hir = crate::hir::translate(&tree_contents, &false).map_err(|e| {
+        let hir = crate::hir::translate(&tree_contents, false).map_err(|e| {
             Violation::new(
                 ViolationKind::ParsingFailed(e),
                 Location::File(tree_path_cow.into_owned()),

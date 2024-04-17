@@ -46,7 +46,7 @@ pub struct Scaffold {
 
 impl Scaffold {
     pub fn run(self) -> anyhow::Result<()> {
-        let scaffolder = Scaffolder::new(&self.solidity_version, &self.with_vm_skip);
+        let scaffolder = Scaffolder::new(&self.solidity_version, self.with_vm_skip);
 
         // For each input file, compile it and print it or write it
         // to the filesystem.
@@ -104,13 +104,13 @@ pub struct Scaffolder<'s> {
     /// Sets a Solidity version for the test contracts.
     solidity_version: &'s str,
     /// Whether to add vm.skip(true) at the begining of each test
-    with_vm_skip: &'s bool,
+    with_vm_skip: bool,
 }
 
 impl<'s> Scaffolder<'s> {
     /// Creates a new scaffolder with the provided configuration.
     #[must_use]
-    pub fn new(solidity_version: &'s str, with_vm_skip: &'s bool) -> Self {
+    pub fn new(solidity_version: &'s str, with_vm_skip: bool) -> Self {
         Scaffolder {
             solidity_version,
             with_vm_skip,

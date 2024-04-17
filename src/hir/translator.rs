@@ -60,7 +60,7 @@ struct TranslatorI<'a> {
 
 impl<'a> TranslatorI<'a> {
     /// Creates a new internal translator.
-    fn new(modifiers: &'a IndexMap<String, String>, with_vm_skip: &'a bool) -> Self {
+    fn new(modifiers: &'a IndexMap<String, String>, with_vm_skip: bool) -> Self {
         Self {
             modifier_stack: Vec::new(),
             modifiers,
@@ -121,7 +121,7 @@ impl<'a> Visitor for TranslatorI<'a> {
                         hirs.insert(
                             0,
                             Hir::Statement(hir::Statement {
-                                ty: hir::SupportedStatement::VmSkip,
+                                ty: hir::StatementType::VmSkip,
                             }),
                         );
                     }
@@ -244,12 +244,12 @@ impl<'a> Visitor for TranslatorI<'a> {
                 Some(self.modifier_stack.iter().map(|&m| m.to_owned()).collect())
             };
 
-            // Add the (optional) statements which should be at the function top-level
-            if *self.with_vm_skip {
+            // Add a `vm.skip(true);` at the start of the function.
+            if self.with_vm_skip {
                 actions.insert(
                     0,
                     Hir::Statement(hir::Statement {
-                        ty: hir::SupportedStatement::VmSkip,
+                        ty: hir::StatementType::VmSkip,
                     }),
                 );
             }
@@ -317,7 +317,7 @@ mod tests {
     use crate::syntax::parser::Parser;
     use crate::syntax::tokenizer::Tokenizer;
 
-    fn translate(text: &str, with_vm_skip: &bool) -> Result<hir::Hir> {
+    fn translate(text: &str, with_vm_skip: bool) -> Result<hir::Hir> {
         let tokens = Tokenizer::new().tokenize(&text)?;
         let ast = Parser::new().parse(&text, &tokens)?;
         let mut discoverer = modifiers::ModifierDiscoverer::new();
@@ -353,7 +353,7 @@ mod tests {
         })
     }
 
-    fn statement(ty: hir::SupportedStatement) -> Hir {
+    fn statement(ty: hir::StatementType) -> Hir {
         Hir::Statement(hir::Statement { ty })
     }
 
@@ -366,7 +366,7 @@ mod tests {
         assert_eq!(
             translate(
                 "Foo_Test\n└── when something bad happens\n   └── it should revert",
-                &true
+                true
             )
             .unwrap(),
             root(vec![contract(
@@ -377,7 +377,7 @@ mod tests {
                     Span::new(Position::new(9, 2, 1), Position::new(74, 3, 23)),
                     None,
                     Some(vec![
-                        statement(hir::SupportedStatement::VmSkip),
+                        statement(hir::StatementType::VmSkip),
                         comment("it should revert".to_owned())
                     ])
                 ),]
@@ -394,7 +394,7 @@ mod tests {
 │  └── it should revert
 └── given not stuff called
    └── it should revert",
-                &true
+                true
             )
             .unwrap(),
             root(vec![contract(
@@ -406,7 +406,7 @@ mod tests {
                         Span::new(Position::new(19, 2, 1), Position::new(77, 3, 23)),
                         None,
                         Some(vec![
-                            statement(hir::SupportedStatement::VmSkip),
+                            statement(hir::StatementType::VmSkip),
                             comment("it should revert".to_owned())
                         ])
                     ),
@@ -416,7 +416,7 @@ mod tests {
                         Span::new(Position::new(79, 4, 1), Position::new(140, 5, 23)),
                         None,
                         Some(vec![
-                            statement(hir::SupportedStatement::VmSkip),
+                            statement(hir::StatementType::VmSkip),
                             comment("it should revert".to_owned())
                         ])
                     ),
@@ -440,7 +440,7 @@ Foo_Test
         );
 
         assert_eq!(
-            translate(&file_contents, &true)?,
+            translate(&file_contents, true)?,
             root(vec![contract(
                 "Foo_Test".to_owned(),
                 vec![
@@ -457,7 +457,7 @@ Foo_Test
                         Span::new(Position::new(10, 3, 1), Position::new(235, 9, 32)),
                         Some(vec!["whenStuffCalled".to_owned()]),
                         Some(vec![
-                            statement(hir::SupportedStatement::VmSkip),
+                            statement(hir::StatementType::VmSkip),
                             comment("It should do stuff.".to_owned()),
                             comment("It should do more.".to_owned())
                         ])
@@ -468,7 +468,7 @@ Foo_Test
                         Span::new(Position::new(76, 5, 5), Position::new(135, 6, 28)),
                         Some(vec!["whenStuffCalled".to_owned()]),
                         Some(vec![
-                            statement(hir::SupportedStatement::VmSkip),
+                            statement(hir::StatementType::VmSkip),
                             comment("it should revert".to_owned())
                         ])
                     ),
@@ -478,7 +478,7 @@ Foo_Test
                         Span::new(Position::new(174, 8, 5), Position::new(235, 9, 32)),
                         Some(vec!["whenStuffCalled".to_owned()]),
                         Some(vec![
-                            statement(hir::SupportedStatement::VmSkip),
+                            statement(hir::StatementType::VmSkip),
                             comment("it should not revert".to_owned())
                         ])
                     ),

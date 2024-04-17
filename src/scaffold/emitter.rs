@@ -248,7 +248,7 @@ impl<'s> Visitor for EmitterI<'s> {
 
         // Match any supported statement to its string representation
         match statement.ty {
-            hir::SupportedStatement::VmSkip => {
+            hir::StatementType::VmSkip => {
                 emitted.push_str(format!("{}vm.skip(true);\n", indentation).as_str());
             }
         }
@@ -267,7 +267,7 @@ mod tests {
     use crate::scaffold::emitter;
 
     fn scaffold_with_flags(text: &str, indent: usize, version: &str) -> Result<String> {
-        let hir = translate_and_combine_trees(text, &false)?;
+        let hir = translate_and_combine_trees(text, false)?;
         Ok(emitter::Emitter::new(indent, version).emit(&hir))
     }
 
