@@ -275,7 +275,6 @@ mod tests {
         with_vm_skip: bool,
     ) -> Result<String> {
         let hir = translate_and_combine_trees(text, with_vm_skip)?;
-        // print!("{:?}", hir);
         Ok(emitter::Emitter::new(indent, version).emit(&hir))
     }
 
