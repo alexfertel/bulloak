@@ -118,11 +118,9 @@ impl<'a> Visitor for TranslatorI<'a> {
 
                     // Include any optional statement for the first function node.
                     if self.with_vm_skip {
-                        hirs.push(
-                            Hir::Statement(hir::Statement {
-                                ty: hir::StatementType::VmSkip,
-                            }),
-                        );
+                        hirs.push(Hir::Statement(hir::Statement {
+                            ty: hir::StatementType::VmSkip,
+                        }));
                     }
 
                     let hir = Hir::FunctionDefinition(hir::FunctionDefinition {
@@ -245,11 +243,9 @@ impl<'a> Visitor for TranslatorI<'a> {
 
             // Add a `vm.skip(true);` at the start of the function.
             if self.with_vm_skip {
-                actions.push(
-                    Hir::Statement(hir::Statement {
-                        ty: hir::StatementType::VmSkip,
-                    }),
-                );
+                actions.push(Hir::Statement(hir::Statement {
+                    ty: hir::StatementType::VmSkip,
+                }));
             }
 
             let hir = Hir::FunctionDefinition(hir::FunctionDefinition {
