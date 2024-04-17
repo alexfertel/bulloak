@@ -39,7 +39,7 @@ pub struct Scaffold {
     /// Sets a Solidity version for the test contracts.
     #[arg(short = 's', long, default_value = INTERNAL_DEFAULT_SOL_VERSION)]
     solidity_version: String,
-    /// Whether to add vm.skip(true) at the begining of each test
+    /// Whether to add vm.skip(true) at the begining of each test.
     #[arg(short = 'S', long = "vm-skip", default_value = "false")]
     with_vm_skip: bool,
 }

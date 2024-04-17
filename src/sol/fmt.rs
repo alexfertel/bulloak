@@ -73,7 +73,7 @@ impl Visitor for Formatter {
             result.push(' ');
         }
 
-        // Include any base contract inherited
+        // Include any base contract inherited.
         if !contract.base.is_empty() {
             result.push_str("is ");
 

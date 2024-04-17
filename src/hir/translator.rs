@@ -30,7 +30,7 @@ impl Translator {
         &self,
         ast: &ast::Ast,
         modifiers: &IndexMap<String, String>,
-        with_vm_skip: &bool,
+        with_vm_skip: bool,
     ) -> Hir {
         TranslatorI::new(modifiers, with_vm_skip).translate(ast)
     }
@@ -55,7 +55,7 @@ struct TranslatorI<'a> {
     /// to a modifier every time it is used.
     modifiers: &'a IndexMap<String, String>,
     /// Whether to add `vm.skip(true)` at the beginning of each test.
-    with_vm_skip: &'a bool,
+    with_vm_skip: bool,
 }
 
 impl<'a> TranslatorI<'a> {
@@ -117,7 +117,7 @@ impl<'a> Visitor for TranslatorI<'a> {
                     let mut hirs = self.visit_action(action)?;
 
                     // Include any optional statement for the first function node
-                    if *self.with_vm_skip {
+                    if self.with_vm_skip {
                         hirs.insert(
                             0,
                             Hir::Statement(hir::Statement {

@@ -134,7 +134,7 @@ pub struct Comment {
 
 /// The statements which are currently supported.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum SupportedStatement {
+pub enum StatementType {
     /// The `vm.skip(true);` statement
     VmSkip,
 }

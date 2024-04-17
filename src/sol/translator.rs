@@ -35,7 +35,7 @@ use crate::utils::sanitize;
 pub(crate) struct Translator {
     /// The Solidity version to be used in the pragma directive.
     sol_version: String,
-    /// A flag indicating if there is a forge-std dependency
+    /// A flag indicating if there is a forge-std dependency.
     with_forge_std: bool,
 }
 
