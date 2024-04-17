@@ -5,8 +5,8 @@ import {Test} from "forge-std/Test.sol";
 
 contract HashPairTestSanitize is Test {
     function test_ShouldNeverRevert() external {
-        vm.skip(true);
         // It should never revert.
+        vm.skip(true);
     }
 
     modifier whenFirstArgIsSmallerThanSecondArg() {
@@ -14,17 +14,17 @@ contract HashPairTestSanitize is Test {
     }
 
     function test_WhenFirstArgIsSmallerThanSecondArg() external whenFirstArgIsSmallerThanSecondArg {
-        vm.skip(true);
         // It should match the result of `keccak256(abi.encodePacked(a,b))`.
+        vm.skip(true);
     }
 
     function test_WhenFirstArgIsZero() external whenFirstArgIsSmallerThanSecondArg {
-        vm.skip(true);
         // It should do something.
+        vm.skip(true);
     }
 
     function test_WhenFirstArgIsBiggerThanSecondArg() external {
-        vm.skip(true);
         // It should match the result of `keccak256(abi.encodePacked(b,a))`.
+        vm.skip(true);
     }
 }

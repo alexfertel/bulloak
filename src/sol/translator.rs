@@ -346,14 +346,14 @@ impl Visitor for TranslatorI {
 
         // Add the forge-std's Test import, if needed.
         if self.translator.with_forge_std {
-            // Getting the relevant offsets for `import {Test} from "forge-std/Test.sol"`
+            // Getting the relevant offsets for `import {Test} from "forge-std/Test.sol"`.
             let loc_import_start = self.offset.get();
             self.bump("import { ");
             let loc_identifier = self.bump("Test");
             self.bump(" } from \"");
             let loc_path = self.bump("forge-std/Test.sol");
 
-            // The import directive `Rename` corresponds to `import {x} from y.sol`
+            // The import directive `Rename` corresponds to `import {x} from y.sol`.
             source_unit.push(SourceUnitPart::ImportDirective(Import::Rename(
                 ImportPath::Filename(StringLiteral {
                     loc: loc_path,
@@ -414,7 +414,7 @@ impl Visitor for TranslatorI {
 
         let mut contract_base = vec![];
 
-        // If there is an import, inherit the base contract as well
+        // If there is an import, inherit the base contract as well.
         if self.translator.with_forge_std {
             let base_start = self.offset.get();
             self.bump(" is ");

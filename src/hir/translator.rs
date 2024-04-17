@@ -116,10 +116,9 @@ impl<'a> Visitor for TranslatorI<'a> {
 
                     let mut hirs = self.visit_action(action)?;
 
-                    // Include any optional statement for the first function node
+                    // Include any optional statement for the first function node.
                     if self.with_vm_skip {
-                        hirs.insert(
-                            0,
+                        hirs.push(
                             Hir::Statement(hir::Statement {
                                 ty: hir::StatementType::VmSkip,
                             }),
@@ -246,8 +245,7 @@ impl<'a> Visitor for TranslatorI<'a> {
 
             // Add a `vm.skip(true);` at the start of the function.
             if self.with_vm_skip {
-                actions.insert(
-                    0,
+                actions.push(
                     Hir::Statement(hir::Statement {
                         ty: hir::StatementType::VmSkip,
                     }),
@@ -377,8 +375,8 @@ mod tests {
                     Span::new(Position::new(9, 2, 1), Position::new(74, 3, 23)),
                     None,
                     Some(vec![
-                        statement(hir::StatementType::VmSkip),
-                        comment("it should revert".to_owned())
+                        comment("it should revert".to_owned()),
+                        statement(hir::StatementType::VmSkip)
                     ])
                 ),]
             )])
@@ -406,8 +404,8 @@ mod tests {
                         Span::new(Position::new(19, 2, 1), Position::new(77, 3, 23)),
                         None,
                         Some(vec![
-                            statement(hir::StatementType::VmSkip),
-                            comment("it should revert".to_owned())
+                            comment("it should revert".to_owned()),
+                            statement(hir::StatementType::VmSkip)
                         ])
                     ),
                     function(
@@ -416,8 +414,8 @@ mod tests {
                         Span::new(Position::new(79, 4, 1), Position::new(140, 5, 23)),
                         None,
                         Some(vec![
-                            statement(hir::StatementType::VmSkip),
-                            comment("it should revert".to_owned())
+                            comment("it should revert".to_owned()),
+                            statement(hir::StatementType::VmSkip)
                         ])
                     ),
                 ]
@@ -457,9 +455,9 @@ Foo_Test
                         Span::new(Position::new(10, 3, 1), Position::new(235, 9, 32)),
                         Some(vec!["whenStuffCalled".to_owned()]),
                         Some(vec![
-                            statement(hir::StatementType::VmSkip),
                             comment("It should do stuff.".to_owned()),
-                            comment("It should do more.".to_owned())
+                            comment("It should do more.".to_owned()),
+                            statement(hir::StatementType::VmSkip)
                         ])
                     ),
                     function(
@@ -468,8 +466,8 @@ Foo_Test
                         Span::new(Position::new(76, 5, 5), Position::new(135, 6, 28)),
                         Some(vec!["whenStuffCalled".to_owned()]),
                         Some(vec![
-                            statement(hir::StatementType::VmSkip),
-                            comment("it should revert".to_owned())
+                            comment("it should revert".to_owned()),
+                            statement(hir::StatementType::VmSkip)
                         ])
                     ),
                     function(
@@ -478,8 +476,8 @@ Foo_Test
                         Span::new(Position::new(174, 8, 5), Position::new(235, 9, 32)),
                         Some(vec!["whenStuffCalled".to_owned()]),
                         Some(vec![
-                            statement(hir::StatementType::VmSkip),
-                            comment("it should not revert".to_owned())
+                            comment("it should not revert".to_owned()),
+                            statement(hir::StatementType::VmSkip)
                         ])
                     ),
                 ]

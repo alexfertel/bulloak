@@ -135,13 +135,13 @@ pub struct Comment {
 /// The statements which are currently supported.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum StatementType {
-    /// The `vm.skip(true);` statement
+    /// The `vm.skip(true);` statement.
     VmSkip,
 }
 
-/// A statement node
+/// A statement node.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Statement {
-    /// The statement
+    /// The statement.
     pub ty: StatementType,
 }

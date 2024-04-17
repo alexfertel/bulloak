@@ -5,8 +5,8 @@ import {Test} from "forge-std/Test.sol";
 
 contract CancelTest is Test {
     function test_RevertWhen_DelegateCalled() external {
-        vm.skip(true);
         // it should revert
+        vm.skip(true);
     }
 
     modifier whenNotDelegateCalled() {
@@ -14,8 +14,8 @@ contract CancelTest is Test {
     }
 
     function test_RevertGiven_TheIdReferencesANullStream() external whenNotDelegateCalled {
-        vm.skip(true);
         // it should revert
+        vm.skip(true);
     }
 
     modifier givenTheIdDoesNotReferenceANullStream() {
@@ -32,8 +32,8 @@ contract CancelTest is Test {
         givenTheIdDoesNotReferenceANullStream
         givenTheStreamIsCold
     {
-        vm.skip(true);
         // it should revert
+        vm.skip(true);
     }
 
     function test_RevertGiven_TheStreamsStatusIsCANCELED()
@@ -42,8 +42,8 @@ contract CancelTest is Test {
         givenTheIdDoesNotReferenceANullStream
         givenTheStreamIsCold
     {
-        vm.skip(true);
         // it should revert
+        vm.skip(true);
     }
 
     function test_RevertGiven_TheStreamsStatusIsSETTLED()
@@ -52,8 +52,8 @@ contract CancelTest is Test {
         givenTheIdDoesNotReferenceANullStream
         givenTheStreamIsCold
     {
-        vm.skip(true);
         // it should revert
+        vm.skip(true);
     }
 
     modifier givenTheStreamIsWarm() {
@@ -71,8 +71,8 @@ contract CancelTest is Test {
         givenTheStreamIsWarm
         whenTheCallerIsUnauthorized
     {
-        vm.skip(true);
         // it should revert
+        vm.skip(true);
     }
 
     function test_RevertWhen_TheCallerIsAnApprovedThirdParty()
@@ -82,8 +82,8 @@ contract CancelTest is Test {
         givenTheStreamIsWarm
         whenTheCallerIsUnauthorized
     {
-        vm.skip(true);
         // it should revert
+        vm.skip(true);
     }
 
     function test_RevertWhen_TheCallerIsAFormerRecipient()
@@ -93,8 +93,8 @@ contract CancelTest is Test {
         givenTheStreamIsWarm
         whenTheCallerIsUnauthorized
     {
-        vm.skip(true);
         // it should revert
+        vm.skip(true);
     }
 
     modifier whenTheCallerIsAuthorized() {
@@ -108,8 +108,8 @@ contract CancelTest is Test {
         givenTheStreamIsWarm
         whenTheCallerIsAuthorized
     {
-        vm.skip(true);
         // it should revert
+        vm.skip(true);
     }
 
     modifier givenTheStreamIsCancelable() {
@@ -124,10 +124,10 @@ contract CancelTest is Test {
         whenTheCallerIsAuthorized
         givenTheStreamIsCancelable
     {
-        vm.skip(true);
         // it should cancel the stream
         // it should mark the stream as depleted
         // it should make the stream not cancelable
+        vm.skip(true);
     }
 
     modifier givenTheStreamsStatusIsSTREAMING() {
@@ -148,9 +148,9 @@ contract CancelTest is Test {
         givenTheStreamsStatusIsSTREAMING
         whenTheCallerIsTheSender
     {
-        vm.skip(true);
         // it should cancel the stream
         // it should mark the stream as canceled
+        vm.skip(true);
     }
 
     modifier givenTheRecipientIsAContract() {
@@ -168,11 +168,11 @@ contract CancelTest is Test {
         whenTheCallerIsTheSender
         givenTheRecipientIsAContract
     {
-        vm.skip(true);
         // it should cancel the stream
         // it should mark the stream as canceled
         // it should call the recipient hook
         // it should ignore the revert
+        vm.skip(true);
     }
 
     modifier givenTheRecipientImplementsTheHook() {
@@ -191,11 +191,11 @@ contract CancelTest is Test {
         givenTheRecipientIsAContract
         givenTheRecipientImplementsTheHook
     {
-        vm.skip(true);
         // it should cancel the stream
         // it should mark the stream as canceled
         // it should call the recipient hook
         // it should ignore the revert
+        vm.skip(true);
     }
 
     modifier whenTheRecipientDoesNotRevert() {
@@ -215,11 +215,11 @@ contract CancelTest is Test {
         givenTheRecipientImplementsTheHook
         whenTheRecipientDoesNotRevert
     {
-        vm.skip(true);
         // it should cancel the stream
         // it should mark the stream as canceled
         // it should call the recipient hook
         // it should ignore the revert
+        vm.skip(true);
     }
 
     function test_WhenThereIsNoReentrancy1()
@@ -235,7 +235,6 @@ contract CancelTest is Test {
         givenTheRecipientImplementsTheHook
         whenTheRecipientDoesNotRevert
     {
-        vm.skip(true);
         // it should cancel the stream
         // it should mark the stream as canceled
         // it should make the stream not cancelable
@@ -244,6 +243,7 @@ contract CancelTest is Test {
         // it should call the recipient hook
         // it should emit a {CancelLockupStream} event
         // it should emit a {MetadataUpdate} event
+        vm.skip(true);
     }
 
     modifier whenTheCallerIsTheRecipient() {
@@ -260,9 +260,9 @@ contract CancelTest is Test {
         givenTheStreamsStatusIsSTREAMING
         whenTheCallerIsTheRecipient
     {
-        vm.skip(true);
         // it should cancel the stream
         // it should mark the stream as canceled
+        vm.skip(true);
     }
 
     modifier givenTheSenderIsAContract() {
@@ -280,11 +280,11 @@ contract CancelTest is Test {
         whenTheCallerIsTheRecipient
         givenTheSenderIsAContract
     {
-        vm.skip(true);
         // it should cancel the stream
         // it should mark the stream as canceled
         // it should call the sender hook
         // it should ignore the revert
+        vm.skip(true);
     }
 
     modifier givenTheSenderImplementsTheHook() {
@@ -303,11 +303,11 @@ contract CancelTest is Test {
         givenTheSenderIsAContract
         givenTheSenderImplementsTheHook
     {
-        vm.skip(true);
         // it should cancel the stream
         // it should mark the stream as canceled
         // it should call the sender hook
         // it should ignore the revert
+        vm.skip(true);
     }
 
     modifier whenTheSenderDoesNotRevert() {
@@ -327,11 +327,11 @@ contract CancelTest is Test {
         givenTheSenderImplementsTheHook
         whenTheSenderDoesNotRevert
     {
-        vm.skip(true);
         // it should cancel the stream
         // it should mark the stream as canceled
         // it should call the sender hook
         // it should ignore the revert
+        vm.skip(true);
     }
 
     function test_WhenThereIsNoReentrancy2()
@@ -347,7 +347,6 @@ contract CancelTest is Test {
         givenTheSenderImplementsTheHook
         whenTheSenderDoesNotRevert
     {
-        vm.skip(true);
         // it should cancel the stream
         // it should mark the stream as canceled
         // it should make the stream not cancelable
@@ -356,5 +355,6 @@ contract CancelTest is Test {
         // it should call the sender hook
         // it should emit a {MetadataUpdate} event
         // it should emit a {CancelLockupStream} event
+        vm.skip(true);
     }
 }
