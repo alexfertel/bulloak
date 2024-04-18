@@ -66,6 +66,9 @@ impl<'s> EmitterI<'s> {
             Hir::ContractDefinition(ref inner) => self.visit_contract(inner).unwrap(),
             Hir::FunctionDefinition(ref inner) => self.visit_function(inner).unwrap(),
             Hir::Comment(ref inner) => self.visit_comment(inner).unwrap(),
+            Hir::Statement(_) => {
+                unreachable!("a statement can't be a top-level source unit in Solidity")
+            }
         }
     }
 
@@ -154,6 +157,7 @@ impl<'s> Visitor for EmitterI<'s> {
     type ContractDefinitionOutput = String;
     type FunctionDefinitionOutput = String;
     type CommentOutput = String;
+    type StatementOutput = String;
     type Error = ();
 
     fn visit_root(&mut self, root: &hir::Root) -> result::Result<Self::RootOutput, Self::Error> {
@@ -215,6 +219,8 @@ impl<'s> Visitor for EmitterI<'s> {
                 for child in children {
                     if let Hir::Comment(comment) = child {
                         emitted.push_str(&self.visit_comment(comment)?);
+                    } else if let Hir::Statement(statement) = child {
+                        emitted.push_str(&self.visit_statement(statement)?);
                     }
                 }
             }
@@ -236,6 +242,23 @@ impl<'s> Visitor for EmitterI<'s> {
 
         Ok(emitted)
     }
+
+    fn visit_statement(
+        &mut self,
+        statement: &hir::Statement,
+    ) -> result::Result<Self::StatementOutput, Self::Error> {
+        let mut emitted = String::new();
+        let indentation = self.emitter.indent().repeat(2);
+
+        // Match any supported statement to its string representation
+        match statement.ty {
+            hir::StatementType::VmSkip => {
+                emitted.push_str(format!("{}vm.skip(true);\n", indentation).as_str());
+            }
+        }
+
+        Ok(emitted)
+    }
 }
 
 #[cfg(test)]
@@ -244,16 +267,21 @@ mod tests {
 
     use crate::constants::INTERNAL_DEFAULT_SOL_VERSION;
     use crate::error::Result;
-    use crate::hir::translate_and_combine_trees;
+    use crate::hir::{translate_and_combine_trees, Hir, Statement, StatementType};
     use crate::scaffold::emitter;
 
-    fn scaffold_with_flags(text: &str, indent: usize, version: &str) -> Result<String> {
-        let hir = translate_and_combine_trees(text)?;
+    fn scaffold_with_flags(
+        text: &str,
+        indent: usize,
+        version: &str,
+        with_vm_skip: bool,
+    ) -> Result<String> {
+        let hir = translate_and_combine_trees(text, with_vm_skip)?;
         Ok(emitter::Emitter::new(indent, version).emit(&hir))
     }
 
     fn scaffold(text: &str) -> Result<String> {
-        scaffold_with_flags(text, 2, INTERNAL_DEFAULT_SOL_VERSION)
+        scaffold_with_flags(text, 2, INTERNAL_DEFAULT_SOL_VERSION, false)
     }
 
     #[test]
@@ -297,7 +325,7 @@ contract FileTest {
         let file_contents = String::from("FileTest\n├── it should do st-ff\n└── It never reverts.");
 
         assert_eq!(
-            &scaffold_with_flags(&file_contents, 2, INTERNAL_DEFAULT_SOL_VERSION)?,
+            &scaffold_with_flags(&file_contents, 2, INTERNAL_DEFAULT_SOL_VERSION, false)?,
             r"// SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.0;
 
@@ -320,7 +348,7 @@ contract FileTest {
         );
 
         assert_eq!(
-            &scaffold_with_flags(&file_contents, 2, INTERNAL_DEFAULT_SOL_VERSION)?,
+            &scaffold_with_flags(&file_contents, 2, INTERNAL_DEFAULT_SOL_VERSION, false)?,
             r"// SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.0;
 
@@ -344,7 +372,7 @@ contract FileTest {
         );
 
         assert_eq!(
-            &scaffold_with_flags(&file_contents, 2, INTERNAL_DEFAULT_SOL_VERSION)?,
+            &scaffold_with_flags(&file_contents, 2, INTERNAL_DEFAULT_SOL_VERSION, false)?,
             r"// SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.0;
 
@@ -372,7 +400,7 @@ contract FileTest {
             String::from("Fi-eTest\n└── when something bad happens\n   └── it should not revert");
 
         assert_eq!(
-            &scaffold_with_flags(&file_contents, 2, INTERNAL_DEFAULT_SOL_VERSION)?,
+            &scaffold_with_flags(&file_contents, 2, INTERNAL_DEFAULT_SOL_VERSION, false)?,
             r"// SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.0;
 
@@ -392,7 +420,7 @@ contract Fi_eTest {
             String::from("FileTest\n└── when something bad happens\n   └── it should not revert");
 
         assert_eq!(
-            &scaffold_with_flags(&file_contents, 4, INTERNAL_DEFAULT_SOL_VERSION)?,
+            &scaffold_with_flags(&file_contents, 4, INTERNAL_DEFAULT_SOL_VERSION, false)?,
             r"// SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.0;
 
@@ -404,6 +432,37 @@ contract FileTest {
         );
 
         Ok(())
+    }
+
+    #[test]
+    fn with_vm_skip() -> Result<()> {
+        let file_contents =
+            String::from("FileTest\n└── when something bad happens\n   └── it should not revert");
+
+        assert_eq!(
+            &scaffold_with_flags(&file_contents, 4, INTERNAL_DEFAULT_SOL_VERSION, true)?,
+            r"// SPDX-License-Identifier: UNLICENSED
+pragma solidity 0.8.0;
+
+contract FileTest {
+    function test_WhenSomethingBadHappens() external {
+        // it should not revert
+        vm.skip(true);
+    }
+}"
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    #[should_panic]
+    fn with_vm_skip_top_level_statement() {
+        let hir = Hir::Statement(Statement {
+            ty: StatementType::VmSkip,
+        });
+
+        let _ = emitter::Emitter::new(4, INTERNAL_DEFAULT_SOL_VERSION).emit(&hir);
     }
 
     #[test]

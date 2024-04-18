@@ -22,6 +22,8 @@ pub enum Hir {
     FunctionDefinition(FunctionDefinition),
     /// A comment.
     Comment(Comment),
+    /// A Statement.
+    Statement(Statement),
 }
 
 impl Default for Hir {
@@ -128,4 +130,18 @@ impl FunctionDefinition {
 pub struct Comment {
     /// The contract name.
     pub lexeme: String,
+}
+
+/// The statements which are currently supported.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum StatementType {
+    /// The `vm.skip(true);` statement.
+    VmSkip,
+}
+
+/// A statement node.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Statement {
+    /// The statement.
+    pub ty: StatementType,
 }

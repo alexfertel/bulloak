@@ -15,6 +15,8 @@ pub trait Visitor {
     type FunctionDefinitionOutput;
     /// The result of visiting a `Comment`.
     type CommentOutput;
+    /// The result of visiting a `Statement`.
+    type StatementOutput;
     /// An error that might occur when visiting the HIR.
     type Error;
 
@@ -59,4 +61,16 @@ pub trait Visitor {
     /// A `Result` containing either the output of visiting the comment node or an error.
     fn visit_comment(&mut self, comment: &hir::Comment)
         -> Result<Self::CommentOutput, Self::Error>;
+
+    /// Visits a statement node within the HIR.
+    ///     
+    /// # Arguments
+    /// * `statement` - A reference to the statement node in the HIR.
+    ///   
+    /// # Returns
+    /// A `Result` containing either the output of visiting the statement node or an error.
+    fn visit_statement(
+        &mut self,
+        statement: &hir::Statement,
+    ) -> Result<Self::StatementOutput, Self::Error>;
 }

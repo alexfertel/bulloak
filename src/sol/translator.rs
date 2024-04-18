@@ -18,8 +18,8 @@ use std::cell::Cell;
 
 use solang_parser::pt::{
     Base, ContractDefinition, ContractPart, ContractTy, Expression, FunctionAttribute,
-    FunctionDefinition, FunctionTy, Identifier, IdentifierPath, Loc, SourceUnit, SourceUnitPart,
-    Statement, StringLiteral, Type, VariableDeclaration, Visibility,
+    FunctionDefinition, FunctionTy, Identifier, IdentifierPath, Import, ImportPath, Loc,
+    SourceUnit, SourceUnitPart, Statement, StringLiteral, Type, VariableDeclaration, Visibility,
 };
 
 use crate::hir::visitor::Visitor;
@@ -35,14 +35,17 @@ use crate::utils::sanitize;
 pub(crate) struct Translator {
     /// The Solidity version to be used in the pragma directive.
     sol_version: String,
+    /// A flag indicating if there is a forge-std dependency.
+    with_forge_std: bool,
 }
 
 impl Translator {
     /// Create a new translator.
     #[must_use]
-    pub(crate) fn new(sol_version: &str) -> Self {
+    pub(crate) fn new(sol_version: &str, with_forge_std: bool) -> Self {
         Self {
             sol_version: sol_version.to_owned(),
+            with_forge_std: with_forge_std.to_owned(),
         }
     }
 
@@ -229,9 +232,12 @@ impl TranslatorI {
     fn gen_function_statements(&mut self, children: &Vec<Hir>) -> Result<Vec<Statement>, ()> {
         let mut stmts = Vec::with_capacity(children.len());
         for child in children {
+            if let Hir::Statement(statement) = child {
+                stmts.push(self.visit_statement(statement)?);
+            }
             if let Hir::Comment(comment) = child {
                 stmts.push(self.visit_comment(comment)?);
-            };
+            }
         }
 
         // If there is at least one child, we add a '\n'
@@ -290,6 +296,7 @@ impl Visitor for TranslatorI {
     type ContractDefinitionOutput = SourceUnitPart;
     type FunctionDefinitionOutput = ContractPart;
     type CommentOutput = Statement;
+    type StatementOutput = Statement;
     type Error = ();
 
     /// Visits the root node of a High-Level Intermediate Representation (HIR) and translates
@@ -298,9 +305,9 @@ impl Visitor for TranslatorI {
     /// of the HIR into a corresponding PT structure.
     ///
     /// The translation involves creating a `SourceUnit`, starting with a pragma directive
-    /// based on the translator's Solidity version, and then iterating over each child node
-    /// within the root. Each contract definition, is translated and incorporated into the
-    /// `SourceUnit`.
+    /// based on the translator's Solidity version as well as optional file imports (e.g. forge-std)
+    /// if required. It then iterates over each child node within the root.
+    /// Each contract definition is translated and incorporated into the `SourceUnit`.
     ///
     /// # Arguments
     /// * `root` - A reference to the root of the HIR structure, representing the highest level
@@ -336,6 +343,35 @@ impl Visitor for TranslatorI {
             pragma_identifier,
         ));
         self.bump(";\n");
+
+        // Add the forge-std's Test import, if needed.
+        if self.translator.with_forge_std {
+            // Getting the relevant offsets for `import {Test} from "forge-std/Test.sol"`.
+            let loc_import_start = self.offset.get();
+            self.bump("import { ");
+            let loc_identifier = self.bump("Test");
+            self.bump(" } from \"");
+            let loc_path = self.bump("forge-std/Test.sol");
+
+            // The import directive `Rename` corresponds to `import {x} from y.sol`.
+            source_unit.push(SourceUnitPart::ImportDirective(Import::Rename(
+                ImportPath::Filename(StringLiteral {
+                    loc: loc_path,
+                    unicode: false,
+                    string: "forge-std/Test.sol".to_string(),
+                }),
+                vec![(
+                    Identifier {
+                        loc: loc_identifier,
+                        name: "Test".to_string(),
+                    },
+                    None,
+                )],
+                Loc::File(0, loc_import_start, loc_path.end()),
+            )));
+
+            self.bump("\";\n");
+        }
 
         for child in &root.children {
             if let Hir::ContractDefinition(contract) = child {
@@ -375,7 +411,29 @@ impl Visitor for TranslatorI {
             loc: self.bump(&contract_name),
             name: contract.identifier.clone(),
         });
-        self.bump(" {"); // `{` after contract identifier.
+
+        let mut contract_base = vec![];
+
+        // If there is an import, inherit the base contract as well.
+        if self.translator.with_forge_std {
+            let base_start = self.offset.get();
+            self.bump(" is ");
+            let base_loc = self.bump("Test");
+            let base_identifier_path = IdentifierPath {
+                loc: base_loc,
+                identifiers: vec![Identifier {
+                    loc: base_loc,
+                    name: "Test".to_string(),
+                }],
+            };
+
+            contract_base = vec![Base {
+                loc: Loc::File(0, base_start, base_loc.end()),
+                name: base_identifier_path,
+                args: None,
+            }];
+        }
+        self.bump(" {"); // `{` after contract identifier and base.
 
         let mut parts = Vec::with_capacity(contract.children.len());
         for child in &contract.children {
@@ -388,13 +446,37 @@ impl Visitor for TranslatorI {
             loc: Loc::File(0, contract_start, self.offset.get()),
             name: contract_name,
             ty: contract_ty,
-            base: vec![],
+            base: contract_base,
             parts,
         };
 
         Ok(SourceUnitPart::ContractDefinition(Box::new(contract_def)))
     }
 
+    /// Visits a `FunctionDefinition` node in the High-Level Intermediate Representation (HIR)
+    /// and translates it into a `ContractPart` for inclusion in the `solang_parser` parse tree (PT).
+    /// This function handles the translation of function definitions, converting them into a format
+    /// suitable for the PT.
+    ///
+    /// The translation process involves several steps:
+    /// 1. Determining the function type and translating it to the corresponding PT representation.
+    /// 2. Translating the function identifier and storing its location information.
+    /// 3. Generating function attributes based on the HIR function definition.
+    /// 4. Translating the function body, including statements and comments, into PT statements.
+    /// 5. Constructing the final `FunctionDefinition` object with the translated components.
+    ///
+    /// # Arguments
+    /// * `function` - A reference to the `FunctionDefinition` node in the HIR, representing a
+    ///   single function within the HIR structure.
+    ///
+    /// # Returns
+    /// A `Result` containing the `ContractPart::FunctionDefinition` representing the translated
+    /// function if the translation is successful, or an `Error` otherwise. The `ContractPart`
+    /// encapsulates the function's PT representation.
+    ///
+    /// # Errors
+    /// This function may return an error if the translation of any component within the function
+    /// encounters issues, such as failing to translate the function body.
     fn visit_function(
         &mut self,
         function: &hir::FunctionDefinition,
@@ -494,5 +576,49 @@ impl Visitor for TranslatorI {
         );
 
         Ok(definition)
+    }
+
+    /// Visits a supported statement node and match based on its type.
+    fn visit_statement(
+        &mut self,
+        statement: &hir::Statement,
+    ) -> Result<Self::StatementOutput, Self::Error> {
+        let start_offset = self.offset.get();
+
+        match statement.ty {
+            hir::StatementType::VmSkip => {
+                let loc_vm = self.bump("vm");
+                self.bump(".");
+                let loc_skip = self.bump("skip");
+                self.bump("(");
+                let loc_arg = self.bump("true");
+                self.bump(");");
+
+                let vm_interface = Expression::MemberAccess(
+                    Loc::File(0, start_offset, loc_skip.end()),
+                    Box::new(Expression::Variable(solang_parser::pt::Identifier {
+                        loc: loc_vm,
+                        name: "vm".to_owned(),
+                    })),
+                    solang_parser::pt::Identifier {
+                        loc: loc_skip,
+                        name: "skip".to_owned(),
+                    },
+                );
+
+                let vm_skip_arg = vec![Expression::BoolLiteral(loc_arg, true)];
+
+                let vm_skip_call = Expression::FunctionCall(
+                    Loc::File(0, loc_skip.start(), loc_arg.end()),
+                    Box::new(vm_interface),
+                    vm_skip_arg,
+                );
+
+                Ok(Statement::Expression(
+                    Loc::File(0, start_offset, self.offset.get()),
+                    vm_skip_call,
+                ))
+            }
+        }
     }
 }

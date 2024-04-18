@@ -10,6 +10,16 @@ use crate::utils::sanitize;
 
 use super::visitor::Visitor;
 
+trait Identified {
+    fn name(&self) -> String;
+}
+
+impl Identified for Base {
+    fn name(&self) -> String {
+        self.name.identifiers[0].name.clone()
+    }
+}
+
 pub(crate) struct Formatter;
 
 impl Formatter {
@@ -73,10 +83,14 @@ impl Visitor for Formatter {
             result.push(' ');
         }
 
+        // Include any base contract inherited.
         if !contract.base.is_empty() {
+            result.push_str("is ");
+
             let mut bases = vec![];
             for b in &mut contract.base {
-                bases.push(format!("{b}"));
+                let base_name = &b.name();
+                bases.push(base_name.to_string());
             }
             result.push_str(&bases.join(", "));
             result.push(' ');
@@ -208,6 +222,7 @@ impl Visitor for Formatter {
                     Ok(format!("{identifier}"))
                 }
             }
+            Expression::FunctionCall(_, _, _) => Ok(format!("{expression};")),
             expression => Ok(format!("{expression}")),
         }
     }
