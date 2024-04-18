@@ -305,9 +305,9 @@ impl Visitor for TranslatorI {
     /// of the HIR into a corresponding PT structure.
     ///
     /// The translation involves creating a `SourceUnit`, starting with a pragma directive
-    /// based on the translator's Solidity version as well as optional file imports (e.g. forge-std),
-    /// if required. It then iterate over each child node within the root.
-    /// Each contract definition, is translated and incorporated into the `SourceUnit`.
+    /// based on the translator's Solidity version as well as optional file imports (e.g. forge-std)
+    /// if required. It then iterates over each child node within the root.
+    /// Each contract definition is translated and incorporated into the `SourceUnit`.
     ///
     /// # Arguments
     /// * `root` - A reference to the root of the HIR structure, representing the highest level
@@ -453,6 +453,30 @@ impl Visitor for TranslatorI {
         Ok(SourceUnitPart::ContractDefinition(Box::new(contract_def)))
     }
 
+    /// Visits a `FunctionDefinition` node in the High-Level Intermediate Representation (HIR)
+    /// and translates it into a `ContractPart` for inclusion in the `solang_parser` parse tree (PT).
+    /// This function handles the translation of function definitions, converting them into a format
+    /// suitable for the PT.
+    ///
+    /// The translation process involves several steps:
+    /// 1. Determining the function type and translating it to the corresponding PT representation.
+    /// 2. Translating the function identifier and storing its location information.
+    /// 3. Generating function attributes based on the HIR function definition.
+    /// 4. Translating the function body, including statements and comments, into PT statements.
+    /// 5. Constructing the final `FunctionDefinition` object with the translated components.
+    ///
+    /// # Arguments
+    /// * `function` - A reference to the `FunctionDefinition` node in the HIR, representing a
+    ///   single function within the HIR structure.
+    ///
+    /// # Returns
+    /// A `Result` containing the `ContractPart::FunctionDefinition` representing the translated
+    /// function if the translation is successful, or an `Error` otherwise. The `ContractPart`
+    /// encapsulates the function's PT representation.
+    ///
+    /// # Errors
+    /// This function may return an error if the translation of any component within the function
+    /// encounters issues, such as failing to translate the function body.
     fn visit_function(
         &mut self,
         function: &hir::FunctionDefinition,

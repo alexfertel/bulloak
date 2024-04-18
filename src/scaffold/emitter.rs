@@ -66,7 +66,9 @@ impl<'s> EmitterI<'s> {
             Hir::ContractDefinition(ref inner) => self.visit_contract(inner).unwrap(),
             Hir::FunctionDefinition(ref inner) => self.visit_function(inner).unwrap(),
             Hir::Comment(ref inner) => self.visit_comment(inner).unwrap(),
-            Hir::Statement(ref inner) => self.visit_statement(inner).unwrap(),
+            Hir::Statement(_) => {
+                unreachable!("a statement can't be a top-level source unit in Solidity")
+            }
         }
     }
 
@@ -265,7 +267,7 @@ mod tests {
 
     use crate::constants::INTERNAL_DEFAULT_SOL_VERSION;
     use crate::error::Result;
-    use crate::hir::translate_and_combine_trees;
+    use crate::hir::{translate_and_combine_trees, Hir, Statement, StatementType};
     use crate::scaffold::emitter;
 
     fn scaffold_with_flags(
@@ -451,6 +453,16 @@ contract FileTest {
         );
 
         Ok(())
+    }
+
+    #[test]
+    #[should_panic]
+    fn with_vm_skip_top_level_statement() {
+        let hir = Hir::Statement(Statement {
+            ty: StatementType::VmSkip,
+        });
+
+        let _ = emitter::Emitter::new(4, INTERNAL_DEFAULT_SOL_VERSION).emit(&hir);
     }
 
     #[test]

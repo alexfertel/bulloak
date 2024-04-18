@@ -103,7 +103,7 @@ impl Scaffold {
 pub struct Scaffolder<'s> {
     /// Sets a Solidity version for the test contracts.
     solidity_version: &'s str,
-    /// Whether to add vm.skip(true) at the begining of each test
+    /// Whether to add vm.skip(true) at the begining of each test.
     with_vm_skip: bool,
 }
 
