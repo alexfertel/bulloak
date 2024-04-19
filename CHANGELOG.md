@@ -2,7 +2,44 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.7.0]
+## [0.7.1]
+
+### Bug Fixes
+
+- *(docs)* Properly render version warning in README
+
+
+### Documentation
+
+- Mention solidity inspector for syntax highlighting (#61)
+
+
+### Features
+
+- Emit vm.skip(true) when passing -S (#63)
+
+
+### Miscellaneous Tasks
+
+- *(deps)* Bump h2 from 0.3.22 to 0.3.24 (#59)
+
+
+### Refactor
+
+- Simplify scaffold entrypoint
+
+
+### Build
+
+- *(ci)* Fix coverage workflow
+
+
+### Lint
+
+- Fix fmt
+
+
+## [0.7.0] - 2024-02-25
 
 ### Bug Fixes
 
@@ -79,7 +116,7 @@ All notable changes to this project will be documented in this file.
 
 ### Features
 
-- *(bulloak)* Make output more readable & succinct
+- *(bulloak)* Make output more readable & succint
 - Add ‘bulloak check —fix’
 
 

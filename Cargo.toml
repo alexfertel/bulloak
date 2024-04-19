@@ -1,6 +1,6 @@
 [package]
 authors = ["Alexander Antonio Gonzalez Fertel"]
-version = "0.7.0"
+version = "0.7.1"
 name = "bulloak"
 license = "MIT OR Apache-2.0"
 edition = "2021"
@@ -12,7 +12,12 @@ description = """
 A Solidity test generator based on the Branching Tree Technique.
 """
 keywords = ["solidity", "testing", "compiler", "cli", "tree"]
-categories = ["development-tools::testing", "command-line-utilities", "compilers", "parsing"]
+categories = [
+  "development-tools::testing",
+  "command-line-utilities",
+  "compilers",
+  "parsing",
+]
 exclude = ["/.github/*"]
 
 [[bin]]
@@ -33,7 +38,7 @@ unicode-xid = "0.2.4"
 zerocopy = "0.7.31"
 
 [dev-dependencies]
-pretty_assertions = { version= "1.4.0" }
+pretty_assertions = { version = "1.4.0" }
 criterion = "0.5.1"
 
 [[bench]]
