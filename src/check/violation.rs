@@ -1,5 +1,6 @@
 //! Defines a rule-checking error object.
 
+use std::borrow::Cow;
 use std::fmt;
 
 use forge_fmt::parse;
@@ -9,11 +10,9 @@ use solang_parser::pt;
 use solang_parser::pt::{ContractDefinition, ContractPart};
 use std::collections::HashSet;
 
-use crate::constants::INTERNAL_DEFAULT_INDENTATION;
 use crate::constants::INTERNAL_DEFAULT_SOL_VERSION;
 use crate::error;
 use crate::hir::{self, Hir};
-use crate::scaffold::emitter::Emitter;
 use crate::sol::find_matching_fn;
 use crate::sol::{self, find_contract};
 
@@ -26,6 +25,7 @@ use super::location::Location;
 pub(crate) struct Violation {
     /// The kind of violation.
     pub(crate) kind: ViolationKind,
+    /// The location information about this violation.
     pub(crate) location: Location,
 }
 
@@ -37,33 +37,7 @@ impl Violation {
 
     /// Determines whether a given violation is fixable.
     pub(crate) fn is_fixable(&self) -> bool {
-        matches!(
-            self.kind,
-            ViolationKind::ContractMissing(_)
-                | ViolationKind::ContractNameNotMatches(_, _)
-                | ViolationKind::FunctionOrderMismatch(_, _, _)
-                | ViolationKind::MatchingFunctionMissing(_, _)
-        )
-    }
-
-    /// Optionally returns a help text to be used when displaying the violation kind.
-    pub(crate) fn help(&self) -> Option<String> {
-        match &self.kind {
-            ViolationKind::ContractMissing(name) => {
-                Some(format!(r#"consider adding a contract with name "{name}""#))
-            }
-            ViolationKind::ContractNameNotMatches(name, _) => {
-                Some(format!(r#"consider renaming the contract to "{name}""#))
-            }
-            ViolationKind::SolidityFileMissing(filename) => {
-                let filename = filename.replace(".t.sol", ".tree");
-                Some(format!("consider running `bulloak scaffold {filename}`"))
-            }
-            ViolationKind::FunctionOrderMismatch(_, _, _) => {
-                Some("consider reordering the function in the file".to_owned())
-            }
-            _ => None,
-        }
+        self.kind.is_fixable()
     }
 }
 
@@ -103,10 +77,10 @@ pub(crate) enum ViolationKind {
 impl fmt::Display for Violation {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "{}: {}", "warn".yellow(), self.kind)?;
-        if let Some(help_text) = self.help() {
+        if let Some(help_text) = self.kind.help() {
             writeln!(f, "     {} help: {}", "=".blue(), help_text)?;
         }
-        if self.is_fixable() {
+        if self.kind.is_fixable() {
             let file = self.location.file().replace(".t.sol", ".tree");
             write!(f, "     {} fix: run ", "+".blue())?;
             writeln!(f, "`bulloak check --fix {file}`")?;
@@ -175,6 +149,41 @@ impl fmt::Display for ViolationKind {
 }
 
 impl ViolationKind {
+    /// Whether this violation kind is fixable.
+    pub(crate) fn is_fixable(&self) -> bool {
+        matches!(
+            self,
+            ViolationKind::ContractMissing(_)
+                | ViolationKind::ContractNameNotMatches(_, _)
+                | ViolationKind::FunctionOrderMismatch(_, _, _)
+                | ViolationKind::MatchingFunctionMissing(_, _)
+        )
+    }
+
+    /// Optionally returns a help text to be used when displaying the violation kind.
+    pub(crate) fn help(&self) -> Option<Cow<'static, str>> {
+        match self {
+            ViolationKind::ContractMissing(name) => {
+                let text = format!(r#"consider adding a contract with name "{name}""#);
+                Some(text.into())
+            }
+            ViolationKind::ContractNameNotMatches(name, _) => {
+                let text = format!(r#"consider renaming the contract to "{name}""#);
+                Some(text.into())
+            }
+            ViolationKind::SolidityFileMissing(filename) => {
+                let filename = filename.replace(".t.sol", ".tree");
+                let text = format!("consider running `bulloak scaffold {filename}`");
+                Some(text.into())
+            }
+            ViolationKind::FunctionOrderMismatch(_, _, _) => {
+                let text = "consider reordering the function in the file";
+                Some(text.into())
+            }
+            _ => None,
+        }
+    }
+
     pub(crate) fn fix(&self, mut ctx: Context) -> Context {
         match self {
             ViolationKind::ContractMissing(_) => {
@@ -194,49 +203,23 @@ impl ViolationKind {
             }
             // Assume order violations have been taken care of first.
             ViolationKind::MatchingFunctionMissing(fn_hir, index) => {
-                if let Some(contract_hir) = ctx.hir.find_contract() {
-                    if let Some(contract_sol) = find_contract(&ctx.pt) {
-                        if let Some(offset) =
-                            get_insertion_offset(&contract_sol, contract_hir, *index, &ctx)
-                        {
-                            ctx.src = insert_function(fn_hir, &ctx.src, offset);
-                        }
+                let Some(contract_hir) = ctx.hir.find_contract() else {
+                    return ctx;
+                };
+                let Some(contract_sol) = find_contract(&ctx.pt) else {
+                    return ctx;
+                };
 
-                        let source = ctx.src.clone();
-                        let parsed = parse(&source).expect("should parse solidity string");
-                        return ctx.from_parsed(parsed);
-                    }
-                }
+                let offset = get_insertion_offset(&contract_sol, contract_hir, *index, &ctx.src);
+                ctx.insert_function_at(fn_hir, offset);
 
-                ctx
+                let source = ctx.src.clone();
+                let parsed = parse(&source).expect("should parse solidity string");
+                ctx.from_parsed(parsed)
             }
             _ => ctx,
         }
     }
-}
-
-/// Inserts a function definition into a source string at a specified offset.
-///
-/// This function takes a `FunctionDefinition` from the High-Level Intermediate Representation (HIR),
-/// converts it into a Solidity function definition string using an `Emitter`, and then inserts
-/// this string into the specified source code at a given offset.
-///
-/// # Arguments
-/// * `function` - A reference to the HIR `FunctionDefinition` to be inserted.
-/// * `src` - The source string into which the function definition will be inserted.
-/// * `offset` - The character position in the source string where the function definition should be inserted.
-///
-/// # Returns
-/// A new `String` containing the source with the function definition inserted at the specified offset.
-fn insert_function(function: &hir::FunctionDefinition, src: &str, offset: usize) -> String {
-    let function = Emitter::new(INTERNAL_DEFAULT_INDENTATION, INTERNAL_DEFAULT_SOL_VERSION)
-        .emit(&Hir::FunctionDefinition(function.clone()));
-    format!(
-        "{}\n\n{}{}",
-        &src[..offset],
-        function.trim_end(),
-        &src[offset..]
-    )
 }
 
 /// Determines the appropriate insertion offset for a function within a contract source code.
@@ -251,11 +234,10 @@ fn insert_function(function: &hir::FunctionDefinition, src: &str, offset: usize)
 /// * `contract_sol` - A `ContractDefinition` from the Solidity parse tree.
 /// * `contract_hir` - A `ContractDefinition` in the HIR node corresponding to the contract.
 /// * `index` - The index at which the function is to be inserted in the contract children.
-/// * `ctx` - A reference to the `Context` containing additional information, including the source code.
+/// * `src` - A reference to the source code.
 ///
 /// # Returns
-/// An `Option<usize>` representing the calculated offset position where the function should be inserted.
-/// Returns `None` if the offset cannot be determined, such as when a preceding function cannot be found.
+/// An `usize` representing the calculated offset position where the function should be inserted.
 ///
 /// # Panics
 /// Panics if it fails to locate the opening brace of the contract while processing the first function
@@ -264,30 +246,35 @@ fn get_insertion_offset(
     contract_sol: &pt::ContractDefinition,
     contract_hir: &hir::ContractDefinition,
     index: usize,
-    ctx: &Context,
-) -> Option<usize> {
+    src: impl AsRef<str>,
+) -> usize {
     if index == 0 {
         let contract_start = contract_sol.loc.start();
-        let opening_brace_pos = ctx
-            .src
+        let opening_brace_pos = src
+            .as_ref()
             .chars()
             .skip(contract_start)
             .position(|c| c == '{')
+            // We know this can't happen unless there is a bug in `solang-parser`,
+            // because this is a well-formed contract definition.
             .expect("should search over a valid solidity program");
 
-        let offset = contract_start + opening_brace_pos + 1;
-        return Some(offset);
-    } else if let Hir::FunctionDefinition(ref pre_fn_hir) = contract_hir.children[index - 1] {
-        let prev_fn = find_matching_fn(contract_sol, pre_fn_hir);
-        if let Some((_, prev_fn)) = prev_fn {
-            let offset = prev_fn.loc().end();
-            return Some(offset);
-        }
+        return contract_start + opening_brace_pos + 1;
+    }
 
-        unreachable!()
-    };
+    if let Hir::FunctionDefinition(ref prev_fn_hir) = contract_hir.children[index - 1] {
+        // It's fine to unwrap here since:
+        // - We check index 0 above, which doesn't have a predecessor.
+        // - This function is called in a context where we know a matching function
+        // will exist. In this specific case, we are fixing a `MatchingFunctionMissing`
+        // violation, so we know there's a predecessor, otherwise we would be
+        // analyzing index 0.
+        let (_, prev_fn) = find_matching_fn(contract_sol, prev_fn_hir).unwrap();
+        return prev_fn.loc().end();
+    }
 
-    None
+    // We handle both possible cases above, so we know we can't reach this line.
+    unreachable!()
 }
 
 /// `fix_order` rearranges the functions in a Solidity contract (`contract_sol`) to match the order

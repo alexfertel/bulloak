@@ -58,7 +58,7 @@ impl Check {
         if self.fix {
             let mut fixed_count = 0;
             for mut ctx in ctxs {
-                let violations = rules::structural_match::StructuralMatcher::check(&ctx);
+                let violations = rules::StructuralMatcher::check(&ctx);
                 let fixable_count = violations.iter().filter(|v| v.is_fixable()).count();
 
                 // Process violations that affect function order first.
@@ -70,7 +70,7 @@ impl Check {
                 }
 
                 // Second pass fixing order violations.
-                let violations = rules::structural_match::StructuralMatcher::check(&ctx);
+                let violations = rules::StructuralMatcher::check(&ctx);
                 let violations: Vec<Violation> = violations
                     .into_iter()
                     .filter(|v| matches!(v.kind, ViolationKind::FunctionOrderMismatch(_, _, _)))
@@ -99,7 +99,7 @@ impl Check {
             );
         } else {
             for ctx in ctxs {
-                violations.append(&mut rules::structural_match::StructuralMatcher::check(&ctx));
+                violations.append(&mut rules::StructuralMatcher::check(&ctx));
             }
 
             exit(&violations);

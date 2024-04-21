@@ -8,16 +8,22 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use crate::check::Violation;
-use crate::hir::Hir;
+use crate::hir::{self, Hir};
+use crate::{
+    check::Violation,
+    constants::{INTERNAL_DEFAULT_INDENTATION, INTERNAL_DEFAULT_SOL_VERSION},
+    scaffold::emitter::Emitter,
+};
 
 use super::{location::Location, violation::ViolationKind};
 
 /// The context in which rule-checking happens.
 ///
-/// This is a utility struct that abstracts away the requirements
-/// for a `check` call. If you need any additional information
-/// for your rule, feel free to add it here.
+/// This is a utility struct that abstracts away the requirements for a `check`
+/// call.
+///
+/// If you need any additional information for your rule, feel free to add it
+/// here.
 #[derive(Clone, Debug)]
 pub(crate) struct Context {
     /// The path to the tree file.
@@ -31,10 +37,15 @@ pub(crate) struct Context {
     pub(crate) src: String,
     /// The abstract syntax tree of the Solidity file.
     pub(crate) pt: SourceUnit,
+    /// The comments present in the Solidity file.
     pub(crate) comments: Comments,
 }
 
 impl Context {
+    /// Creates a new `Context`.
+    ///
+    /// This structure contains everything necessary to perform checks between
+    /// trees and Solidity files.
     pub(crate) fn new(tree: PathBuf) -> Result<Self, Violation> {
         let tree_path_cow = tree.to_string_lossy();
         let tree_contents = try_read_to_string(&tree)?;
@@ -67,6 +78,7 @@ impl Context {
         })
     }
 
+    /// Updates this `Context` with the result of parsing a Solidity file.
     #[inline]
     pub(crate) fn from_parsed(mut self, parsed: Parsed) -> Self {
         self.src = parsed.src.to_owned();
@@ -75,6 +87,8 @@ impl Context {
         self
     }
 
+    /// Updates the context with a formatted representation of the Solidity
+    /// file.
     pub(crate) fn fmt(self) -> anyhow::Result<String, FormatterError> {
         let mut formatted = String::new();
         format(
@@ -91,13 +105,31 @@ impl Context {
 
         Ok(formatted)
     }
+
+    /// Inserts a function definition into the source string at a specified offset.
+    ///
+    /// This function takes a `FunctionDefinition` from the High-Level Intermediate Representation (HIR),
+    /// converts it into a Solidity function definition string using an `Emitter`, and then inserts
+    /// this string into the specified source code at a given offset.
+    ///
+    /// # Arguments
+    /// * `function` - A reference to the HIR `FunctionDefinition` to be inserted.
+    /// * `offset` - The character position in the source string where the function definition should be inserted.
+    pub(crate) fn insert_function_at(&mut self, function: &hir::FunctionDefinition, offset: usize) {
+        let indentation = INTERNAL_DEFAULT_INDENTATION;
+        let solidity_version = INTERNAL_DEFAULT_SOL_VERSION;
+        let function = Emitter::new(indentation, solidity_version)
+            .emit(&Hir::FunctionDefinition(function.clone()));
+        self.src = format!(
+            "{}\n\n{}{}",
+            &self.src[..offset],
+            function.trim_end(),
+            &self.src[offset..]
+        );
+    }
 }
 
-fn get_path_with_ext<P, S>(path: P, ext: S) -> Result<PathBuf, Violation>
-where
-    P: AsRef<Path>,
-    S: AsRef<OsStr>,
-{
+fn get_path_with_ext(path: impl AsRef<Path>, ext: impl AsRef<OsStr>) -> Result<PathBuf, Violation> {
     let path = path.as_ref();
     let mut sol = path.to_path_buf();
     sol.set_extension(ext);
@@ -113,10 +145,7 @@ where
     Ok(sol)
 }
 
-fn try_read_to_string<P>(path: P) -> Result<String, Violation>
-where
-    P: AsRef<Path>,
-{
+fn try_read_to_string(path: impl AsRef<Path>) -> Result<String, Violation> {
     fs::read_to_string(&path).map_err(|_| {
         let path = path.as_ref().to_string_lossy();
         Violation::new(

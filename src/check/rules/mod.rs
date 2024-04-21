@@ -6,6 +6,7 @@
 use super::{context::Context, violation::Violation};
 
 pub(crate) mod structural_match;
+pub(crate) use structural_match::StructuralMatcher;
 
 /// Trait definition for a rule checker object.
 ///
