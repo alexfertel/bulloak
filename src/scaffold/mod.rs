@@ -2,6 +2,7 @@
 //!
 //! This command scaffolds a Solidity file from a spec `.tree` file.
 
+use std::path::Path;
 use std::{fs, path::PathBuf};
 
 use clap::Parser;
@@ -65,7 +66,7 @@ impl Scaffold {
                         continue;
                     }
 
-                    let file = self.to_test_file(file);
+                    let file = Self::to_test_file(file);
                     self.write_file(&emitted, &file);
                 }
                 Err(err) => {
@@ -95,8 +96,8 @@ impl Scaffold {
     }
 
     /// Gets the `t.sol` path equivalent of `file`.
-    fn to_test_file(&self, file: &PathBuf) -> PathBuf {
-        let mut file = file.clone();
+    fn to_test_file(file: &Path) -> PathBuf {
+        let mut file = file.to_path_buf();
         file.set_extension("t.sol");
         file
     }

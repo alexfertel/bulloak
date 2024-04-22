@@ -238,7 +238,7 @@ impl<'s> Visitor for EmitterI<'s> {
     ) -> result::Result<Self::CommentOutput, Self::Error> {
         let mut emitted = String::new();
         let indentation = self.emitter.indent().repeat(2);
-        emitted.push_str(format!("{}// {}\n", indentation, comment.lexeme).as_str());
+        emitted.push_str(format!("{indentation}// {}\n", comment.lexeme).as_str());
 
         Ok(emitted)
     }
@@ -253,7 +253,7 @@ impl<'s> Visitor for EmitterI<'s> {
         // Match any supported statement to its string representation
         match statement.ty {
             hir::StatementType::VmSkip => {
-                emitted.push_str(format!("{}vm.skip(true);\n", indentation).as_str());
+                emitted.push_str(format!("{indentation}vm.skip(true);\n").as_str());
             }
         }
 
