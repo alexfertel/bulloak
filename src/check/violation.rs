@@ -162,26 +162,24 @@ impl ViolationKind {
 
     /// Optionally returns a help text to be used when displaying the violation kind.
     pub(crate) fn help(&self) -> Option<Cow<'static, str>> {
-        match self {
+        let text = match self {
             ViolationKind::ContractMissing(name) => {
-                let text = format!(r#"consider adding a contract with name "{name}""#);
-                Some(text.into())
+                format!(r#"consider adding a contract with name "{name}""#).into()
             }
             ViolationKind::ContractNameNotMatches(name, _) => {
-                let text = format!(r#"consider renaming the contract to "{name}""#);
-                Some(text.into())
+                format!(r#"consider renaming the contract to "{name}""#).into()
             }
             ViolationKind::SolidityFileMissing(filename) => {
                 let filename = filename.replace(".t.sol", ".tree");
-                let text = format!("consider running `bulloak scaffold {filename}`");
-                Some(text.into())
+                format!("consider running `bulloak scaffold {filename}`").into()
             }
             ViolationKind::FunctionOrderMismatch(_, _, _) => {
-                let text = "consider reordering the function in the file";
-                Some(text.into())
+                "consider reordering the function in the file".into()
             }
-            _ => None,
-        }
+            _ => return None,
+        };
+
+        Some(text)
     }
 
     pub(crate) fn fix(&self, mut ctx: Context) -> Context {
@@ -190,7 +188,7 @@ impl ViolationKind {
                 let pt =
                     sol::Translator::new(INTERNAL_DEFAULT_SOL_VERSION, false).translate(&ctx.hir);
                 let source = sol::Formatter::new().emit(pt.clone());
-                let parsed = parse(&source).expect("should parse solidity string");
+                let parsed = parse(&source).expect("should parse Solidity string");
                 ctx.from_parsed(parsed)
             }
             ViolationKind::ContractNameNotMatches(new_name, old_name) => {
@@ -198,7 +196,7 @@ impl ViolationKind {
                     &format!("contract {old_name}"),
                     &format!("contract {new_name}"),
                 );
-                let parsed = parse(&source).expect("should parse solidity string");
+                let parsed = parse(&source).expect("should parse Solidity string");
                 ctx.from_parsed(parsed)
             }
             // Assume order violations have been taken care of first.

@@ -15,12 +15,9 @@ pub(crate) use translator::Translator;
 
 /// Searches for and returns the first `ContractDefinition` found in a given `SourceUnit`.
 pub(crate) fn find_contract(pt: &SourceUnit) -> Option<Box<ContractDefinition>> {
-    pt.0.iter().find_map(|part| {
-        if let SourceUnitPart::ContractDefinition(contract) = part {
-            Some(contract.clone())
-        } else {
-            None
-        }
+    pt.0.iter().find_map(|part| match part {
+        SourceUnitPart::ContractDefinition(contract) => Some(contract.clone()),
+        _ => None,
     })
 }
 

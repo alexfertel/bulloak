@@ -55,12 +55,9 @@ pub struct Root {
 
 impl Root {
     pub(crate) fn find_contract(&self) -> Option<&ContractDefinition> {
-        self.children.iter().find_map(|child| {
-            if let Hir::ContractDefinition(contract) = child {
-                Some(contract)
-            } else {
-                None
-            }
+        self.children.iter().find_map(|child| match child {
+            Hir::ContractDefinition(contract) => Some(contract),
+            _ => None,
         })
     }
 }
