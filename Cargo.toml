@@ -1,5 +1,5 @@
 [package]
-authors = ["Alexander Antonio Gonzalez Fertel"]
+authors = ["Alexander Gonzalez <alexfertel97@gmail.com>"]
 version = "0.7.1"
 name = "bulloak"
 license = "MIT OR Apache-2.0"
