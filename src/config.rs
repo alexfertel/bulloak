@@ -20,15 +20,24 @@ impl Config {
         }
     }
 
+    pub(crate) fn check(&self) -> crate::check::Check {
+        match self.command.clone() {
+            Commands::Check(c) => c,
+            Commands::Scaffold(_) => Default::default(),
+        }
+    }
+
     /// Return a cloned `Config` instance with `with_vm_skip` set to the passed
     /// value.
-    #[must_use] pub fn with_vm_skip(&self, with_vm_skip: bool) -> Config {
+    #[must_use]
+    pub fn with_vm_skip(&self, with_vm_skip: bool) -> Config {
         if let Commands::Scaffold(ref s) = self.command {
             return Config {
                 command: Commands::Scaffold(crate::scaffold::Scaffold {
                     with_vm_skip,
                     ..s.clone()
                 }),
+                ..Config::default()
             };
         }
 

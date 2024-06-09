@@ -70,6 +70,27 @@ fn scaffolds_trees_with_vm_skip() {
 }
 
 #[test]
+fn scaffolds_trees_with_skip_modifiers() {
+    let cwd = env::current_dir().unwrap();
+    let binary_path = get_binary_path();
+    let tests_path = cwd.join("tests").join("scaffold");
+    let trees = ["skip_modifiers.tree"];
+
+    for tree_name in trees {
+        let tree_path = tests_path.join(tree_name);
+        let output = cmd(&binary_path, "scaffold", &tree_path, &["-m"]);
+        let actual = String::from_utf8(output.stdout).unwrap();
+
+        let mut output_file = tree_path.clone();
+        output_file.set_extension("t.sol");
+        let expected = fs::read_to_string(output_file).unwrap();
+
+        // We trim here because we don't care about ending newlines.
+        assert_eq!(expected.trim(), actual.trim());
+    }
+}
+
+#[test]
 fn skips_trees_when_file_exists() {
     let cwd = env::current_dir().unwrap();
     let binary_path = get_binary_path();

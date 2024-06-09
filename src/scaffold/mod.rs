@@ -45,6 +45,9 @@ pub struct Scaffold {
     /// Whether to add vm.skip(true) at the begining of each test.
     #[arg(short = 'S', long = "vm-skip", default_value_t = false)]
     pub with_vm_skip: bool,
+    /// Whether to emit modifiers.
+    #[arg(short = 'm', long, default_value_t = false)]
+    pub skip_modifiers: bool,
 }
 
 impl Default for Scaffold {

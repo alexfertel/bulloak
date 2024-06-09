@@ -32,14 +32,17 @@ pub struct Check {
     /// The set of tree files to use as spec.
     ///
     /// Solidity file names are inferred from the specs.
-    files: Vec<PathBuf>,
+    pub files: Vec<PathBuf>,
     /// Whether to fix any issues found.
     #[arg(long, group = "fix-violations", default_value_t = false)]
-    fix: bool,
+    pub fix: bool,
     /// When `--fix` is passed, use `--stdout` to direct output
     /// to standard output instead of writing to files.
     #[arg(long, requires = "fix-violations", default_value_t = false)]
-    stdout: bool,
+    pub stdout: bool,
+    /// Whether to emit modifiers.
+    #[arg(short = 'm', long, default_value_t = false)]
+    pub skip_modifiers: bool,
 }
 
 impl Default for Check {
@@ -52,13 +55,13 @@ impl Check {
     /// Entrypoint for `bulloak check`.
     ///
     /// Note that we don't deal with `solang_parser` errors at all.
-    pub(crate) fn run(&self, _cfg: &Config) -> anyhow::Result<()> {
+    pub(crate) fn run(&self, cfg: &Config) -> anyhow::Result<()> {
         let mut violations = Vec::new();
         let ctxs: Vec<Context> = self
             .files
             .iter()
             .filter_map(|tree_path| {
-                Context::new(tree_path.clone())
+                Context::new(tree_path.clone(), cfg.clone())
                     .map_err(|violation| violations.push(violation))
                     .ok()
             })

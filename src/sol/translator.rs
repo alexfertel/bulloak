@@ -38,17 +38,21 @@ pub(crate) struct Translator {
     sol_version: String,
     /// A flag indicating if there is a forge-std dependency.
     with_forge_std: bool,
+    /// Whether to emit modifiers.
+    skip_modifiers: bool,
 }
 
 impl Translator {
     /// Create a new translator.
     #[must_use]
     pub(crate) fn new(cfg: &Config) -> Self {
-        let cfg = cfg.scaffold();
-        let with_forge_std = [cfg.with_vm_skip].into_iter().any(|f| f);
+        let scaffold_cfg = cfg.scaffold();
+        let with_forge_std = [scaffold_cfg.with_vm_skip].into_iter().any(|f| f);
+
         Self {
-            sol_version: cfg.solidity_version,
+            sol_version: scaffold_cfg.solidity_version,
             with_forge_std,
+            skip_modifiers: scaffold_cfg.skip_modifiers,
         }
     }
 
@@ -441,6 +445,9 @@ impl Visitor for TranslatorI {
         let mut parts = Vec::with_capacity(contract.children.len());
         for child in &contract.children {
             if let Hir::FunctionDefinition(function) = child {
+                if function.is_modifier() && self.translator.skip_modifiers {
+                    continue;
+                }
                 parts.push(self.visit_function(function)?);
             }
         }
