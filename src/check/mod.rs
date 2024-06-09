@@ -32,14 +32,14 @@ pub struct Check {
     /// The set of tree files to use as spec.
     ///
     /// Solidity file names are inferred from the specs.
-    files: Vec<PathBuf>,
+    pub files: Vec<PathBuf>,
     /// Whether to fix any issues found.
     #[arg(long, group = "fix-violations", default_value_t = false)]
-    fix: bool,
+    pub fix: bool,
     /// When `--fix` is passed, use `--stdout` to direct output
     /// to standard output instead of writing to files.
     #[arg(long, requires = "fix-violations", default_value_t = false)]
-    stdout: bool,
+    pub stdout: bool,
     /// Whether to emit modifiers.
     #[arg(short = 'm', long, default_value_t = false)]
     pub skip_modifiers: bool,
