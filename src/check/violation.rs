@@ -10,7 +10,6 @@ use solang_parser::pt;
 use solang_parser::pt::{ContractDefinition, ContractPart};
 use std::collections::HashSet;
 
-use crate::constants::INTERNAL_DEFAULT_SOL_VERSION;
 use crate::error;
 use crate::hir::{self, Hir};
 use crate::sol::find_matching_fn;
@@ -185,8 +184,7 @@ impl ViolationKind {
     pub(crate) fn fix(&self, mut ctx: Context) -> Context {
         match self {
             ViolationKind::ContractMissing(_) => {
-                let pt =
-                    sol::Translator::new(INTERNAL_DEFAULT_SOL_VERSION, false).translate(&ctx.hir);
+                let pt = sol::Translator::new(&Default::default()).translate(&ctx.hir);
                 let source = sol::Formatter::new().emit(pt.clone());
                 let parsed = parse(&source).expect("should parse Solidity string");
                 ctx.from_parsed(parsed)

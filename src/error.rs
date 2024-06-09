@@ -78,7 +78,7 @@ impl fmt::Display for Error {
 pub(crate) struct Formatter<'e, E> {
     /// The original .tree text in which the error occurred.
     text: &'e str,
-    /// The error kind. It must impl fmt::Display.
+    /// The error kind. It must impl `fmt::Display`.
     err: &'e E,
     /// The span of the error.
     span: &'e span::Span,

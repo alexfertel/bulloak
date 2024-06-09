@@ -139,6 +139,12 @@ pub struct Tokenizer {
     identifier_mode: Cell<bool>,
 }
 
+impl Default for Tokenizer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Tokenizer {
     /// Create a new tokenizer.
     #[must_use]

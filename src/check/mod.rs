@@ -8,9 +8,11 @@ use std::path::PathBuf;
 
 use clap::Parser;
 use owo_colors::OwoColorize;
+use serde::{Deserialize, Serialize};
 use violation::{Violation, ViolationKind};
 
 use crate::check::violation::fix_order;
+use crate::config::Config;
 use crate::sol::find_contract;
 use crate::utils::pluralize;
 
@@ -24,26 +26,33 @@ mod utils;
 pub(crate) mod violation;
 
 /// Check that the tests match the spec.
-#[derive(Debug, Parser)]
+#[doc(hidden)]
+#[derive(Debug, Parser, Clone, Serialize, Deserialize)]
 pub struct Check {
     /// The set of tree files to use as spec.
     ///
     /// Solidity file names are inferred from the specs.
     files: Vec<PathBuf>,
     /// Whether to fix any issues found.
-    #[arg(long, group = "fix-violations", default_value = "false")]
+    #[arg(long, group = "fix-violations", default_value_t = false)]
     fix: bool,
     /// When `--fix` is passed, use `--stdout` to direct output
     /// to standard output instead of writing to files.
-    #[arg(long, requires = "fix-violations", default_value = "false")]
+    #[arg(long, requires = "fix-violations", default_value_t = false)]
     stdout: bool,
+}
+
+impl Default for Check {
+    fn default() -> Self {
+        Check::parse_from(Vec::<String>::new())
+    }
 }
 
 impl Check {
     /// Entrypoint for `bulloak check`.
     ///
     /// Note that we don't deal with `solang_parser` errors at all.
-    pub fn run(self) {
+    pub(crate) fn run(&self, _cfg: &Config) -> anyhow::Result<()> {
         let mut violations = Vec::new();
         let ctxs: Vec<Context> = self
             .files
@@ -104,6 +113,8 @@ impl Check {
 
             exit(&violations);
         }
+
+        Ok(())
     }
 
     /// Handles writing the output of the `check` command.

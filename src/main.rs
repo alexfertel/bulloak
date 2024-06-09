@@ -2,7 +2,7 @@
 use std::process;
 
 fn main() {
-    if let Err(e) = bulloak::cli::run() {
+    if let Err(e) = bulloak::config::run() {
         eprintln!("Error: {e:?}");
         process::exit(1);
     }

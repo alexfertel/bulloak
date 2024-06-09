@@ -2,6 +2,7 @@
 //! high-level intermediate representation (HIR) -- AST -> HIR.
 use indexmap::IndexMap;
 
+use crate::config::Config;
 use crate::hir::{self, Hir};
 use crate::syntax::ast;
 use crate::syntax::visitor::Visitor;
@@ -30,9 +31,9 @@ impl Translator {
         &self,
         ast: &ast::Ast,
         modifiers: &IndexMap<String, String>,
-        with_vm_skip: bool,
+        cfg: &Config,
     ) -> Hir {
-        TranslatorI::new(modifiers, with_vm_skip).translate(ast)
+        TranslatorI::new(modifiers, cfg).translate(ast)
     }
 }
 
@@ -60,7 +61,8 @@ struct TranslatorI<'a> {
 
 impl<'a> TranslatorI<'a> {
     /// Creates a new internal translator.
-    fn new(modifiers: &'a IndexMap<String, String>, with_vm_skip: bool) -> Self {
+    fn new(modifiers: &'a IndexMap<String, String>, cfg: &Config) -> Self {
+        let with_vm_skip = cfg.scaffold().with_vm_skip;
         Self {
             modifier_stack: Vec::new(),
             modifiers,
@@ -305,19 +307,22 @@ mod tests {
     use anyhow::Result;
     use pretty_assertions::assert_eq;
 
+    use crate::config::Config;
     use crate::hir::{self, Hir};
     use crate::scaffold::modifiers;
     use crate::span::{Position, Span};
     use crate::syntax::parser::Parser;
     use crate::syntax::tokenizer::Tokenizer;
 
-    fn translate(text: &str, with_vm_skip: bool) -> Result<hir::Hir> {
+    fn translate(text: &str) -> Result<hir::Hir> {
         let tokens = Tokenizer::new().tokenize(&text)?;
         let ast = Parser::new().parse(&text, &tokens)?;
         let mut discoverer = modifiers::ModifierDiscoverer::new();
         let modifiers = discoverer.discover(&ast);
 
-        Ok(hir::translator::Translator::new().translate(&ast, modifiers, with_vm_skip))
+        let cfg: Config = Default::default();
+        let cfg = cfg.with_vm_skip(true);
+        Ok(hir::translator::Translator::new().translate(&ast, modifiers, &cfg))
     }
 
     fn root(children: Vec<Hir>) -> Hir {
@@ -357,12 +362,9 @@ mod tests {
 
     #[test]
     fn one_child() {
+        let file_contents = "Foo_Test\n└── when something bad happens\n   └── it should revert";
         assert_eq!(
-            translate(
-                "Foo_Test\n└── when something bad happens\n   └── it should revert",
-                true
-            )
-            .unwrap(),
+            translate(file_contents).unwrap(),
             root(vec![contract(
                 "Foo_Test".to_owned(),
                 vec![function(
@@ -381,16 +383,13 @@ mod tests {
 
     #[test]
     fn two_children() {
-        assert_eq!(
-            translate(
-                r"FooBarTheBest_Test
+        let file_contents = r"FooBarTheBest_Test
 ├── when stuff called
 │  └── it should revert
 └── given not stuff called
-   └── it should revert",
-                true
-            )
-            .unwrap(),
+   └── it should revert";
+        assert_eq!(
+            translate(file_contents).unwrap(),
             root(vec![contract(
                 "FooBarTheBest_Test".to_owned(),
                 vec![
@@ -434,7 +433,7 @@ Foo_Test
         );
 
         assert_eq!(
-            translate(&file_contents, true)?,
+            translate(&file_contents)?,
             root(vec![contract(
                 "Foo_Test".to_owned(),
                 vec![
