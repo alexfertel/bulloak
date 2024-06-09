@@ -129,13 +129,17 @@ fn check_fns_structure(
                 Some((sol_idx, _)) => present_fn_indices.push((hir_idx, sol_idx)),
                 // We didn't find a matching function, so this is a
                 // violation.
-                None => violations.push(Violation::new(
-                    ViolationKind::MatchingFunctionMissing(fn_hir.clone(), hir_idx),
-                    Location::Code(
-                        ctx.tree.to_string_lossy().into_owned(),
-                        fn_hir.span.start.line,
-                    ),
-                )),
+                None => {
+                    if !ctx.cfg.check().skip_modifiers {
+                        violations.push(Violation::new(
+                            ViolationKind::MatchingFunctionMissing(fn_hir.clone(), hir_idx),
+                            Location::Code(
+                                ctx.tree.to_string_lossy().into_owned(),
+                                fn_hir.span.start.line,
+                            ),
+                        ))
+                    }
+                }
             }
         };
     }

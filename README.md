@@ -114,8 +114,11 @@ $ bulloak scaffold -wf ./**/*.tree
 
 Note all tests are showing as passing when their body is empty. To prevent this,
 you can use the `-S` (or `--vm-skip`) option to add a `vm.skip(true);` at the
-beginning of each test function. This option will also add an import for 
+beginning of each test function. This option will also add an import for
 forge-std's `Test.sol` and all test contracts will inherit from it.
+
+You can skip emitting the modifiers by passing the `-m` (or `--skip--modifiers`)
+option. This way, the generated files will only include the test functions.
 
 ### Check That Your Code And Spec Match
 
@@ -193,6 +196,10 @@ automatically fixed, and bulloak's output will reflect that.
 ```text
 warn: 13 checks failed (run `bulloak check --fix <.tree files>` to apply 11 fixes)
 ```
+
+You can skip checking that the modifiers are present by passing the `-m`
+(or `--skip--modifiers`) option. This way, `bulloak` will not warn when a
+modifier is missing from the generated file.
 
 #### Rules
 

@@ -406,7 +406,6 @@ bulloak error: contract name missing at tree root #2";
         // Append a comment HIR to the hirs.
         hirs.push(root(vec![comment("this is a random comment".to_owned())]));
 
-        println!("{:#?}", hirs);
         let text = trees.join("\n\n");
         let children = match combine(&text, hirs).unwrap() {
             Hir::Root(root) => root.children,

@@ -52,6 +52,20 @@ fn checks_valid_structural_match() {
 }
 
 #[test]
+fn checks_modifiers_skipped() {
+    let cwd = env::current_dir().unwrap();
+    let binary_path = get_binary_path();
+    let tree_path = cwd.join("tests").join("check").join("skip_modifiers.tree");
+
+    let output = cmd(&binary_path, "check", &tree_path, &["-m"]);
+    let stderr = String::from_utf8(output.stderr).unwrap();
+    let stdout = String::from_utf8(output.stdout).unwrap();
+
+    assert_eq!("", stderr);
+    assert!(stdout.contains("All checks completed successfully! No issues found."));
+}
+
+#[test]
 fn checks_missing_sol_file() {
     let cwd = env::current_dir().unwrap();
     let binary_path = get_binary_path();
@@ -241,7 +255,6 @@ fn fixes_extra_fn_plus_wrong_order() {
 
     let output = cmd(&binary_path, "check", &tree_path, &["--fix", "--stdout"]);
     let actual = String::from_utf8(output.stdout).unwrap();
-    println!("what {}", actual);
 
     let expected = r"// SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.0;

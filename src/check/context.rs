@@ -8,8 +8,11 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use crate::hir::{self, Hir};
 use crate::{check::Violation, scaffold::emitter::Emitter};
+use crate::{
+    config::Config,
+    hir::{self, Hir},
+};
 
 use super::{location::Location, violation::ViolationKind};
 
@@ -35,6 +38,8 @@ pub(crate) struct Context {
     pub(crate) pt: SourceUnit,
     /// The comments present in the Solidity file.
     pub(crate) comments: Comments,
+    /// The config passed to `bulloak check`.
+    pub(crate) cfg: Config,
 }
 
 impl Context {
@@ -42,7 +47,7 @@ impl Context {
     ///
     /// This structure contains everything necessary to perform checks between
     /// trees and Solidity files.
-    pub(crate) fn new(tree: PathBuf) -> Result<Self, Violation> {
+    pub(crate) fn new(tree: PathBuf, cfg: Config) -> Result<Self, Violation> {
         let tree_path_cow = tree.to_string_lossy();
         let tree_contents = try_read_to_string(&tree)?;
         let hir = crate::hir::translate(&tree_contents, &Default::default()).map_err(|e| {
@@ -71,6 +76,7 @@ impl Context {
             src,
             pt,
             comments,
+            cfg: cfg.clone(),
         })
     }
 
