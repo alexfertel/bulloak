@@ -2,6 +2,7 @@
 //!
 //! This is based on
 //! <https://github.com/foundry-rs/foundry/blob/890bc7a03fd575fbfaf02a8870241f34760e65f1/crates/fmt/src/formatter.rs#L1639>.
+#![allow(unused)]
 
 use solang_parser::pt::{
     Base, ContractDefinition, ContractPart, ErrorDefinition, ErrorParameter, EventDefinition,

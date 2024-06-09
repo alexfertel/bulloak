@@ -9,11 +9,7 @@ use std::{
 };
 
 use crate::hir::{self, Hir};
-use crate::{
-    check::Violation,
-    constants::{INTERNAL_DEFAULT_INDENTATION, INTERNAL_DEFAULT_SOL_VERSION},
-    scaffold::emitter::Emitter,
-};
+use crate::{check::Violation, scaffold::emitter::Emitter};
 
 use super::{location::Location, violation::ViolationKind};
 
@@ -49,7 +45,7 @@ impl Context {
     pub(crate) fn new(tree: PathBuf) -> Result<Self, Violation> {
         let tree_path_cow = tree.to_string_lossy();
         let tree_contents = try_read_to_string(&tree)?;
-        let hir = crate::hir::translate(&tree_contents, false).map_err(|e| {
+        let hir = crate::hir::translate(&tree_contents, &Default::default()).map_err(|e| {
             Violation::new(
                 ViolationKind::ParsingFailed(e),
                 Location::File(tree_path_cow.into_owned()),
@@ -81,7 +77,7 @@ impl Context {
     /// Updates this `Context` with the result of parsing a Solidity file.
     #[inline]
     pub(crate) fn from_parsed(mut self, parsed: Parsed) -> Self {
-        self.src = parsed.src.to_owned();
+        parsed.src.clone_into(&mut self.src);
         self.pt = parsed.pt;
         self.comments = parsed.comments;
         self
@@ -116,10 +112,9 @@ impl Context {
     /// * `function` - A reference to the HIR `FunctionDefinition` to be inserted.
     /// * `offset` - The character position in the source string where the function definition should be inserted.
     pub(crate) fn insert_function_at(&mut self, function: &hir::FunctionDefinition, offset: usize) {
-        let indentation = INTERNAL_DEFAULT_INDENTATION;
-        let solidity_version = INTERNAL_DEFAULT_SOL_VERSION;
-        let function = Emitter::new(indentation, solidity_version)
-            .emit(&Hir::FunctionDefinition(function.clone()));
+        let cfg = &Default::default();
+        let f = &Hir::FunctionDefinition(function.clone());
+        let function = Emitter::new(cfg).emit(f);
         self.src = format!(
             "{}\n\n{}{}",
             &self.src[..offset],

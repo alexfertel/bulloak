@@ -2,6 +2,8 @@
 
 use std::result;
 
+use crate::config::Config;
+use crate::constants::INTERNAL_DEFAULT_INDENTATION;
 use crate::hir::visitor::Visitor;
 use crate::hir::{self, Hir};
 use crate::utils::sanitize;
@@ -10,20 +12,21 @@ use crate::utils::sanitize;
 ///
 /// This struct holds the state of the emitter. It is not
 /// tied to a specific HIR.
-pub struct Emitter<'s> {
+pub struct Emitter {
     /// The indentation level of the emitted code.
     indent: usize,
     /// The Solidity version to be used in the pragma directive.
-    solidity_version: &'s str,
+    solidity_version: String,
 }
 
-impl<'s> Emitter<'s> {
+impl Emitter {
     /// Create a new emitter with the given configuration.
     #[must_use]
-    pub fn new(indent: usize, solidity_version: &'s str) -> Self {
+    pub fn new(cfg: &Config) -> Self {
+        let cfg = cfg.scaffold();
         Self {
-            indent,
-            solidity_version,
+            indent: INTERNAL_DEFAULT_INDENTATION,
+            solidity_version: cfg.solidity_version,
         }
     }
 
@@ -44,14 +47,14 @@ impl<'s> Emitter<'s> {
 ///
 /// This emitter generates skeleton contracts and tests functions
 /// inside that contract described in the input .tree file.
-struct EmitterI<'s> {
+struct EmitterI {
     /// The emitter state.
-    emitter: Emitter<'s>,
+    emitter: Emitter,
 }
 
-impl<'s> EmitterI<'s> {
+impl EmitterI {
     /// Create a new emitter with the given emitter state and modifier map.
-    fn new(emitter: Emitter<'s>) -> Self {
+    fn new(emitter: Emitter) -> Self {
         Self { emitter }
     }
 
@@ -152,7 +155,7 @@ impl<'s> EmitterI<'s> {
 /// Note that the visitor is infallible because previous
 /// passes ensure that the HIR is valid. In case an error
 /// is found, it should be added to a previous pass.
-impl<'s> Visitor for EmitterI<'s> {
+impl Visitor for EmitterI {
     type RootOutput = String;
     type ContractDefinitionOutput = String;
     type FunctionDefinitionOutput = String;
@@ -265,23 +268,15 @@ impl<'s> Visitor for EmitterI<'s> {
 mod tests {
     use pretty_assertions::assert_eq;
 
-    use crate::constants::INTERNAL_DEFAULT_SOL_VERSION;
+    use crate::config::Config;
     use crate::error::Result;
     use crate::hir::{translate_and_combine_trees, Hir, Statement, StatementType};
     use crate::scaffold::emitter;
 
-    fn scaffold_with_flags(
-        text: &str,
-        indent: usize,
-        version: &str,
-        with_vm_skip: bool,
-    ) -> Result<String> {
-        let hir = translate_and_combine_trees(text, with_vm_skip)?;
-        Ok(emitter::Emitter::new(indent, version).emit(&hir))
-    }
-
     fn scaffold(text: &str) -> Result<String> {
-        scaffold_with_flags(text, 2, INTERNAL_DEFAULT_SOL_VERSION, false)
+        let cfg = Default::default();
+        let hir = translate_and_combine_trees(text, &cfg)?;
+        Ok(emitter::Emitter::new(&cfg).emit(&hir))
     }
 
     #[test]
@@ -325,7 +320,7 @@ contract FileTest {
         let file_contents = String::from("FileTest\n├── it should do st-ff\n└── It never reverts.");
 
         assert_eq!(
-            &scaffold_with_flags(&file_contents, 2, INTERNAL_DEFAULT_SOL_VERSION, false)?,
+            &scaffold(&file_contents)?,
             r"// SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.0;
 
@@ -348,7 +343,7 @@ contract FileTest {
         );
 
         assert_eq!(
-            &scaffold_with_flags(&file_contents, 2, INTERNAL_DEFAULT_SOL_VERSION, false)?,
+            &scaffold(&file_contents)?,
             r"// SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.0;
 
@@ -372,7 +367,7 @@ contract FileTest {
         );
 
         assert_eq!(
-            &scaffold_with_flags(&file_contents, 2, INTERNAL_DEFAULT_SOL_VERSION, false)?,
+            &scaffold(&file_contents)?,
             r"// SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.0;
 
@@ -400,7 +395,7 @@ contract FileTest {
             String::from("Fi-eTest\n└── when something bad happens\n   └── it should not revert");
 
         assert_eq!(
-            &scaffold_with_flags(&file_contents, 2, INTERNAL_DEFAULT_SOL_VERSION, false)?,
+            &scaffold(&file_contents)?,
             r"// SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.0;
 
@@ -420,14 +415,14 @@ contract Fi_eTest {
             String::from("FileTest\n└── when something bad happens\n   └── it should not revert");
 
         assert_eq!(
-            &scaffold_with_flags(&file_contents, 4, INTERNAL_DEFAULT_SOL_VERSION, false)?,
+            &scaffold(&file_contents)?,
             r"// SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.0;
 
 contract FileTest {
-    function test_WhenSomethingBadHappens() external {
-        // it should not revert
-    }
+  function test_WhenSomethingBadHappens() external {
+    // it should not revert
+  }
 }"
         );
 
@@ -436,19 +431,22 @@ contract FileTest {
 
     #[test]
     fn with_vm_skip() -> Result<()> {
-        let file_contents =
-            String::from("FileTest\n└── when something bad happens\n   └── it should not revert");
+        let file_contents = "FileTest\n└── when something bad happens\n   └── it should not revert";
+        let cfg: Config = Default::default();
+        let cfg = cfg.with_vm_skip(true);
+        let hir = translate_and_combine_trees(file_contents, &cfg)?;
+        let emitted = emitter::Emitter::new(&cfg).emit(&hir);
 
         assert_eq!(
-            &scaffold_with_flags(&file_contents, 4, INTERNAL_DEFAULT_SOL_VERSION, true)?,
+            emitted,
             r"// SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.0;
 
 contract FileTest {
-    function test_WhenSomethingBadHappens() external {
-        // it should not revert
-        vm.skip(true);
-    }
+  function test_WhenSomethingBadHappens() external {
+    // it should not revert
+    vm.skip(true);
+  }
 }"
         );
 
@@ -462,7 +460,7 @@ contract FileTest {
             ty: StatementType::VmSkip,
         });
 
-        let _ = emitter::Emitter::new(4, INTERNAL_DEFAULT_SOL_VERSION).emit(&hir);
+        let _ = emitter::Emitter::new(&Default::default()).emit(&hir);
     }
 
     #[test]

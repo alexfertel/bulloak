@@ -22,6 +22,7 @@ use solang_parser::pt::{
     SourceUnit, SourceUnitPart, Statement, StringLiteral, Type, VariableDeclaration, Visibility,
 };
 
+use crate::config::Config;
 use crate::hir::visitor::Visitor;
 use crate::hir::{self, Hir};
 use crate::utils::sanitize;
@@ -42,10 +43,12 @@ pub(crate) struct Translator {
 impl Translator {
     /// Create a new translator.
     #[must_use]
-    pub(crate) fn new(sol_version: &str, with_forge_std: bool) -> Self {
+    pub(crate) fn new(cfg: &Config) -> Self {
+        let cfg = cfg.scaffold();
+        let with_forge_std = [cfg.with_vm_skip].into_iter().any(|f| f);
         Self {
-            sol_version: sol_version.to_owned(),
-            with_forge_std: with_forge_std.to_owned(),
+            sol_version: cfg.solidity_version,
+            with_forge_std,
         }
     }
 
