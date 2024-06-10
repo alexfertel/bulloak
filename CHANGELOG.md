@@ -2,7 +2,33 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.7.1]
+## [0.7.2] - 2024-06-10
+
+### Bug Fixes
+
+- Add email to Cargo.toml
+
+
+### Features
+
+- Add --skip-modifiers flag (#68)
+
+
+### Miscellaneous Tasks
+
+- Update lock file
+- Add FUNDING.json
+
+
+### Refactor
+
+- *(check)* Simplify function insertion procedures
+- *(hir)* Simplify imports
+- Improve readability of find_contract
+- Rework crate to support configuration (#67)
+
+
+## [0.7.1] - 2024-04-19
 
 ### Bug Fixes
 
@@ -34,11 +60,6 @@ All notable changes to this project will be documented in this file.
 - *(ci)* Fix coverage workflow
 
 
-### Lint
-
-- Fix fmt
-
-
 ## [0.7.0] - 2024-02-25
 
 ### Bug Fixes
@@ -55,11 +76,6 @@ All notable changes to this project will be documented in this file.
 
 - *(combine)* Optimize allocations during the combine pass
 - Add support for multiple trees per file (#51)
-
-
-### Lint
-
-- Fix addressable clippy warnings
 
 
 ## [0.6.5] - 2024-02-17
