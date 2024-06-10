@@ -395,6 +395,7 @@ These are the current steps taken to publish `bulloak`:
 This project has been possible thanks to the support of:
 
 - [Sense Finance](https://sense.finance)
+- [Sablier](https://github.com/sablier-labs)
 
 ## License
 
