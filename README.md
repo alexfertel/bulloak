@@ -75,20 +75,18 @@ will be printed to `stdout`:
 
 ```solidity
 // $ bulloak scaffold foo.tree
+// SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.0;
 
 contract FooTest {
-  modifier whenStuffIsCalled() {
-    _;
-  }
+    modifier whenStuffIsCalled() {
+        _;
+    }
 
-  function test_WhenAConditionIsMet()
-    external
-    whenStuffIsCalled
-  {
-    // It should revert.
-    //     Because we shouldn't allow it.
-  }
+    function test_RevertWhen_AConditionIsMet() external whenStuffIsCalled {
+        // It should revert.
+        //     Because we shouldn't allow it.
+    }
 }
 ```
 

@@ -485,8 +485,8 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
     ///
     /// A string is a sequence of words separated by spaces.
     ///
-    /// Consumes all the tokens including the given token
-    /// until no more words are found.
+    /// Consumes all the tokens including the given token until no more words
+    /// are found.
     fn parse_string(&self, start_token: &Token) -> String {
         self.consume();
         let mut string = String::from(&start_token.lexeme);

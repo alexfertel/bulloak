@@ -548,7 +548,7 @@ contract Foo_Test {
         let file_contents = String::from(
             r"ActionsTest
 └── when stuff called
-   ├── it should revert
+   ├── it should do stuff
    ├── it should be cool
    └── it might break
 ",
@@ -561,8 +561,88 @@ pragma solidity 0.8.0;
 
 contract ActionsTest {
   function test_WhenStuffCalled() external {
+    // it should do stuff
+    // it should be cool
+    // it might break
+  }
+}"
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn first_action_revert_emits_revert_when() -> Result<()> {
+        let file_contents = String::from(
+            r"ActionsTest
+└── when stuff called
+   ├── it should revert
+   ├── it should be cool
+   └── it might break
+",
+        );
+
+        assert_eq!(
+            &scaffold(&file_contents)?,
+            r"// SPDX-License-Identifier: UNLICENSED
+pragma solidity 0.8.0;
+
+contract ActionsTest {
+  function test_RevertWhen_StuffCalled() external {
     // it should revert
     // it should be cool
+    // it might break
+  }
+}"
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn weird_it_should_revert_emits_revert_when() -> Result<()> {
+        let file_contents = String::from(
+            r"ActionsTest
+└── when stuff called
+   └── IT sHould RevERT. 
+",
+        );
+
+        assert_eq!(
+            &scaffold(&file_contents)?,
+            r"// SPDX-License-Identifier: UNLICENSED
+pragma solidity 0.8.0;
+
+contract ActionsTest {
+  function test_RevertWhen_StuffCalled() external {
+    // IT sHould RevERT.
+  }
+}"
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn non_firt_child_it_should_revert_doesnt_emit_revert_when() -> Result<()> {
+        let file_contents = String::from(
+            r"ActionsTest
+└── when stuff called
+   ├── it should be cool
+   ├── it should revert
+   └── it might break
+",
+        );
+
+        assert_eq!(
+            &scaffold(&file_contents)?,
+            r"// SPDX-License-Identifier: UNLICENSED
+pragma solidity 0.8.0;
+
+contract ActionsTest {
+  function test_WhenStuffCalled() external {
+    // it should be cool
+    // it should revert
     // it might break
   }
 }"

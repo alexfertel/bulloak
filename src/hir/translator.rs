@@ -192,14 +192,14 @@ impl<'a> Visitor for TranslatorI<'a> {
         if !actions.is_empty() {
             // If the only action is `it should revert`, we slightly change the function name
             // to reflect this.
-            let is_revert = actions.len() == 1
-                && actions.first().is_some_and(|action| {
-                    if let hir::Hir::Comment(comment) = action {
-                        comment.lexeme == "it should revert"
-                    } else {
-                        false
-                    }
-                });
+            let is_revert = actions.first().is_some_and(|action| {
+                if let hir::Hir::Comment(comment) = action {
+                    let sanitized_lexeme = sanitize(&comment.lexeme.trim().to_lowercase());
+                    sanitized_lexeme == "it should revert"
+                } else {
+                    false
+                }
+            });
 
             let mut words = condition.title.split_whitespace();
             // It is fine to unwrap because conditions have at least one word in them.
