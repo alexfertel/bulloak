@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.3] - 2024-07-02
+
+### Bug Fixes
+
+- Properly include RevertWhen in test names
+
+
+### Miscellaneous Tasks
+
+- Add Sablier to the supporters section
+
+
 ## [0.7.2] - 2024-06-10
 
 ### Bug Fixes
