@@ -1,8 +1,9 @@
-//! This module implements functionality related to operating on a parse tree (PT) from `solang_parser`.
+//! This module implements functionality related to operating on a parse tree
+//! (PT) from `solang_parser`.
 
 use solang_parser::pt::{
-    ContractDefinition, ContractPart, FunctionDefinition, FunctionTy, Identifier, SourceUnit,
-    SourceUnitPart,
+    ContractDefinition, ContractPart, FunctionDefinition, FunctionTy,
+    Identifier, SourceUnit, SourceUnitPart,
 };
 
 use crate::hir::hir;
@@ -13,8 +14,11 @@ mod visitor;
 pub(crate) use fmt::Formatter;
 pub(crate) use translator::Translator;
 
-/// Searches for and returns the first `ContractDefinition` found in a given `SourceUnit`.
-pub(crate) fn find_contract(pt: &SourceUnit) -> Option<Box<ContractDefinition>> {
+/// Searches for and returns the first `ContractDefinition` found in a given
+/// `SourceUnit`.
+pub(crate) fn find_contract(
+    pt: &SourceUnit,
+) -> Option<Box<ContractDefinition>> {
     pt.0.iter().find_map(|part| match part {
         SourceUnitPart::ContractDefinition(contract) => Some(contract.clone()),
         _ => None,
@@ -27,31 +31,27 @@ pub(crate) fn find_matching_fn<'a>(
     contract_sol: &'a ContractDefinition,
     fn_hir: &'a hir::FunctionDefinition,
 ) -> Option<(usize, &'a FunctionDefinition)> {
-    contract_sol
-        .parts
-        .iter()
-        .enumerate()
-        .find_map(|(idx, part)| {
-            if let ContractPart::FunctionDefinition(fn_sol) = part {
-                if fns_match(fn_hir, fn_sol) {
-                    return Some((idx, &**fn_sol));
-                }
-            };
+    contract_sol.parts.iter().enumerate().find_map(|(idx, part)| {
+        if let ContractPart::FunctionDefinition(fn_sol) = part {
+            if fns_match(fn_hir, fn_sol) {
+                return Some((idx, &**fn_sol));
+            }
+        };
 
-            None
-        })
+        None
+    })
 }
 
 /// Check whether a Solidity function matches its bulloak counterpart.
 ///
 /// Two functions match if they have the same name and their types match.
-fn fns_match(fn_hir: &hir::FunctionDefinition, fn_sol: &FunctionDefinition) -> bool {
-    fn_sol
-        .name
-        .clone()
-        .is_some_and(|Identifier { ref name, .. }| {
-            name == &fn_hir.identifier && fn_types_match(&fn_hir.ty, fn_sol.ty)
-        })
+fn fns_match(
+    fn_hir: &hir::FunctionDefinition,
+    fn_sol: &FunctionDefinition,
+) -> bool {
+    fn_sol.name.clone().is_some_and(|Identifier { ref name, .. }| {
+        name == &fn_hir.identifier && fn_types_match(&fn_hir.ty, fn_sol.ty)
+    })
 }
 
 /// Checks that the function types between a HIR function

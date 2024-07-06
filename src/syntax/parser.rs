@@ -1,12 +1,15 @@
 //! A parser implementation for a stream of tokens representing a bulloak tree.
 
-use std::fmt;
-use std::{borrow::Borrow, cell::Cell, result};
+use std::{borrow::Borrow, cell::Cell, fmt, result};
 
-use super::ast::{Action, Ast, Condition, Description, Root};
-use super::tokenizer::{Token, TokenKind};
-use crate::span::Span;
-use crate::utils::{repeat_str, sanitize};
+use super::{
+    ast::{Action, Ast, Condition, Description, Root},
+    tokenizer::{Token, TokenKind},
+};
+use crate::{
+    span::Span,
+    utils::{repeat_str, sanitize},
+};
 
 type Result<T> = result::Result<T, Error>;
 
@@ -90,9 +93,10 @@ impl fmt::Display for Error {
 impl fmt::Display for ErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use self::ErrorKind::{
-            CornerNotLastChild, DescriptionTokenUnexpected, EofUnexpected, GivenUnexpected,
-            ItUnexpected, TeeLastChild, TitleMissing, TokenUnexpected, TreeEmpty, TreeRootless,
-            WhenUnexpected, WordUnexpected,
+            CornerNotLastChild, DescriptionTokenUnexpected, EofUnexpected,
+            GivenUnexpected, ItUnexpected, TeeLastChild, TitleMissing,
+            TokenUnexpected, TreeEmpty, TreeRootless, WhenUnexpected,
+            WordUnexpected,
         };
         match self {
             TokenUnexpected(lexeme) => write!(f, "unexpected token '{lexeme}'"),
@@ -106,8 +110,12 @@ impl fmt::Display for ErrorKind {
             EofUnexpected => write!(f, "unexpected end of file"),
             TreeEmpty => write!(f, "found an empty tree"),
             TreeRootless => write!(f, "missing a root"),
-            TitleMissing => write!(f, "found a condition/action without a title"),
-            CornerNotLastChild => write!(f, "a `Corner` must be the last child"),
+            TitleMissing => {
+                write!(f, "found a condition/action without a title")
+            }
+            CornerNotLastChild => {
+                write!(f, "a `Corner` must be the last child")
+            }
             TeeLastChild => write!(f, "a `Tee` must not be the last child"),
         }
     }
@@ -127,9 +135,7 @@ impl Parser {
     /// Create a new parser.
     #[must_use]
     pub const fn new() -> Self {
-        Self {
-            current: Cell::new(0),
-        }
+        Self { current: Cell::new(0) }
     }
 
     /// Parse the given tokens into an abstract syntax tree (AST).
@@ -159,11 +165,7 @@ struct ParserI<'t, P> {
 impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
     /// Create a new parser given the parser state, input text, and tokens.
     const fn new(parser: P, text: &'t str, tokens: &'t [Token]) -> Self {
-        Self {
-            text,
-            tokens,
-            parser,
-        }
+        Self { text, tokens, parser }
     }
 
     /// Return a reference to the state of the parser.
@@ -173,11 +175,7 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
 
     /// Create a new error with the given span and error type.
     fn error(&self, span: Span, kind: ErrorKind) -> Error {
-        Error {
-            kind,
-            text: self.text.to_owned(),
-            span,
-        }
+        Error { kind, text: self.text.to_owned(), span }
     }
 
     /// Returns true if the next call to `current` would
@@ -261,18 +259,25 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
         // `Tee` or the last `Corner`.
         let mut children = vec![];
         while let Some(current_token) = self.current() {
-            let child = match current_token.kind {
-                TokenKind::Corner | TokenKind::Tee => self.parse_branch(current_token)?,
-                TokenKind::Word => Err(self.error(
-                    current_token.span,
-                    ErrorKind::WordUnexpected(current_token.lexeme.clone()),
-                ))?,
-                TokenKind::When => Err(self.error(current_token.span, ErrorKind::WhenUnexpected))?,
-                TokenKind::Given => {
-                    Err(self.error(current_token.span, ErrorKind::GivenUnexpected))?
-                }
-                TokenKind::It => Err(self.error(current_token.span, ErrorKind::ItUnexpected))?,
-            };
+            let child =
+                match current_token.kind {
+                    TokenKind::Corner | TokenKind::Tee => {
+                        self.parse_branch(current_token)?
+                    }
+                    TokenKind::Word => Err(self.error(
+                        current_token.span,
+                        ErrorKind::WordUnexpected(current_token.lexeme.clone()),
+                    ))?,
+                    TokenKind::When => Err(self
+                        .error(current_token.span, ErrorKind::WhenUnexpected))?,
+                    TokenKind::Given => Err(self.error(
+                        current_token.span,
+                        ErrorKind::GivenUnexpected,
+                    ))?,
+                    TokenKind::It => Err(
+                        self.error(current_token.span, ErrorKind::ItUnexpected)
+                    )?,
+                };
 
             children.push(child);
         }
@@ -306,7 +311,9 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
         ))?;
 
         let ast = match first_token.kind {
-            TokenKind::When | TokenKind::Given => self.parse_condition(token)?,
+            TokenKind::When | TokenKind::Given => {
+                self.parse_condition(token)?
+            }
             TokenKind::It => self.parse_action(token)?,
             _ => Err(self.error(
                 first_token.span,
@@ -367,7 +374,9 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
 
             let current_token = self.current().unwrap();
             let ast = match next_token.kind {
-                TokenKind::When | TokenKind::Given => self.parse_condition(current_token)?,
+                TokenKind::When | TokenKind::Given => {
+                    self.parse_condition(current_token)?
+                }
                 TokenKind::It => self.parse_action(current_token)?,
                 _ => Err(self.error(
                     next_token.span,
@@ -426,7 +435,9 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
                 )?,
                 _ => Err(self.error(
                     next_token.span,
-                    ErrorKind::DescriptionTokenUnexpected(next_token.lexeme.clone()),
+                    ErrorKind::DescriptionTokenUnexpected(
+                        next_token.lexeme.clone(),
+                    ),
                 ))?,
             };
 
@@ -465,7 +476,11 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
     ///
     /// Panics if called when the parser is not at a `Tee` or a `Corner`
     /// token.
-    fn parse_description(&self, token: &Token, column_delta: usize) -> Result<Ast> {
+    fn parse_description(
+        &self,
+        token: &Token,
+        column_delta: usize,
+    ) -> Result<Ast> {
         assert!(matches!(token.kind, TokenKind::Tee | TokenKind::Corner));
 
         let start_token = self.peek().ok_or(self.error(
@@ -494,7 +509,10 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
         // Consume all words.
         while let Some(token) = self.consume() {
             match token.kind {
-                TokenKind::Word | TokenKind::It | TokenKind::When | TokenKind::Given => {
+                TokenKind::Word
+                | TokenKind::It
+                | TokenKind::When
+                | TokenKind::Given => {
                     string = string + " " + &token.lexeme;
                 }
                 _ => break,
@@ -509,11 +527,15 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
 mod tests {
     use pretty_assertions::assert_eq;
 
-    use crate::span::Span;
-    use crate::syntax::ast::{Action, Ast, Condition, Description, Root};
-    use crate::syntax::parser::{self, ErrorKind, Parser};
-    use crate::syntax::test_utils::{p, s, TestError};
-    use crate::syntax::tokenizer::Tokenizer;
+    use crate::{
+        span::Span,
+        syntax::{
+            ast::{Action, Ast, Condition, Description, Root},
+            parser::{self, ErrorKind, Parser},
+            test_utils::{p, s, TestError},
+            tokenizer::Tokenizer,
+        },
+    };
 
     impl PartialEq<parser::Error> for TestError<parser::ErrorKind> {
         fn eq(&self, other: &parser::Error) -> bool {

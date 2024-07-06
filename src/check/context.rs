@@ -1,20 +1,23 @@
 //! Defines the context in which rule-checking occurs.
 
-use forge_fmt::{format, Comments, FormatterConfig, FormatterError, InlineConfig, Parsed};
-use solang_parser::pt::SourceUnit;
 use std::{
     ffi::OsStr,
     fs,
     path::{Path, PathBuf},
 };
 
-use crate::{check::Violation, scaffold::emitter::Emitter};
-use crate::{
-    config::Config,
-    hir::{self, Hir},
+use forge_fmt::{
+    format, Comments, FormatterConfig, FormatterError, InlineConfig, Parsed,
 };
+use solang_parser::pt::SourceUnit;
 
 use super::{location::Location, violation::ViolationKind};
+use crate::{
+    check::Violation,
+    config::Config,
+    hir::{self, Hir},
+    scaffold::emitter::Emitter,
+};
 
 /// The context in which rule-checking happens.
 ///
@@ -50,34 +53,29 @@ impl Context {
     pub(crate) fn new(tree: PathBuf, cfg: Config) -> Result<Self, Violation> {
         let tree_path_cow = tree.to_string_lossy();
         let tree_contents = try_read_to_string(&tree)?;
-        let hir = crate::hir::translate(&tree_contents, &Default::default()).map_err(|e| {
-            Violation::new(
-                ViolationKind::ParsingFailed(e),
-                Location::File(tree_path_cow.into_owned()),
-            )
-        })?;
+        let hir = crate::hir::translate(&tree_contents, &Default::default())
+            .map_err(|e| {
+                Violation::new(
+                    ViolationKind::ParsingFailed(e),
+                    Location::File(tree_path_cow.into_owned()),
+                )
+            })?;
 
         let sol = get_path_with_ext(&tree, "t.sol")?;
         let src = try_read_to_string(&sol)?;
         let parsed = forge_fmt::parse(&src).map_err(|_| {
             let sol_filename = sol.to_string_lossy().into_owned();
             Violation::new(
-                ViolationKind::ParsingFailed(anyhow::anyhow!("Failed to parse {sol_filename}")),
+                ViolationKind::ParsingFailed(anyhow::anyhow!(
+                    "Failed to parse {sol_filename}"
+                )),
                 Location::File(sol_filename),
             )
         })?;
 
         let pt = parsed.pt.clone();
         let comments = parsed.comments;
-        Ok(Context {
-            tree,
-            hir,
-            sol,
-            src,
-            pt,
-            comments,
-            cfg: cfg.clone(),
-        })
+        Ok(Context { tree, hir, sol, src, pt, comments, cfg: cfg.clone() })
     }
 
     /// Updates this `Context` with the result of parsing a Solidity file.
@@ -108,16 +106,24 @@ impl Context {
         Ok(formatted)
     }
 
-    /// Inserts a function definition into the source string at a specified offset.
+    /// Inserts a function definition into the source string at a specified
+    /// offset.
     ///
-    /// This function takes a `FunctionDefinition` from the High-Level Intermediate Representation (HIR),
-    /// converts it into a Solidity function definition string using an `Emitter`, and then inserts
-    /// this string into the specified source code at a given offset.
+    /// This function takes a `FunctionDefinition` from the High-Level
+    /// Intermediate Representation (HIR), converts it into a Solidity
+    /// function definition string using an `Emitter`, and then inserts this
+    /// string into the specified source code at a given offset.
     ///
     /// # Arguments
-    /// * `function` - A reference to the HIR `FunctionDefinition` to be inserted.
-    /// * `offset` - The character position in the source string where the function definition should be inserted.
-    pub(crate) fn insert_function_at(&mut self, function: &hir::FunctionDefinition, offset: usize) {
+    /// * `function` - A reference to the HIR `FunctionDefinition` to be
+    ///   inserted.
+    /// * `offset` - The character position in the source string where the
+    ///   function definition should be inserted.
+    pub(crate) fn insert_function_at(
+        &mut self,
+        function: &hir::FunctionDefinition,
+        offset: usize,
+    ) {
         let cfg = &Default::default();
         let f = &Hir::FunctionDefinition(function.clone());
         let function = Emitter::new(cfg).emit(f);
@@ -130,7 +136,10 @@ impl Context {
     }
 }
 
-fn get_path_with_ext(path: impl AsRef<Path>, ext: impl AsRef<OsStr>) -> Result<PathBuf, Violation> {
+fn get_path_with_ext(
+    path: impl AsRef<Path>,
+    ext: impl AsRef<OsStr>,
+) -> Result<PathBuf, Violation> {
     let path = path.as_ref();
     let mut sol = path.to_path_buf();
     sol.set_extension(ext);

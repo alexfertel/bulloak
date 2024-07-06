@@ -1,10 +1,8 @@
 use std::{env, fs};
 
+use common::{cmd, get_binary_path};
 use owo_colors::OwoColorize;
 use pretty_assertions::assert_eq;
-
-use common::cmd;
-use common::get_binary_path;
 
 mod common;
 

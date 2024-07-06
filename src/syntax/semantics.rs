@@ -1,12 +1,13 @@
 //! Implementation of the semantic analysis of a bulloak tree.
 
-use std::collections::HashMap;
-use std::{fmt, result};
+use std::{collections::HashMap, fmt, result};
 
 use super::ast::{self, Ast};
-use crate::span::Span;
-use crate::syntax::visitor::Visitor;
-use crate::utils::{lower_first_letter, sanitize, to_pascal_case};
+use crate::{
+    span::Span,
+    syntax::visitor::Visitor,
+    utils::{lower_first_letter, sanitize, to_pascal_case},
+};
 
 type Result<T> = result::Result<T, Vec<Error>>;
 
@@ -73,7 +74,9 @@ impl fmt::Display for Error {
 
 impl fmt::Display for ErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        use self::ErrorKind::{ConditionEmpty, IdentifierDuplicated, NodeUnexpected, TreeEmpty};
+        use self::ErrorKind::{
+            ConditionEmpty, IdentifierDuplicated, NodeUnexpected, TreeEmpty,
+        };
         match *self {
             IdentifierDuplicated(ref spans) => {
                 let lines = spans
@@ -81,7 +84,10 @@ impl fmt::Display for ErrorKind {
                     .map(|s| s.start.line.to_string())
                     .collect::<Vec<String>>()
                     .join(", ");
-                write!(f, "found an identifier more than once in lines: {lines}")
+                write!(
+                    f,
+                    "found an identifier more than once in lines: {lines}"
+                )
             }
             ConditionEmpty => write!(f, "found a condition with no children"),
             NodeUnexpected => write!(f, "unexpected child node"),
@@ -114,11 +120,7 @@ impl<'t> SemanticAnalyzer<'t> {
 
     /// Create a new error given an AST node and error type.
     fn error(&mut self, span: Span, kind: ErrorKind) {
-        self.errors.push(Error {
-            kind,
-            text: self.text.to_owned(),
-            span,
-        });
+        self.errors.push(Error { kind, text: self.text.to_owned(), span });
     }
 
     /// Traverse the given AST and store any errors that occur.
@@ -130,7 +132,9 @@ impl<'t> SemanticAnalyzer<'t> {
             Ast::Root(root) => self.visit_root(root),
             Ast::Condition(condition) => self.visit_condition(condition),
             Ast::Action(action) => self.visit_action(action),
-            Ast::ActionDescription(description) => self.visit_description(description),
+            Ast::ActionDescription(description) => {
+                self.visit_description(description)
+            }
         }
         // It is fine to unwrap here since analysis errors will
         // be stored in `self.errors`.
@@ -140,8 +144,9 @@ impl<'t> SemanticAnalyzer<'t> {
         for spans in self.identifiers.clone().into_values() {
             if spans.len() > 1 {
                 self.error(
-                    // FIXME: This is a patch until we start storing locations for
-                    // parts of an AST node. In this case, we need the location of
+                    // FIXME: This is a patch until we start storing locations
+                    // for parts of an AST node. In this
+                    // case, we need the location of
                     // the condition's title.
                     spans[0].with_end(spans[0].start),
                     ErrorKind::IdentifierDuplicated(spans),
@@ -159,10 +164,13 @@ impl<'t> SemanticAnalyzer<'t> {
 
 /// A visitor that performs semantic analysis on an AST.
 impl Visitor for SemanticAnalyzer<'_> {
-    type Output = ();
     type Error = ();
+    type Output = ();
 
-    fn visit_root(&mut self, root: &ast::Root) -> result::Result<Self::Output, Self::Error> {
+    fn visit_root(
+        &mut self,
+        root: &ast::Root,
+    ) -> result::Result<Self::Output, Self::Error> {
         if root.children.is_empty() {
             self.error(Span::splat(root.span.end), ErrorKind::TreeEmpty);
         }
@@ -173,13 +181,16 @@ impl Visitor for SemanticAnalyzer<'_> {
                     self.visit_condition(condition)?;
                 }
                 Ast::Action(action) => {
-                    // Top-level actions must be checked for duplicates since they will become
-                    // Solidity functions.
-                    let identifier = lower_first_letter(&to_pascal_case(&sanitize(&action.title)));
+                    // Top-level actions must be checked for duplicates since
+                    // they will become Solidity functions.
+                    let identifier = lower_first_letter(&to_pascal_case(
+                        &sanitize(&action.title),
+                    ));
                     match self.identifiers.get_mut(&identifier) {
                         Some(spans) => spans.push(action.span),
                         None => {
-                            self.identifiers.insert(identifier, vec![action.span]);
+                            self.identifiers
+                                .insert(identifier, vec![action.span]);
                         }
                     }
                     self.visit_action(action)?;
@@ -201,7 +212,8 @@ impl Visitor for SemanticAnalyzer<'_> {
             self.error(condition.span, ErrorKind::ConditionEmpty);
         }
 
-        let modifier = lower_first_letter(&to_pascal_case(&sanitize(&condition.title)));
+        let modifier =
+            lower_first_letter(&to_pascal_case(&sanitize(&condition.title)));
         match self.identifiers.get_mut(&modifier) {
             Some(spans) => spans.push(condition.span),
             None => {
@@ -226,7 +238,10 @@ impl Visitor for SemanticAnalyzer<'_> {
         Ok(())
     }
 
-    fn visit_action(&mut self, _action: &ast::Action) -> result::Result<Self::Output, Self::Error> {
+    fn visit_action(
+        &mut self,
+        _action: &ast::Action,
+    ) -> result::Result<Self::Output, Self::Error> {
         // We don't implement any semantic rules here for now.
         Ok(())
     }
@@ -243,11 +258,15 @@ impl Visitor for SemanticAnalyzer<'_> {
 #[cfg(test)]
 mod tests {
 
-    use crate::span::{Position, Span};
-    use crate::syntax::ast;
-    use crate::syntax::parser::Parser;
-    use crate::syntax::semantics::{self, ErrorKind::*};
-    use crate::syntax::tokenizer::Tokenizer;
+    use crate::{
+        span::{Position, Span},
+        syntax::{
+            ast,
+            parser::Parser,
+            semantics::{self, ErrorKind::*},
+            tokenizer::Tokenizer,
+        },
+    };
 
     fn analyze(text: &str) -> semantics::Result<()> {
         let tokens = Tokenizer::new().tokenize(text).unwrap();
@@ -338,7 +357,10 @@ mod tests {
             vec![semantics::Error {
                 kind: ConditionEmpty,
                 text: "Foo_Test\n└── when something".to_owned(),
-                span: Span::new(Position::new(9, 2, 1), Position::new(32, 2, 18)),
+                span: Span::new(
+                    Position::new(9, 2, 1),
+                    Position::new(32, 2, 18)
+                ),
             }]
         );
     }

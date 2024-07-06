@@ -50,11 +50,7 @@ pub struct Position {
 
 impl Default for Position {
     fn default() -> Self {
-        Self {
-            offset: Default::default(),
-            line: 1,
-            column: 1,
-        }
+        Self { offset: Default::default(), line: 1, column: 1 }
     }
 }
 
@@ -114,10 +110,6 @@ impl Position {
     ///
     /// `column` is the approximate column number, starting at `1`.
     pub const fn new(offset: usize, line: usize, column: usize) -> Self {
-        Self {
-            offset,
-            line,
-            column,
-        }
+        Self { offset, line, column }
     }
 }

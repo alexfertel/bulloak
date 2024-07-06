@@ -1,9 +1,12 @@
-//! The implementation of a high-level intermediate representation (HIR) combiner.
+//! The implementation of a high-level intermediate representation (HIR)
+//! combiner.
 use std::{collections::HashSet, fmt, mem, result};
 
-use crate::{constants::CONTRACT_IDENTIFIER_SEPARATOR, span::Span, utils::capitalize_first_letter};
-
 use super::{ContractDefinition, Hir, Root};
+use crate::{
+    constants::CONTRACT_IDENTIFIER_SEPARATOR, span::Span,
+    utils::capitalize_first_letter,
+};
 
 type Result<T> = result::Result<T, Error>;
 
@@ -65,7 +68,9 @@ impl fmt::Display for Error {
 
 impl fmt::Display for ErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        use self::ErrorKind::{ContractNameMismatch, ContractNameMissing, SeparatorMissing};
+        use self::ErrorKind::{
+            ContractNameMismatch, ContractNameMissing, SeparatorMissing,
+        };
         match self {
             ContractNameMismatch(actual, expected) => write!(
                 f,
@@ -124,11 +129,7 @@ impl<'t> CombinerI<'t> {
 
     /// Create a new error with the given span and error type.
     fn error(&self, span: Span, kind: ErrorKind) -> Error {
-        Error {
-            kind,
-            text: self.text.to_owned(),
-            span,
-        }
+        Error { kind, text: self.text.to_owned(), span }
     }
 
     /// Internal implementation of `Combiner::combine`.
@@ -158,22 +159,30 @@ impl<'t> CombinerI<'t> {
                 let (contract_name, function_name) = contract
                     .identifier
                     .split_once(CONTRACT_IDENTIFIER_SEPARATOR)
-                    .ok_or(self.error(Span::default(), ErrorKind::SeparatorMissing(idx + 1)))?;
+                    .ok_or(self.error(
+                        Span::default(),
+                        ErrorKind::SeparatorMissing(idx + 1),
+                    ))?;
 
                 if contract_name.trim().is_empty() {
-                    return Err(
-                        self.error(Span::default(), ErrorKind::ContractNameMissing(idx + 1))
-                    );
+                    return Err(self.error(
+                        Span::default(),
+                        ErrorKind::ContractNameMissing(idx + 1),
+                    ));
                 }
 
-                // If the accumulated identifier is empty, we're on the first contract.
+                // If the accumulated identifier is empty, we're on the first
+                // contract.
                 if acc_contract.identifier.is_empty() {
-                    // Add modifiers to the list of added modifiers and prefix test names.
+                    // Add modifiers to the list of added modifiers and prefix
+                    // test names.
                     let children = contract
                         .children
                         .into_iter()
                         .map(|c| prefix_test(c, function_name))
-                        .filter_map(|c| collect_modifier(c, &mut unique_modifiers))
+                        .filter_map(|c| {
+                            collect_modifier(c, &mut unique_modifiers)
+                        })
                         .collect();
                     let first_contract = ContractDefinition {
                         identifier: contract_name.to_owned(),
@@ -194,8 +203,11 @@ impl<'t> CombinerI<'t> {
                     ));
                 }
 
-                let children =
-                    update_children(contract.children, function_name, &mut unique_modifiers);
+                let children = update_children(
+                    contract.children,
+                    function_name,
+                    &mut unique_modifiers,
+                );
                 acc_contract.children.extend(children);
             }
         }
@@ -213,7 +225,8 @@ fn prefix_test(child: Hir, prefix: &str) -> Hir {
     };
 
     if test_or_modifier.is_function() {
-        test_or_modifier.identifier = prefix_test_with(&test_or_modifier.identifier, prefix);
+        test_or_modifier.identifier =
+            prefix_test_with(&test_or_modifier.identifier, prefix);
     }
 
     Hir::FunctionDefinition(test_or_modifier)
@@ -239,7 +252,10 @@ fn prefix_test_with(test_name: &str, prefix: &str) -> String {
     format!("test_{capitalized_fn_name}{test_suffix}")
 }
 
-fn collect_modifier(child: Hir, unique_modifiers: &mut HashSet<String>) -> Option<Hir> {
+fn collect_modifier(
+    child: Hir,
+    unique_modifiers: &mut HashSet<String>,
+) -> Option<Hir> {
     let Hir::FunctionDefinition(test_or_modifier) = child else {
         return Some(child);
     };
@@ -260,12 +276,13 @@ mod tests {
     use anyhow::{Error, Result};
     use pretty_assertions::assert_eq;
 
-    use crate::config::Config;
-    use crate::hir::{self, Hir};
-    use crate::scaffold::modifiers;
-    use crate::span::{Position, Span};
-    use crate::syntax::parser::Parser;
-    use crate::syntax::tokenizer::Tokenizer;
+    use crate::{
+        config::Config,
+        hir::{self, Hir},
+        scaffold::modifiers,
+        span::{Position, Span},
+        syntax::{parser::Parser, tokenizer::Tokenizer},
+    };
 
     fn translate(text: &str) -> Result<Hir> {
         let tokens = Tokenizer::new().tokenize(&text)?;
@@ -354,7 +371,8 @@ bulloak error: contract name missing at tree root #2";
             "Contract::function1\n└── when something bad happens\n    └── it should revert",
             "Contract::function2\n└── when something shit happens\n    └── it should revert",
         ];
-        let mut hirs: Vec<_> = trees.iter().map(|tree| translate(tree).unwrap()).collect();
+        let mut hirs: Vec<_> =
+            trees.iter().map(|tree| translate(tree).unwrap()).collect();
 
         // Append a comment HIR to the hirs.
         hirs.push(root(vec![comment("this is a random comment".to_owned())]));
@@ -371,9 +389,13 @@ bulloak error: contract name missing at tree root #2";
                 "Contract".to_owned(),
                 vec![
                     function(
-                        "test_Function1RevertWhen_SomethingBadHappens".to_owned(),
+                        "test_Function1RevertWhen_SomethingBadHappens"
+                            .to_owned(),
                         hir::FunctionTy::Function,
-                        Span::new(Position::new(20, 2, 1), Position::new(86, 3, 24)),
+                        Span::new(
+                            Position::new(20, 2, 1),
+                            Position::new(86, 3, 24)
+                        ),
                         None,
                         Some(vec![
                             comment("it should revert".to_owned()),
@@ -381,9 +403,13 @@ bulloak error: contract name missing at tree root #2";
                         ])
                     ),
                     function(
-                        "test_Function2RevertWhen_SomethingShitHappens".to_owned(),
+                        "test_Function2RevertWhen_SomethingShitHappens"
+                            .to_owned(),
                         hir::FunctionTy::Function,
-                        Span::new(Position::new(20, 2, 1), Position::new(87, 3, 24)),
+                        Span::new(
+                            Position::new(20, 2, 1),
+                            Position::new(87, 3, 24)
+                        ),
                         None,
                         Some(vec![
                             comment("it should revert".to_owned()),
@@ -401,7 +427,8 @@ bulloak error: contract name missing at tree root #2";
             "Contract::function1\n└── when something bad happens\n    └── given something else happens\n        └── it should revert",
             "Contract::function2\n└── when something bad happens\n    └── given the caller is 0x1337\n        └── it should revert",
         ];
-        let mut hirs: Vec<_> = trees.iter().map(|tree| translate(tree).unwrap()).collect();
+        let mut hirs: Vec<_> =
+            trees.iter().map(|tree| translate(tree).unwrap()).collect();
 
         // Append a comment HIR to the hirs.
         hirs.push(root(vec![comment("this is a random comment".to_owned())]));
@@ -420,14 +447,21 @@ bulloak error: contract name missing at tree root #2";
                     function(
                         "whenSomethingBadHappens".to_owned(),
                         hir::FunctionTy::Modifier,
-                        Span::new(Position::new(20, 2, 1), Position::new(133, 4, 28)),
+                        Span::new(
+                            Position::new(20, 2, 1),
+                            Position::new(133, 4, 28)
+                        ),
                         None,
                         None
                     ),
                     function(
-                        "test_Function1RevertGiven_SomethingElseHappens".to_owned(),
+                        "test_Function1RevertGiven_SomethingElseHappens"
+                            .to_owned(),
                         hir::FunctionTy::Function,
-                        Span::new(Position::new(61, 3, 5), Position::new(133, 4, 28)),
+                        Span::new(
+                            Position::new(61, 3, 5),
+                            Position::new(133, 4, 28)
+                        ),
                         Some(vec!["whenSomethingBadHappens".to_owned()]),
                         Some(vec![
                             comment("it should revert".to_owned()),
@@ -435,9 +469,13 @@ bulloak error: contract name missing at tree root #2";
                         ])
                     ),
                     function(
-                        "test_Function2RevertGiven_TheCallerIs0x1337".to_owned(),
+                        "test_Function2RevertGiven_TheCallerIs0x1337"
+                            .to_owned(),
                         hir::FunctionTy::Function,
-                        Span::new(Position::new(61, 3, 5), Position::new(131, 4, 28)),
+                        Span::new(
+                            Position::new(61, 3, 5),
+                            Position::new(131, 4, 28)
+                        ),
                         Some(vec!["whenSomethingBadHappens".to_owned()]),
                         Some(vec![
                             comment("it should revert".to_owned()),

@@ -1,23 +1,20 @@
 //! Defines the `bulloak check` command.
 //!
-//! This command performs checks on the relationship between a bulloak tree and a
-//! Solidity file.
+//! This command performs checks on the relationship between a bulloak tree and
+//! a Solidity file.
 
-use std::fs;
-use std::path::PathBuf;
+use std::{fs, path::PathBuf};
 
 use clap::Parser;
 use owo_colors::OwoColorize;
 use serde::{Deserialize, Serialize};
 use violation::{Violation, ViolationKind};
 
-use crate::check::violation::fix_order;
-use crate::config::Config;
-use crate::sol::find_contract;
-use crate::utils::pluralize;
-
-use self::context::Context;
-use self::rules::Checker;
+use self::{context::Context, rules::Checker};
+use crate::{
+    check::violation::fix_order, config::Config, sol::find_contract,
+    utils::pluralize,
+};
 
 mod context;
 mod location;
@@ -71,12 +68,16 @@ impl Check {
             let mut fixed_count = 0;
             for mut ctx in ctxs {
                 let violations = rules::StructuralMatcher::check(&ctx);
-                let fixable_count = violations.iter().filter(|v| v.is_fixable()).count();
+                let fixable_count =
+                    violations.iter().filter(|v| v.is_fixable()).count();
 
                 // Process violations that affect function order first.
-                let violations = violations
-                    .into_iter()
-                    .filter(|v| !matches!(v.kind, ViolationKind::FunctionOrderMismatch(_, _, _)));
+                let violations = violations.into_iter().filter(|v| {
+                    !matches!(
+                        v.kind,
+                        ViolationKind::FunctionOrderMismatch(_, _, _)
+                    )
+                });
                 for violation in violations {
                     ctx = violation.kind.fix(ctx);
                 }
@@ -85,18 +86,31 @@ impl Check {
                 let violations = rules::StructuralMatcher::check(&ctx);
                 let violations: Vec<Violation> = violations
                     .into_iter()
-                    .filter(|v| matches!(v.kind, ViolationKind::FunctionOrderMismatch(_, _, _)))
+                    .filter(|v| {
+                        matches!(
+                            v.kind,
+                            ViolationKind::FunctionOrderMismatch(_, _, _)
+                        )
+                    })
                     .collect();
                 if !violations.is_empty() {
                     if let Some(contract_sol) = find_contract(&ctx.pt) {
-                        if let Some(contract_hir) = ctx.hir.clone().find_contract() {
-                            ctx = fix_order(&violations, &contract_sol, contract_hir, ctx);
+                        if let Some(contract_hir) =
+                            ctx.hir.clone().find_contract()
+                        {
+                            ctx = fix_order(
+                                &violations,
+                                &contract_sol,
+                                contract_hir,
+                                ctx,
+                            );
                         }
                     }
                 }
 
                 let sol = ctx.sol.clone();
-                let formatted = ctx.fmt().expect("should format the emitted solidity code");
+                let formatted =
+                    ctx.fmt().expect("should format the emitted solidity code");
                 self.write(&formatted, sol);
 
                 fixed_count += fixable_count;
@@ -153,7 +167,8 @@ fn exit(violations: &[Violation]) {
             violations.len(),
             check_literal
         );
-        let fixable_count = violations.iter().filter(|v| v.is_fixable()).count();
+        let fixable_count =
+            violations.iter().filter(|v| v.is_fixable()).count();
         if fixable_count > 0 {
             let fix_literal = pluralize(fixable_count, "fix", "fixes");
             eprintln!(

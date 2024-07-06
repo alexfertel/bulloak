@@ -5,15 +5,19 @@
 
 use indexmap::IndexMap;
 
-use crate::syntax::ast::{self, Ast};
-use crate::syntax::visitor::Visitor;
-use crate::utils::{lower_first_letter, to_pascal_case};
+use crate::{
+    syntax::{
+        ast::{self, Ast},
+        visitor::Visitor,
+    },
+    utils::{lower_first_letter, to_pascal_case},
+};
 
 /// AST visitor that discovers modifiers.
 ///
-/// Modifiers are discovered by visiting the AST and collecting all condition titles.
-/// The collected titles are then converted to modifiers. For example, the title
-/// `when only owner` is converted to the `whenOnlyOwner` modifier.
+/// Modifiers are discovered by visiting the AST and collecting all condition
+/// titles. The collected titles are then converted to modifiers. For example,
+/// the title `when only owner` is converted to the `whenOnlyOwner` modifier.
 ///
 /// For ease of retrieval, the discovered modifiers are stored in a `IndexMap`
 /// for the later phases of the compiler.
@@ -29,9 +33,7 @@ impl ModifierDiscoverer {
     /// Create a new discoverer.
     #[must_use]
     pub fn new() -> Self {
-        Self {
-            modifiers: IndexMap::new(),
-        }
+        Self { modifiers: IndexMap::new() }
     }
 
     /// Discover modifiers in the given AST.
@@ -52,10 +54,13 @@ impl ModifierDiscoverer {
 /// A visitor that stores key-value pairs of condition titles and
 /// their corresponding modifiers.
 impl Visitor for ModifierDiscoverer {
-    type Output = ();
     type Error = ();
+    type Output = ();
 
-    fn visit_root(&mut self, root: &ast::Root) -> Result<Self::Output, Self::Error> {
+    fn visit_root(
+        &mut self,
+        root: &ast::Root,
+    ) -> Result<Self::Output, Self::Error> {
         for condition in &root.children {
             if let Ast::Condition(condition) = condition {
                 self.visit_condition(condition)?;
@@ -65,7 +70,10 @@ impl Visitor for ModifierDiscoverer {
         Ok(())
     }
 
-    fn visit_condition(&mut self, condition: &ast::Condition) -> Result<Self::Output, Self::Error> {
+    fn visit_condition(
+        &mut self,
+        condition: &ast::Condition,
+    ) -> Result<Self::Output, Self::Error> {
         self.modifiers.insert(
             condition.title.clone(),
             lower_first_letter(&to_pascal_case(&condition.title)),
@@ -80,7 +88,10 @@ impl Visitor for ModifierDiscoverer {
         Ok(())
     }
 
-    fn visit_action(&mut self, _action: &ast::Action) -> Result<Self::Output, Self::Error> {
+    fn visit_action(
+        &mut self,
+        _action: &ast::Action,
+    ) -> Result<Self::Output, Self::Error> {
         // No-op.
         Ok(())
     }
@@ -97,13 +108,13 @@ impl Visitor for ModifierDiscoverer {
 #[cfg(test)]
 mod tests {
     use indexmap::IndexMap;
-
     use pretty_assertions::assert_eq;
 
-    use crate::error::Result;
-    use crate::scaffold::modifiers::ModifierDiscoverer;
-    use crate::syntax::parser::Parser;
-    use crate::syntax::tokenizer::Tokenizer;
+    use crate::{
+        error::Result,
+        scaffold::modifiers::ModifierDiscoverer,
+        syntax::{parser::Parser, tokenizer::Tokenizer},
+    };
 
     fn discover(file_contents: &str) -> Result<IndexMap<String, String>> {
         let tokens = Tokenizer::new().tokenize(file_contents)?;
@@ -202,7 +213,8 @@ mod tests {
                     "whenTheAssetMissesTheERC_20ReturnValue".to_owned()
                 ),
                 (
-                    "when the asset does not miss the ERC_20 return value".to_owned(),
+                    "when the asset does not miss the ERC_20 return value"
+                        .to_owned(),
                     "whenTheAssetDoesNotMissTheERC_20ReturnValue".to_owned()
                 ),
             ])

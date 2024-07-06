@@ -1,14 +1,14 @@
 use once_cell::sync::Lazy;
 use regex::Regex;
 use solang_parser::pt::{
-    Base, ContractDefinition, ContractPart, ErrorDefinition, ErrorParameter, EventDefinition,
-    EventParameter, Expression, FunctionAttribute, FunctionDefinition, Parameter, SourceUnit,
-    SourceUnitPart, Statement, StructDefinition, TypeDefinition, VariableAttribute,
+    Base, ContractDefinition, ContractPart, ErrorDefinition, ErrorParameter,
+    EventDefinition, EventParameter, Expression, FunctionAttribute,
+    FunctionDefinition, Parameter, SourceUnit, SourceUnitPart, Statement,
+    StructDefinition, TypeDefinition, VariableAttribute,
 };
 
-use crate::utils::sanitize;
-
 use super::visitor::Visitor;
+use crate::utils::sanitize;
 
 trait Identified {
     fn name(&self) -> String;
@@ -37,8 +37,8 @@ impl Formatter {
 }
 
 impl Visitor for Formatter {
-    type Output = String;
     type Error = ();
+    type Output = String;
 
     fn visit_source_unit(
         &mut self,
@@ -63,8 +63,12 @@ impl Visitor for Formatter {
 
                 Ok(header)
             }
-            SourceUnitPart::ContractDefinition(inner) => self.visit_contract(inner),
-            SourceUnitPart::FunctionDefinition(inner) => self.visit_function(inner),
+            SourceUnitPart::ContractDefinition(inner) => {
+                self.visit_contract(inner)
+            }
+            SourceUnitPart::FunctionDefinition(inner) => {
+                self.visit_function(inner)
+            }
             SourceUnitPart::StraySemicolon(_) => Ok(";".to_owned()),
             part => Ok(format!("{part}")),
         }
@@ -116,7 +120,9 @@ impl Visitor for Formatter {
             ContractPart::StructDefinition(inner) => Ok(format!("{inner}")),
             ContractPart::EventDefinition(inner) => Ok(format!("{inner}")),
             ContractPart::ErrorDefinition(inner) => Ok(format!("{inner}")),
-            ContractPart::FunctionDefinition(inner) => self.visit_function(inner),
+            ContractPart::FunctionDefinition(inner) => {
+                self.visit_function(inner)
+            }
             ContractPart::VariableDefinition(inner) => Ok(format!("{inner}")),
             ContractPart::TypeDefinition(inner) => Ok(format!("{inner}")),
             ContractPart::Annotation(inner) => Ok(format!("{inner}")),
@@ -179,13 +185,12 @@ impl Visitor for Formatter {
         Ok(result)
     }
 
-    fn visit_statement(&mut self, statement: &mut Statement) -> Result<Self::Output, Self::Error> {
+    fn visit_statement(
+        &mut self,
+        statement: &mut Statement,
+    ) -> Result<Self::Output, Self::Error> {
         match statement {
-            Statement::Block {
-                unchecked,
-                statements,
-                ..
-            } => {
+            Statement::Block { unchecked, statements, .. } => {
                 let mut result = String::new();
 
                 if *unchecked {
@@ -206,12 +211,17 @@ impl Visitor for Formatter {
 
                 Ok(result)
             }
-            Statement::Expression(_, ref mut expression) => self.visit_expr(expression),
+            Statement::Expression(_, ref mut expression) => {
+                self.visit_expr(expression)
+            }
             statement => Ok(format!("{statement}")),
         }
     }
 
-    fn visit_expr(&mut self, expression: &mut Expression) -> Result<Self::Output, Self::Error> {
+    fn visit_expr(
+        &mut self,
+        expression: &mut Expression,
+    ) -> Result<Self::Output, Self::Error> {
         match expression {
             Expression::Variable(identifier) => {
                 // We need to special case `_`. See
@@ -241,11 +251,17 @@ impl Visitor for Formatter {
         Ok(format!("{attribute}"))
     }
 
-    fn visit_base(&mut self, base: &mut Base) -> Result<Self::Output, Self::Error> {
+    fn visit_base(
+        &mut self,
+        base: &mut Base,
+    ) -> Result<Self::Output, Self::Error> {
         Ok(format!("{base}"))
     }
 
-    fn visit_parameter(&mut self, parameter: &mut Parameter) -> Result<Self::Output, Self::Error> {
+    fn visit_parameter(
+        &mut self,
+        parameter: &mut Parameter,
+    ) -> Result<Self::Output, Self::Error> {
         Ok(format!("{parameter}"))
     }
 
@@ -256,7 +272,10 @@ impl Visitor for Formatter {
         Ok(format!("{structure}"))
     }
 
-    fn visit_event(&mut self, event: &mut EventDefinition) -> Result<Self::Output, Self::Error> {
+    fn visit_event(
+        &mut self,
+        event: &mut EventDefinition,
+    ) -> Result<Self::Output, Self::Error> {
         Ok(format!("{event}"))
     }
 
@@ -267,7 +286,10 @@ impl Visitor for Formatter {
         Ok(format!("{param}"))
     }
 
-    fn visit_error(&mut self, error: &mut ErrorDefinition) -> Result<Self::Output, Self::Error> {
+    fn visit_error(
+        &mut self,
+        error: &mut ErrorDefinition,
+    ) -> Result<Self::Output, Self::Error> {
         Ok(format!("{error}"))
     }
 
@@ -286,13 +308,15 @@ impl Visitor for Formatter {
     }
 }
 
-/// Converts special `__bulloak_comment__` variables to regular solidity comments.
+/// Converts special `__bulloak_comment__` variables to regular solidity
+/// comments.
 ///
-/// Specifically, it looks for patterns matching `string __bulloak_comment__ = "<comment>";`
-/// and converts them into `// <comment>` format.
+/// Specifically, it looks for patterns matching `string __bulloak_comment__ =
+/// "<comment>";` and converts them into `// <comment>` format.
 fn cleanup_comments(source: &str) -> String {
-    static RE_BULLOAK_COMMENT: Lazy<Regex> =
-        Lazy::new(|| Regex::new(r#"string __bulloak_comment__ = "(.*)";"#).unwrap());
+    static RE_BULLOAK_COMMENT: Lazy<Regex> = Lazy::new(|| {
+        Regex::new(r#"string __bulloak_comment__ = "(.*)";"#).unwrap()
+    });
     RE_BULLOAK_COMMENT.replace_all(source, "// $1").to_string()
 }
 

@@ -1,13 +1,11 @@
-use std::cmp;
-use std::fmt;
-use std::result;
+use std::{cmp, fmt, result};
 
-use crate::hir::combiner;
-use crate::span;
-use crate::syntax::parser;
-use crate::syntax::semantics;
-use crate::syntax::tokenizer;
-use crate::utils::repeat_str;
+use crate::{
+    hir::combiner,
+    span,
+    syntax::{parser, semantics, tokenizer},
+    utils::repeat_str,
+};
 
 /// A type alias for dealing with errors returned when parsing.
 pub(crate) type Result<T> = result::Result<T, Error>;
@@ -86,41 +84,25 @@ pub(crate) struct Formatter<'e, E> {
 
 impl<'e> From<&'e parser::Error> for Formatter<'e, parser::ErrorKind> {
     fn from(err: &'e parser::Error) -> Self {
-        Formatter {
-            text: err.text(),
-            err: err.kind(),
-            span: err.span(),
-        }
+        Formatter { text: err.text(), err: err.kind(), span: err.span() }
     }
 }
 
 impl<'e> From<&'e tokenizer::Error> for Formatter<'e, tokenizer::ErrorKind> {
     fn from(err: &'e tokenizer::Error) -> Self {
-        Formatter {
-            text: err.text(),
-            err: err.kind(),
-            span: err.span(),
-        }
+        Formatter { text: err.text(), err: err.kind(), span: err.span() }
     }
 }
 
 impl<'e> From<&'e combiner::Error> for Formatter<'e, combiner::ErrorKind> {
     fn from(err: &'e combiner::Error) -> Self {
-        Formatter {
-            text: err.text(),
-            err: err.kind(),
-            span: err.span(),
-        }
+        Formatter { text: err.text(), err: err.kind(), span: err.span() }
     }
 }
 
 impl<'e> From<&'e semantics::Error> for Formatter<'e, semantics::ErrorKind> {
     fn from(err: &'e semantics::Error) -> Self {
-        Formatter {
-            text: err.text(),
-            err: err.kind(),
-            span: err.span(),
-        }
+        Formatter { text: err.text(), err: err.kind(), span: err.span() }
     }
 }
 
@@ -155,7 +137,8 @@ fn notate<E>(f: &Formatter<'_, E>) -> String {
         notated.push_str(line);
         notated.push('\n');
         notated.push_str(&repeat_str(" ", f.span.start.column - 1));
-        let note_len = f.span.end.column.saturating_sub(f.span.start.column) + 1;
+        let note_len =
+            f.span.end.column.saturating_sub(f.span.start.column) + 1;
         let note_len = cmp::max(1, note_len);
         notated.push_str(&repeat_str("^", note_len));
         notated.push('\n');
@@ -166,11 +149,14 @@ fn notate<E>(f: &Formatter<'_, E>) -> String {
 
 #[cfg(test)]
 mod test {
-    use super::repeat_str;
-    use crate::error::Formatter;
-    use crate::span::{Position, Span};
-    use crate::syntax::{parser, semantics};
     use pretty_assertions::assert_eq;
+
+    use super::repeat_str;
+    use crate::{
+        error::Formatter,
+        span::{Position, Span},
+        syntax::{parser, semantics},
+    };
 
     #[test]
     fn test_notate() {
@@ -186,7 +172,8 @@ mod test {
         let mut expected = String::from("");
         expected.push_str(&repeat_str("•", 79));
         expected.push('\n');
-        expected.push_str(format!("bulloak error: {}\n\n", formatter.err).as_str());
+        expected
+            .push_str(format!("bulloak error: {}\n\n", formatter.err).as_str());
         expected.push_str("world\n");
         expected.push_str("^^^^^\n\n");
         expected.push_str(
