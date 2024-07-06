@@ -53,7 +53,7 @@ impl Context {
     pub(crate) fn new(tree: PathBuf, cfg: Config) -> Result<Self, Violation> {
         let tree_path_cow = tree.to_string_lossy();
         let tree_contents = try_read_to_string(&tree)?;
-        let hir = crate::hir::translate(&tree_contents, &Default::default())
+        let hir = crate::hir::translate(&tree_contents, &Config::default())
             .map_err(|e| {
                 Violation::new(
                     ViolationKind::ParsingFailed(e),
@@ -124,7 +124,7 @@ impl Context {
         function: &hir::FunctionDefinition,
         offset: usize,
     ) {
-        let cfg = &Default::default();
+        let cfg = &Config::default();
         let f = &Hir::FunctionDefinition(function.clone());
         let function = Emitter::new(cfg).emit(f);
         self.src = format!(

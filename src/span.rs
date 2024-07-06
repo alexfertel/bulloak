@@ -50,7 +50,7 @@ pub struct Position {
 
 impl Default for Position {
     fn default() -> Self {
-        Self { offset: Default::default(), line: 1, column: 1 }
+        Self { offset: usize::default(), line: 1, column: 1 }
     }
 }
 

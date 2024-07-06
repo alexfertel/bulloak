@@ -14,6 +14,7 @@ use solang_parser::{
 
 use super::{context::Context, location::Location};
 use crate::{
+    config::Config,
     error,
     hir::{self, Hir},
     sol::{self, find_contract, find_matching_fn},
@@ -193,7 +194,7 @@ impl ViolationKind {
     pub(crate) fn fix(&self, mut ctx: Context) -> Context {
         match self {
             ViolationKind::ContractMissing(_) => {
-                let pt = sol::Translator::new(&Default::default())
+                let pt = sol::Translator::new(&Config::default())
                     .translate(&ctx.hir);
                 let source = sol::Formatter::new().emit(pt.clone());
                 let parsed =
