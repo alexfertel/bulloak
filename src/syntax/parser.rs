@@ -1,7 +1,7 @@
 //! A parser implementation for a stream of tokens representing a bulloak tree.
-
-use std::fmt;
 use std::{borrow::Borrow, cell::Cell, result};
+
+use thiserror::Error;
 
 use super::ast::{Action, Ast, Condition, Description, Root};
 use super::tokenizer::{Token, TokenKind};
@@ -12,9 +12,10 @@ type Result<T> = result::Result<T, Error>;
 
 /// An error that occurred while parsing a sequence of tokens into an abstract
 /// syntax tree (AST).
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Error, Clone, Debug, Eq, PartialEq)]
 pub struct Error {
     /// The kind of error.
+    #[source]
     kind: ErrorKind,
     /// The original text that the parser generated the error from. Every
     /// span in an error is a valid range into this string.
@@ -22,8 +23,6 @@ pub struct Error {
     /// The span of this error.
     span: Span,
 }
-
-impl std::error::Error for Error {}
 
 impl Error {
     /// Return the type of this error.
@@ -48,69 +47,59 @@ impl Error {
 type Lexeme = String;
 
 /// The type of an error that occurred while building an AST.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Error, Clone, Debug, Eq, PartialEq)]
 #[non_exhaustive]
 pub enum ErrorKind {
-    /// This might happen because of an internal bug or the user
-    /// might have passed an invalid .tree.
-    /// An example of how this might be an internal bug is if the
-    /// parser ends up in a state where the current grammar production
+    /// This might happen because of an internal bug or the user might have
+    /// passed an invalid .tree. An example of how this might be an internal bug
+    /// is if the parser ends up in a state where the current grammar production
     /// being applied doesn't expect this token to occur.
+    #[error("unexpected token '{0}'")]
     TokenUnexpected(Lexeme),
+
     /// Did not expect this token when parsing a description node.
+    #[error("unexpected token in description '{0}'")]
     DescriptionTokenUnexpected(Lexeme),
+
     /// Did not expect this When keyword.
+    #[error("unexpected `when` keyword")]
     WhenUnexpected,
+
     /// Did not expect this Given keyword.
+    #[error("unexpected `given` keyword")]
     GivenUnexpected,
+
     /// Did not expect this It keyword.
+    #[error("unexpected `it` keyword")]
     ItUnexpected,
+
     /// Did not expect a Word.
+    #[error("unexpected `word` '{0}'")]
     WordUnexpected(Lexeme),
+
     /// Did not expect an end of file.
+    #[error("unexpected end of file")]
     EofUnexpected,
+
     /// The token stream was empty, so the tree is empty.
+    #[error("found an empty tree")]
     TreeEmpty,
+
     /// A condition or action with no title was found.
+    #[error("found a condition/action without a title")]
     TitleMissing,
+
     /// A tree without a root was found.
+    #[error("missing a root")]
     TreeRootless,
+
     /// A corner is not the last child.
+    #[error("a `Corner` must be the last child")]
     CornerNotLastChild,
+
     /// A tee is the last child.
+    #[error("a `Tee` must not be the last child")]
     TeeLastChild,
-}
-
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        crate::error::Formatter::from(self).fmt(f)
-    }
-}
-
-impl fmt::Display for ErrorKind {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        use self::ErrorKind::{
-            CornerNotLastChild, DescriptionTokenUnexpected, EofUnexpected, GivenUnexpected,
-            ItUnexpected, TeeLastChild, TitleMissing, TokenUnexpected, TreeEmpty, TreeRootless,
-            WhenUnexpected, WordUnexpected,
-        };
-        match self {
-            TokenUnexpected(lexeme) => write!(f, "unexpected token '{lexeme}'"),
-            DescriptionTokenUnexpected(lexeme) => {
-                write!(f, "unexpected token in description '{lexeme}'")
-            }
-            WhenUnexpected => write!(f, "unexpected `when` keyword"),
-            GivenUnexpected => write!(f, "unexpected `given` keyword"),
-            ItUnexpected => write!(f, "unexpected `it` keyword"),
-            WordUnexpected(lexeme) => write!(f, "unexpected `word` '{lexeme}'"),
-            EofUnexpected => write!(f, "unexpected end of file"),
-            TreeEmpty => write!(f, "found an empty tree"),
-            TreeRootless => write!(f, "missing a root"),
-            TitleMissing => write!(f, "found a condition/action without a title"),
-            CornerNotLastChild => write!(f, "a `Corner` must be the last child"),
-            TeeLastChild => write!(f, "a `Tee` must not be the last child"),
-        }
-    }
 }
 
 /// A parser for a sequence of .tree tokens into an abstract syntax tree (AST).

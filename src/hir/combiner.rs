@@ -1,5 +1,8 @@
-//! The implementation of a high-level intermediate representation (HIR) combiner.
-use std::{collections::HashSet, fmt, mem, result};
+//! The implementation of a high-level intermediate representation (HIR)
+//! combiner.
+use std::{collections::HashSet, mem, result};
+
+use thiserror::Error;
 
 use crate::{constants::CONTRACT_IDENTIFIER_SEPARATOR, span::Span, utils::capitalize_first_letter};
 
@@ -8,9 +11,10 @@ use super::{ContractDefinition, Hir, Root};
 type Result<T> = result::Result<T, Error>;
 
 /// An error that occurred while combining HIRs.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Error, Clone, Debug, Eq, PartialEq)]
 pub struct Error {
     /// The kind of error.
+    #[source]
     kind: ErrorKind,
     /// The original text that the parser generated the error from. Every
     /// span in an error is a valid range into this string.
@@ -18,8 +22,6 @@ pub struct Error {
     /// The span of this error.
     span: Span,
 }
-
-impl std::error::Error for Error {}
 
 impl Error {
     /// Return the type of this error.
@@ -45,42 +47,27 @@ type Identifier = String;
 type Index = usize;
 
 /// The type of an error that occurred while combining HIRs.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Error, Clone, Debug, Eq, PartialEq)]
 #[non_exhaustive]
 pub enum ErrorKind {
     /// This happens when the contract name in the identifier of one HIR does
     /// not match the contract name in the identifier of another HIR.
-    ContractNameMismatch(Identifier, Identifier),
+    #[error("contract name mismatch: expected '{expected}', found '{actual}'")]
+    ContractNameMismatch {
+        /// The name found in the current tree being analyzed.
+        actual: Identifier,
+        /// The name expected to be found during analysis.
+        expected: Identifier,
+    },
+
     /// No contract name was found in one of the tree roots.
+    #[error("contract name missing at tree root #{0}")]
     ContractNameMissing(Index),
-    /// A `CONTRACT_IDENTIFIER_SEPARATOR` was missing in one of the tree roots.
+
+    /// A [`crate::constants::CONTRACT_IDENTIFIER_SEPARATOR`] was missing in one
+    /// of the tree roots.
+    #[error("separator missing at tree root #{0}. Expected to find `::` between the contract name and the function name when multiple roots exist")]
     SeparatorMissing(Index),
-}
-
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        crate::error::Formatter::from(self).fmt(f)
-    }
-}
-
-impl fmt::Display for ErrorKind {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        use self::ErrorKind::{ContractNameMismatch, ContractNameMissing, SeparatorMissing};
-        match self {
-            ContractNameMismatch(actual, expected) => write!(
-                f,
-                "contract name mismatch: expected '{expected}', found '{actual}'"
-            ),
-            ContractNameMissing(index) => write!(
-                f,
-                "contract name missing at tree root #{index}"
-            ),
-            SeparatorMissing(index) => write!(
-                f,
-                "separator missing at tree root #{index}. Expected to find a `::` between the contract name and the function name when multiple roots exist"
-            ),
-        }
-    }
 }
 
 /// A high-level intermediate representation (HIR) combiner.
@@ -187,10 +174,10 @@ impl<'t> CombinerI<'t> {
                 if contract_name != acc_contract.identifier {
                     return Err(self.error(
                         Span::default(),
-                        ErrorKind::ContractNameMismatch(
-                            contract_name.to_owned(),
-                            acc_contract.identifier.clone(),
-                        ),
+                        ErrorKind::ContractNameMismatch {
+                            actual: contract_name.to_owned(),
+                            expected: acc_contract.identifier.clone(),
+                        },
                     ));
                 }
 
