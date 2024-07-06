@@ -1,7 +1,7 @@
-//! Defines a modifier discovering step in the compiler.
+//! Defines a modifier-discovering step in the compiler.
 //!
-//! It visits the AST in depth-first order, storing modifiers
-//! for use in later phases.
+//! It visits the AST in depth-first order, storing modifiers for use in later
+//! phases.
 
 use indexmap::IndexMap;
 
@@ -11,15 +11,14 @@ use crate::utils::{lower_first_letter, to_pascal_case};
 
 /// AST visitor that discovers modifiers.
 ///
-/// Modifiers are discovered by visiting the AST and collecting all condition titles.
-/// The collected titles are then converted to modifiers. For example, the title
-/// `when only owner` is converted to the `whenOnlyOwner` modifier.
+/// Modifiers are discovered by visiting the AST and collecting all condition
+/// titles. The collected titles are then converted to modifiers. For example,
+/// the title `when only owner` is converted to the `whenOnlyOwner` modifier.
 ///
 /// For ease of retrieval, the discovered modifiers are stored in a `IndexMap`
-/// for the later phases of the compiler.
-/// `IndexMap` was chosen since preserving the order of insertion
-/// to match the order of the modifiers in the source tree is helpful
-/// and the performance trade-off is negligible.
+/// for the later phases of the compiler. `IndexMap` was chosen since preserving
+/// the order of insertion to match the order of the modifiers in the source
+/// tree is helpful and the performance trade-off is negligible.
 #[derive(Clone, Default)]
 pub struct ModifierDiscoverer {
     modifiers: IndexMap<String, String>,
@@ -36,8 +35,8 @@ impl ModifierDiscoverer {
 
     /// Discover modifiers in the given AST.
     ///
-    /// `discover` is the entry point of the `ModifierDiscoverer`.
-    /// It takes an abstract syntax tree (AST) and returns a map of modifiers.
+    /// `discover` is the entry point of the `ModifierDiscoverer`. It takes an
+    /// abstract syntax tree (AST) and returns a map of modifiers.
     pub fn discover(&mut self, ast: &Ast) -> &IndexMap<String, String> {
         match ast {
             Ast::Root(root) => {
