@@ -13,35 +13,22 @@ pub struct Config {
 }
 
 impl Config {
-    pub(crate) fn scaffold(&self) -> crate::scaffold::Scaffold {
-        match self.command.clone() {
-            Commands::Scaffold(s) => s,
-            Commands::Check(_) => Default::default(),
-        }
-    }
-
-    pub(crate) fn check(&self) -> crate::check::Check {
-        match self.command.clone() {
-            Commands::Check(c) => c,
-            Commands::Scaffold(_) => Default::default(),
-        }
-    }
-
     /// Return a cloned `Config` instance with `with_vm_skip` set to the passed
     /// value.
     #[must_use]
-    pub fn with_vm_skip(&self, with_vm_skip: bool) -> Config {
-        if let Commands::Scaffold(ref s) = self.command {
-            return Config {
-                command: Commands::Scaffold(crate::scaffold::Scaffold {
-                    with_vm_skip,
-                    ..s.clone()
-                }),
-                ..Config::default()
-            };
+    pub fn with_vm_skip(mut self, with_vm_skip: bool) -> Self {
+        if let Commands::Scaffold(s) = &mut self.command {
+            s.with_vm_skip = with_vm_skip;
         }
+        self
+    }
 
-        self.clone()
+    pub(crate) fn scaffold(&self) -> crate::scaffold::Scaffold {
+        self.command.clone().into()
+    }
+
+    pub(crate) fn check(&self) -> crate::check::Check {
+        self.command.clone().into()
     }
 }
 
@@ -71,5 +58,23 @@ pub fn run() -> anyhow::Result<()> {
     match &config.command {
         Commands::Scaffold(command) => command.run(&config),
         Commands::Check(command) => command.run(&config),
+    }
+}
+
+impl From<Commands> for crate::scaffold::Scaffold {
+    fn from(command: Commands) -> Self {
+        match command {
+            Commands::Scaffold(s) => s,
+            _ => Default::default(),
+        }
+    }
+}
+
+impl From<Commands> for crate::check::Check {
+    fn from(command: Commands) -> Self {
+        match command {
+            Commands::Check(c) => c,
+            _ => Default::default(),
+        }
     }
 }
