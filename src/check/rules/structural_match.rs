@@ -2,7 +2,8 @@
 //!
 //! This rule enforces the following:
 //! - All spec-generated functions & modifiers are present in the output file.
-//! - The order of the spec-generated functions & modifiers matches the output file.
+//! - The order of the spec-generated functions & modifiers matches the output
+//!   file.
 //!
 //! Matching is name-based, which means that two functions are considered the
 //! same if:
@@ -14,6 +15,7 @@ use std::collections::BTreeSet;
 
 use solang_parser::pt;
 
+use super::{Checker, Context};
 use crate::{
     check::{
         location::Location,
@@ -24,8 +26,6 @@ use crate::{
     sol::{find_contract, find_matching_fn},
     utils::sanitize,
 };
-
-use super::{Checker, Context};
 
 /// An implementation of a structural matching rule.
 ///
@@ -72,8 +72,16 @@ impl Checker for StructuralMatcher {
         let contract_hir = contract_hir.unwrap();
         let contract_sol = contract_sol.unwrap();
         if let Hir::ContractDefinition(contract_hir) = contract_hir {
-            violations.append(&mut check_contract_names(contract_hir, &contract_sol, ctx));
-            violations.append(&mut check_fns_structure(contract_hir, &contract_sol, ctx));
+            violations.append(&mut check_contract_names(
+                contract_hir,
+                &contract_sol,
+                ctx,
+            ));
+            violations.append(&mut check_fns_structure(
+                contract_hir,
+                &contract_sol,
+                ctx,
+            ));
         };
 
         violations
@@ -93,7 +101,10 @@ fn check_contract_names(
         let contract_name = sanitize(&contract_hir.identifier);
         if identifier.name != contract_name {
             let violation = Violation::new(
-                ViolationKind::ContractNameNotMatches(contract_name, identifier.name.clone()),
+                ViolationKind::ContractNameNotMatches(
+                    contract_name,
+                    identifier.name.clone(),
+                ),
                 Location::Code(
                     ctx.sol.as_path().to_string_lossy().into_owned(),
                     offset_to_line(&ctx.src, contract_sol.loc.start()),
@@ -107,8 +118,8 @@ fn check_contract_names(
 }
 
 /// Checks that function structures match between the HIR and the Solidity AST.
-/// i.e. that all the functions are present in the output file in the right order.
-/// This could be better, currently it is O(N^2).
+/// i.e. that all the functions are present in the output file in the right
+/// order. This could be better, currently it is O(N^2).
 fn check_fns_structure(
     contract_hir: &hir::ContractDefinition,
     contract_sol: &pt::ContractDefinition,
@@ -118,7 +129,8 @@ fn check_fns_structure(
 
     // Check that hir functions are present in the solidity contract. Store
     // their indices for later processing.
-    let mut present_fn_indices = Vec::with_capacity(contract_hir.children.len());
+    let mut present_fn_indices =
+        Vec::with_capacity(contract_hir.children.len());
     for (hir_idx, fn_hir) in contract_hir.children.iter().enumerate() {
         if let Hir::FunctionDefinition(fn_hir) = fn_hir {
             let fn_sol = find_matching_fn(contract_sol, fn_hir);
@@ -126,13 +138,18 @@ fn check_fns_structure(
             match fn_sol {
                 // Store the matched function to check it is at the
                 // appropriate place later.
-                Some((sol_idx, _)) => present_fn_indices.push((hir_idx, sol_idx)),
+                Some((sol_idx, _)) => {
+                    present_fn_indices.push((hir_idx, sol_idx))
+                }
                 // We didn't find a matching function, so this is a
                 // violation.
                 None => {
                     if !ctx.cfg.check().skip_modifiers {
                         violations.push(Violation::new(
-                            ViolationKind::MatchingFunctionMissing(fn_hir.clone(), hir_idx),
+                            ViolationKind::MatchingFunctionMissing(
+                                fn_hir.clone(),
+                                hir_idx,
+                            ),
                             Location::Code(
                                 ctx.tree.to_string_lossy().into_owned(),
                                 fn_hir.span.start.line,
@@ -169,9 +186,15 @@ fn check_fns_structure(
     // Emit a violation per unsorted item.
     for (hir_idx, sol_idx) in unsorted_set {
         if let Hir::FunctionDefinition(_) = contract_hir.children[hir_idx] {
-            if let pt::ContractPart::FunctionDefinition(ref fn_sol) = contract_sol.parts[sol_idx] {
+            if let pt::ContractPart::FunctionDefinition(ref fn_sol) =
+                contract_sol.parts[sol_idx]
+            {
                 violations.push(Violation::new(
-                    ViolationKind::FunctionOrderMismatch(*fn_sol.clone(), sol_idx, hir_idx),
+                    ViolationKind::FunctionOrderMismatch(
+                        *fn_sol.clone(),
+                        sol_idx,
+                        hir_idx,
+                    ),
                     Location::Code(
                         ctx.sol.clone().to_string_lossy().into_owned(),
                         offset_to_line(&ctx.src, fn_sol.loc.start()),

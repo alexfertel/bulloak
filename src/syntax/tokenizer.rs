@@ -72,18 +72,17 @@ impl Token {
     fn is_branch(&self) -> bool {
         match self.kind {
             TokenKind::Tee | TokenKind::Corner => true,
-            TokenKind::Word | TokenKind::When | TokenKind::Given | TokenKind::It => false,
+            TokenKind::Word
+            | TokenKind::When
+            | TokenKind::Given
+            | TokenKind::It => false,
         }
     }
 }
 
 impl fmt::Debug for Token {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "Token({:?}, {:?}, {:?})",
-            self.kind, self.lexeme, self.span
-        )
+        write!(f, "Token({:?}, {:?}, {:?})", self.kind, self.lexeme, self.span)
     }
 }
 
@@ -177,11 +176,7 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
 
     /// Create a new error with the given span and error type.
     fn error(&self, span: Span, kind: ErrorKind) -> Error {
-        Error {
-            kind,
-            text: self.text.to_owned(),
-            span,
-        }
+        Error { kind, text: self.text.to_owned(), span }
     }
 
     /// Return a reference to the text being parsed.
@@ -237,9 +232,7 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
         if self.is_eof() {
             return None;
         }
-        self.text()[self.offset() + self.char().len_utf8()..]
-            .chars()
-            .next()
+        self.text()[self.offset() + self.char().len_utf8()..].chars().next()
     }
 
     /// Enters identifier mode.
@@ -271,11 +264,7 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
         if self.is_eof() {
             return None;
         }
-        let Position {
-            mut offset,
-            mut line,
-            mut column,
-        } = self.pos();
+        let Position { mut offset, mut line, mut column } = self.pos();
 
         if self.char() == '\n' {
             line = line.checked_add(1).unwrap();
@@ -285,11 +274,7 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
         }
 
         offset += self.char().len_utf8();
-        self.tokenizer().pos.set(Position {
-            offset,
-            line,
-            column,
-        });
+        self.tokenizer().pos.set(Position { offset, line, column });
         self.text()[self.offset()..].chars().next()
     }
 
@@ -325,9 +310,11 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
                 }
                 _ => {
                     let token = self.scan_word()?;
-                    let last_is_branch = tokens.last().is_some_and(Token::is_branch);
+                    let last_is_branch =
+                        tokens.last().is_some_and(Token::is_branch);
                     if last_is_branch
-                        && (token.kind == TokenKind::When || token.kind == TokenKind::Given)
+                        && (token.kind == TokenKind::When
+                            || token.kind == TokenKind::Given)
                     {
                         self.enter_identifier_mode();
                     };
@@ -363,13 +350,19 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
         let span_start = self.pos();
 
         loop {
-            if self.is_identifier_mode() && !is_valid_identifier_char(self.char()) {
-                let invalid_identifier_error =
-                    self.error(self.span(), ErrorKind::IdentifierCharInvalid(self.char()));
+            if self.is_identifier_mode()
+                && !is_valid_identifier_char(self.char())
+            {
+                let invalid_identifier_error = self.error(
+                    self.span(),
+                    ErrorKind::IdentifierCharInvalid(self.char()),
+                );
                 return Err(invalid_identifier_error);
             };
 
-            if self.peek().is_none() || self.peek().is_some_and(char::is_whitespace) {
+            if self.peek().is_none()
+                || self.peek().is_some_and(char::is_whitespace)
+            {
                 lexeme.push(self.char());
                 let kind = match lexeme.to_lowercase().as_str() {
                     "when" => TokenKind::When,
@@ -403,11 +396,16 @@ fn is_valid_identifier_char(c: char) -> bool {
 mod tests {
     use pretty_assertions::assert_eq;
 
-    use crate::error::Result;
-    use crate::span::Span;
-    use crate::syntax::test_utils::{p, s, TestError};
-    use crate::syntax::tokenizer::{
-        self, ErrorKind::IdentifierCharInvalid, Token, TokenKind, Tokenizer,
+    use crate::{
+        error::Result,
+        span::Span,
+        syntax::{
+            test_utils::{p, s, TestError},
+            tokenizer::{
+                self, ErrorKind::IdentifierCharInvalid, Token, TokenKind,
+                Tokenizer,
+            },
+        },
     };
 
     impl PartialEq<tokenizer::Error> for TestError<tokenizer::ErrorKind> {
@@ -427,11 +425,7 @@ mod tests {
     }
 
     fn t(kind: TokenKind, lexeme: &str, span: Span) -> Token {
-        Token {
-            kind,
-            lexeme: lexeme.to_owned(),
-            span,
-        }
+        Token { kind, lexeme: lexeme.to_owned(), span }
     }
 
     fn tokenize(text: &str) -> tokenizer::Result<Vec<Token>> {
@@ -557,7 +551,8 @@ mod tests {
         let starts_whitespace = String::from(" foo\n");
         let ends_whitespace = String::from("foo \n");
 
-        let expected = vec![t(TokenKind::Word, "foo", s(p(0, 1, 1), p(2, 1, 3)))];
+        let expected =
+            vec![t(TokenKind::Word, "foo", s(p(0, 1, 1), p(2, 1, 3)))];
         let mut tokenizer = Tokenizer::new();
 
         assert_eq!(tokenizer.tokenize(&simple_name).unwrap(), expected);
@@ -571,8 +566,9 @@ mod tests {
     #[test]
     fn one_child() {
         // Test parsing a when.
-        let file_contents =
-            String::from("Foo_Test\n└── when something bad happens\n   └── it should revert");
+        let file_contents = String::from(
+            "Foo_Test\n└── when something bad happens\n   └── it should revert",
+        );
 
         assert_eq!(
             tokenize(&file_contents).unwrap(),
@@ -692,11 +688,7 @@ mod tests {
             t(TokenKind::Word, "is", s(p(360, 10, 26), p(361, 10, 27))),
             t(TokenKind::Word, "not", s(p(363, 10, 29), p(365, 10, 31))),
             t(TokenKind::Word, "a", s(p(367, 10, 33), p(367, 10, 33))),
-            t(
-                TokenKind::Word,
-                "contract",
-                s(p(369, 10, 35), p(376, 10, 42)),
-            ),
+            t(TokenKind::Word, "contract", s(p(369, 10, 35), p(376, 10, 42))),
             t(TokenKind::Corner, "└", s(p(389, 11, 10), p(389, 11, 10))),
             t(TokenKind::It, "it", s(p(399, 11, 14), p(400, 11, 15))),
             t(TokenKind::Word, "should", s(p(402, 11, 17), p(407, 11, 22))),
@@ -707,11 +699,7 @@ mod tests {
             t(TokenKind::Word, "asset", s(p(441, 12, 20), p(445, 12, 24))),
             t(TokenKind::Word, "is", s(p(447, 12, 26), p(448, 12, 27))),
             t(TokenKind::Word, "a", s(p(450, 12, 29), p(450, 12, 29))),
-            t(
-                TokenKind::Word,
-                "contract",
-                s(p(452, 12, 31), p(459, 12, 38)),
-            ),
+            t(TokenKind::Word, "contract", s(p(452, 12, 31), p(459, 12, 38))),
             t(TokenKind::Tee, "├", s(p(471, 13, 11), p(471, 13, 11))),
             t(TokenKind::When, "when", s(p(481, 13, 15), p(484, 13, 18))),
             t(TokenKind::Word, "the", s(p(486, 13, 20), p(488, 13, 22))),
@@ -730,18 +718,10 @@ mod tests {
             t(TokenKind::Tee, "├", s(p(594, 15, 14), p(594, 15, 14))),
             t(TokenKind::It, "it", s(p(604, 15, 18), p(605, 15, 19))),
             t(TokenKind::Word, "should", s(p(607, 15, 21), p(612, 15, 26))),
-            t(
-                TokenKind::Word,
-                "perform",
-                s(p(614, 15, 28), p(620, 15, 34)),
-            ),
+            t(TokenKind::Word, "perform", s(p(614, 15, 28), p(620, 15, 34))),
             t(TokenKind::Word, "the", s(p(622, 15, 36), p(624, 15, 38))),
             t(TokenKind::Word, "ERC-20", s(p(626, 15, 40), p(631, 15, 45))),
-            t(
-                TokenKind::Word,
-                "transfers",
-                s(p(633, 15, 47), p(641, 15, 55)),
-            ),
+            t(TokenKind::Word, "transfers", s(p(633, 15, 47), p(641, 15, 55))),
             t(TokenKind::Corner, "└", s(p(658, 16, 14), p(658, 16, 14))),
             t(TokenKind::It, "it", s(p(668, 16, 18), p(669, 16, 19))),
             t(TokenKind::Word, "should", s(p(671, 16, 21), p(676, 16, 26))),

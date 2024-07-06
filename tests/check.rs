@@ -1,10 +1,8 @@
 use std::env;
 
+use common::{cmd, get_binary_path};
 use owo_colors::OwoColorize;
 use pretty_assertions::assert_eq;
-
-use common::cmd;
-use common::get_binary_path;
 
 mod common;
 
@@ -12,10 +10,8 @@ mod common;
 fn checks_invalid_structural_match() {
     let binary_path = get_binary_path();
     let cwd = env::current_dir().unwrap();
-    let tree_path = cwd
-        .join("tests")
-        .join("check")
-        .join("invalid_sol_structure.tree");
+    let tree_path =
+        cwd.join("tests").join("check").join("invalid_sol_structure.tree");
 
     let output = cmd(&binary_path, "check", &tree_path, &[]);
     let stderr = String::from_utf8(output.stderr).unwrap();
@@ -38,17 +34,17 @@ warn: incorrect position for function "test_WhenThereIsReentrancy""#
 fn checks_valid_structural_match() {
     let cwd = env::current_dir().unwrap();
     let binary_path = get_binary_path();
-    let tree_path = cwd
-        .join("tests")
-        .join("check")
-        .join("extra_codegen_sol.tree");
+    let tree_path =
+        cwd.join("tests").join("check").join("extra_codegen_sol.tree");
 
     let output = cmd(&binary_path, "check", &tree_path, &[]);
     let stderr = String::from_utf8(output.stderr).unwrap();
     let stdout = String::from_utf8(output.stdout).unwrap();
 
     assert_eq!("", stderr);
-    assert!(stdout.contains("All checks completed successfully! No issues found."));
+    assert!(
+        stdout.contains("All checks completed successfully! No issues found.")
+    );
 }
 
 #[test]
@@ -62,14 +58,17 @@ fn checks_modifiers_skipped() {
     let stdout = String::from_utf8(output.stdout).unwrap();
 
     assert_eq!("", stderr);
-    assert!(stdout.contains("All checks completed successfully! No issues found."));
+    assert!(
+        stdout.contains("All checks completed successfully! No issues found.")
+    );
 }
 
 #[test]
 fn checks_missing_sol_file() {
     let cwd = env::current_dir().unwrap();
     let binary_path = get_binary_path();
-    let tree_path = cwd.join("tests").join("check").join("no_matching_sol.tree");
+    let tree_path =
+        cwd.join("tests").join("check").join("no_matching_sol.tree");
 
     let output = cmd(&binary_path, "check", &tree_path, &[]);
     let actual = String::from_utf8(output.stderr).unwrap();
@@ -87,18 +86,19 @@ fn checks_empty_contract() {
     let output = cmd(&binary_path, "check", &tree_path, &[]);
     let actual = String::from_utf8(output.stderr).unwrap();
 
-    assert!(actual.contains(r#"function "test_ShouldNeverRevert" is missing in .sol"#));
-    assert!(actual.contains(r#"function "test_ShouldNotFindTheSolidityFile" is missing in .sol"#));
+    assert!(actual
+        .contains(r#"function "test_ShouldNeverRevert" is missing in .sol"#));
+    assert!(actual.contains(
+        r#"function "test_ShouldNotFindTheSolidityFile" is missing in .sol"#
+    ));
 }
 
 #[test]
 fn checks_missing_contract() {
     let cwd = env::current_dir().unwrap();
     let binary_path = get_binary_path();
-    let tree_path = cwd
-        .join("tests")
-        .join("check")
-        .join("missing_contract.tree");
+    let tree_path =
+        cwd.join("tests").join("check").join("missing_contract.tree");
 
     let output = cmd(&binary_path, "check", &tree_path, &[]);
     let actual = String::from_utf8(output.stderr).unwrap();
@@ -132,10 +132,8 @@ fn checks_missing_contract_identifier() {
 fn checks_contract_name_mismatch() {
     let cwd = env::current_dir().unwrap();
     let binary_path = get_binary_path();
-    let tree_path = cwd
-        .join("tests")
-        .join("check")
-        .join("contract_names_mismatch.tree");
+    let tree_path =
+        cwd.join("tests").join("check").join("contract_names_mismatch.tree");
 
     let output = cmd(&binary_path, "check", &tree_path, &[]);
     let actual = String::from_utf8(output.stderr).unwrap();
@@ -176,17 +174,17 @@ fn checks_invalid_tree() {
     let output = cmd(&binary_path, "check", &tree_path, &[]);
     let actual = String::from_utf8(output.stderr).unwrap();
 
-    assert!(actual.contains(r#"an error occurred while parsing the tree: unexpected token '├'"#));
+    assert!(actual.contains(
+        r#"an error occurred while parsing the tree: unexpected token '├'"#
+    ));
 }
 
 #[test]
 fn fixes_non_matching_contract_names() {
     let cwd = env::current_dir().unwrap();
     let binary_path = get_binary_path();
-    let tree_path = cwd
-        .join("tests")
-        .join("check")
-        .join("contract_names_mismatch.tree");
+    let tree_path =
+        cwd.join("tests").join("check").join("contract_names_mismatch.tree");
 
     let output = cmd(&binary_path, "check", &tree_path, &["--fix", "--stdout"]);
     let expected = "// SPDX-License-Identifier: UNLICENSED
@@ -208,10 +206,8 @@ contract ContractName {
 fn fixes_contract_missing() {
     let cwd = env::current_dir().unwrap();
     let binary_path = get_binary_path();
-    let tree_path = cwd
-        .join("tests")
-        .join("check")
-        .join("missing_contract.tree");
+    let tree_path =
+        cwd.join("tests").join("check").join("missing_contract.tree");
 
     let output = cmd(&binary_path, "check", &tree_path, &["--fix", "--stdout"]);
     let expected = "// SPDX-License-Identifier: UNLICENSED
@@ -232,10 +228,8 @@ contract MissingContract {
 fn fixes_extra_codegen_tree() {
     let cwd = env::current_dir().unwrap();
     let binary_path = get_binary_path();
-    let tree_path = cwd
-        .join("tests")
-        .join("check")
-        .join("extra_codegen_tree.tree");
+    let tree_path =
+        cwd.join("tests").join("check").join("extra_codegen_tree.tree");
 
     let output = cmd(&binary_path, "check", &tree_path, &["--fix", "--stdout"]);
     let actual = String::from_utf8(output.stdout).unwrap();
@@ -248,10 +242,8 @@ fn fixes_extra_codegen_tree() {
 fn fixes_extra_fn_plus_wrong_order() {
     let cwd = env::current_dir().unwrap();
     let binary_path = get_binary_path();
-    let tree_path = cwd
-        .join("tests")
-        .join("check")
-        .join("fix_extra_fn_plus_order.tree");
+    let tree_path =
+        cwd.join("tests").join("check").join("fix_extra_fn_plus_order.tree");
 
     let output = cmd(&binary_path, "check", &tree_path, &["--fix", "--stdout"]);
     let actual = String::from_utf8(output.stdout).unwrap();
@@ -287,10 +279,8 @@ contract Foo {
 fn fixes_invalid_structural_match() {
     let binary_path = get_binary_path();
     let cwd = env::current_dir().unwrap();
-    let tree_path = cwd
-        .join("tests")
-        .join("check")
-        .join("invalid_sol_structure.tree");
+    let tree_path =
+        cwd.join("tests").join("check").join("invalid_sol_structure.tree");
 
     let output = cmd(&binary_path, "check", &tree_path, &["--fix", "--stdout"]);
     let actual = String::from_utf8(output.stdout).unwrap();

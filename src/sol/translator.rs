@@ -1,31 +1,34 @@
-//! This module implements a translator between a Bulloak tree's High-Level Intermediate
-//! Representation (HIR) and a `solang_parser` parse tree (PT). The primary purpose of
-//! this module is to facilitate the conversion of a custom HIR into a format that is
-//! compatible with the `solang_parser`, which is used for further processing or
-//! compilation in the Solidity language context.
+//! This module implements a translator between a Bulloak tree's High-Level
+//! Intermediate Representation (HIR) and a `solang_parser` parse tree (PT). The
+//! primary purpose of this module is to facilitate the conversion of a custom
+//! HIR into a format that is compatible with the `solang_parser`, which is used
+//! for further processing or compilation in the Solidity language context.
 //!
-//! The translator operates by traversing the HIR in a depth-first order and systematically
-//! converting each node into its corresponding PT representation. The translation covers
-//! various aspects of the HIR, such as root nodes, contract definitions, function definitions,
-//! and comments, each requiring specific handling to maintain the semantics and structure
+//! The translator operates by traversing the HIR in a depth-first order and
+//! systematically converting each node into its corresponding PT
+//! representation. The translation covers various aspects of the HIR, such as
+//! root nodes, contract definitions, function definitions, and comments, each
+//! requiring specific handling to maintain the semantics and structure
 //! in the resulting PT.
 //!
-//! The module is structured with a main `Translator` struct that serves as the interface for
-//! initiating the translation process. Internally, a `TranslatorI` struct implements the
-//! detailed translation logic.
+//! The module is structured with a main `Translator` struct that serves as the
+//! interface for initiating the translation process. Internally, a
+//! `TranslatorI` struct implements the detailed translation logic.
 
 use std::cell::Cell;
 
 use solang_parser::pt::{
-    Base, ContractDefinition, ContractPart, ContractTy, Expression, FunctionAttribute,
-    FunctionDefinition, FunctionTy, Identifier, IdentifierPath, Import, ImportPath, Loc,
-    SourceUnit, SourceUnitPart, Statement, StringLiteral, Type, VariableDeclaration, Visibility,
+    Base, ContractDefinition, ContractPart, ContractTy, Expression,
+    FunctionAttribute, FunctionDefinition, FunctionTy, Identifier,
+    IdentifierPath, Import, ImportPath, Loc, SourceUnit, SourceUnitPart,
+    Statement, StringLiteral, Type, VariableDeclaration, Visibility,
 };
 
-use crate::config::Config;
-use crate::hir::visitor::Visitor;
-use crate::hir::{self, Hir};
-use crate::utils::sanitize;
+use crate::{
+    config::Config,
+    hir::{self, visitor::Visitor, Hir},
+    utils::sanitize,
+};
 
 /// The implementation of a translator between a bulloak tree HIR and a
 /// `solang_parser` parse tree -- HIR -> PT.
@@ -67,8 +70,8 @@ impl Translator {
 
 /// The internal implementation of the Translator.
 struct TranslatorI {
-    /// Current byte offset the translator is emitting. Helps in computing locations
-    /// for the parse tree nodes.
+    /// Current byte offset the translator is emitting. Helps in computing
+    /// locations for the parse tree nodes.
     offset: Cell<usize>,
     /// The translator state.
     translator: Translator,
@@ -77,10 +80,7 @@ struct TranslatorI {
 impl TranslatorI {
     /// Creates a new internal translator.
     fn new(translator: Translator) -> Self {
-        Self {
-            offset: Cell::new(0),
-            translator,
-        }
+        Self { offset: Cell::new(0), translator }
     }
 
     /// Concrete implementation of the translation from AST to HIR.
@@ -120,10 +120,7 @@ impl TranslatorI {
     /// appropriate `Identifier` instance.
     fn translate_function_id(&self, identifier: &str) -> Identifier {
         let function_name_loc = self.bump(identifier);
-        Identifier {
-            loc: function_name_loc,
-            name: identifier.to_owned(),
-        }
+        Identifier { loc: function_name_loc, name: identifier.to_owned() }
     }
 
     /// Bumps `self.offset` given a modifier and returns the appropriate
@@ -146,33 +143,42 @@ impl TranslatorI {
         FunctionAttribute::BaseOrModifier(modifier_loc, modifier)
     }
 
-    /// Generates a list of attributes for a function based on its type in the High-Level
-    /// Intermediate Representation (HIR). This function processes the function definition
-    /// and constructs a corresponding set of `FunctionAttribute` items, which represent
-    /// various attributes of a function in the parse tree (PT), such as visibility and modifiers.
+    /// Generates a list of attributes for a function based on its type in the
+    /// High-Level Intermediate Representation (HIR). This function
+    /// processes the function definition and constructs a corresponding set
+    /// of `FunctionAttribute` items, which represent various attributes of
+    /// a function in the parse tree (PT), such as visibility and modifiers.
     ///
-    /// In the case of a modifier function, an empty vector is returned as modifiers generally
-    /// do not have additional attributes in this context. For a regular function, the function
-    /// generates the visibility attribute (defaulted to 'external') and includes any modifiers
-    /// that are part of the function definition.
+    /// In the case of a modifier function, an empty vector is returned as
+    /// modifiers generally do not have additional attributes in this
+    /// context. For a regular function, the function generates the
+    /// visibility attribute (defaulted to 'external') and includes any
+    /// modifiers that are part of the function definition.
     ///
     /// # Arguments
-    /// * `function` - A reference to the `FunctionDefinition` node in the HIR. This node contains
-    ///   details about the function, including its type and any modifiers associated with it.
+    /// * `function` - A reference to the `FunctionDefinition` node in the HIR.
+    ///   This node contains details about the function, including its type and
+    ///   any modifiers associated with it.
     ///
     /// # Returns
-    /// A vector of `FunctionAttribute` objects representing the attributes of the function. This
-    /// can include visibility attributes and any modifiers that apply to the function.
-    fn gen_function_attr(&self, function: &hir::FunctionDefinition) -> Vec<FunctionAttribute> {
+    /// A vector of `FunctionAttribute` objects representing the attributes of
+    /// the function. This can include visibility attributes and any
+    /// modifiers that apply to the function.
+    fn gen_function_attr(
+        &self,
+        function: &hir::FunctionDefinition,
+    ) -> Vec<FunctionAttribute> {
         match function.ty {
             hir::FunctionTy::Modifier => vec![],
             hir::FunctionTy::Function => {
-                let mut attrs = vec![FunctionAttribute::Visibility(Visibility::External(Some(
-                    self.bump("external"),
-                )))];
+                let mut attrs = vec![FunctionAttribute::Visibility(
+                    Visibility::External(Some(self.bump("external"))),
+                )];
                 self.bump(" ");
                 if let Some(ref modifiers) = function.modifiers {
-                    attrs.extend(modifiers.iter().map(|m| self.translate_modifier(m)));
+                    attrs.extend(
+                        modifiers.iter().map(|m| self.translate_modifier(m)),
+                    );
                 };
 
                 attrs
@@ -180,22 +186,25 @@ impl TranslatorI {
         }
     }
 
-    /// Generates the statements of a modifier function. In the context of this translation, a modifier's
-    /// body is represented by a special variable definition. This function creates and returns
-    /// a vector of statements that constitute this body.
+    /// Generates the statements of a modifier function. In the context of this
+    /// translation, a modifier's body is represented by a special variable
+    /// definition. This function creates and returns a vector of statements
+    /// that constitute this body.
     ///
-    /// The body consists of a single `VariableDefinition` statement with a special identifier `_`,
-    /// which is a common convention in Solidity for representing a placeholder in modifier bodies.
+    /// The body consists of a single `VariableDefinition` statement with a
+    /// special identifier `_`, which is a common convention in Solidity for
+    /// representing a placeholder in modifier bodies.
     ///
     /// # Returns
-    /// A `Vec<Statement>` representing the body of the modifier. This vector contains a single
-    /// `VariableDefinition` statement for the `_` placeholder.
+    /// A `Vec<Statement>` representing the body of the modifier. This vector
+    /// contains a single `VariableDefinition` statement for the `_`
+    /// placeholder.
     // TODO: After <https://github.com/hyperledger/solang/commit/90b3f7085fe6375e47a29fe01e802f6118c3ad0e>
-    // makes it to production, we should update this function and mirror the structure of
-    // solang's pt.
+    // makes it to production, we should update this function and mirror the
+    // structure of solang's pt.
     //
-    // It is currently a `VariableDefinition` because the formatter does not append
-    // a `;` after the variable which causes `forge-fmt` to fail.
+    // It is currently a `VariableDefinition` because the formatter does not
+    // append a `;` after the variable which causes `forge-fmt` to fail.
     fn gen_modifier_statements(&self) -> Vec<Statement> {
         let mut stmts = Vec::with_capacity(1);
         let variable_loc = self.bump("_");
@@ -218,25 +227,31 @@ impl TranslatorI {
         stmts
     }
 
-    /// Generates the statements of a function by processing its child nodes. This function iterates
-    /// through each child node in the provided vector, translating comments into statements
-    /// and adding them to the function body.
+    /// Generates the statements of a function by processing its child nodes.
+    /// This function iterates through each child node in the provided
+    /// vector, translating comments into statements and adding them to the
+    /// function body.
     ///
-    /// A newline character is added after processing all children for proper formatting in the
-    /// output. This function is called in the context of translating a function's HIR representation
-    /// to its PT (parse tree) counterpart.
+    /// A newline character is added after processing all children for proper
+    /// formatting in the output. This function is called in the context of
+    /// translating a function's HIR representation to its PT (parse tree)
+    /// counterpart.
     ///
     /// # Arguments
-    /// * `children` - A reference to a vector of `Hir` nodes, representing the child nodes
-    ///   of a function in the HIR.
+    /// * `children` - A reference to a vector of `Hir` nodes, representing the
+    ///   child nodes of a function in the HIR.
     ///
     /// # Returns
-    /// A `Result` containing a `Vec<Statement>` representing the translated function body. If
-    /// the translation of any child node fails, an error is returned.
+    /// A `Result` containing a `Vec<Statement>` representing the translated
+    /// function body. If the translation of any child node fails, an error
+    /// is returned.
     ///
     /// # Errors
     /// Returns an error if any of the child nodes' translation fails.
-    fn gen_function_statements(&mut self, children: &Vec<Hir>) -> Result<Vec<Statement>, ()> {
+    fn gen_function_statements(
+        &mut self,
+        children: &Vec<Hir>,
+    ) -> Result<Vec<Statement>, ()> {
         let mut stmts = Vec::with_capacity(children.len());
         for child in children {
             if let Hir::Statement(statement) = child {
@@ -256,29 +271,32 @@ impl TranslatorI {
         Ok(stmts)
     }
 
-    /// Generates the body of a function or modifier as a sequence of statements. This function
-    /// differentiates between function and modifier types and generates the respective bodies
-    /// accordingly.
+    /// Generates the body of a function or modifier as a sequence of
+    /// statements. This function differentiates between function and
+    /// modifier types and generates the respective bodies accordingly.
     ///
-    /// For a function, the body is generated by processing its child nodes, which may include
-    /// comments and other elements specific to the function's logic. For a modifier, a standard
-    /// placeholder statement is created, following Solidity's convention for modifiers.
+    /// For a function, the body is generated by processing its child nodes,
+    /// which may include comments and other elements specific to the
+    /// function's logic. For a modifier, a standard placeholder statement
+    /// is created, following Solidity's convention for modifiers.
     ///
     /// The function leverages `gen_modifier_statements` for modifiers and
     /// `gen_function_statements` for functions.
     ///
     /// # Arguments
-    /// * `function` - A reference to the `FunctionDefinition` node in the High-Level Intermediate
-    ///   Representation (HIR). This node contains information about the function, including its
-    ///   type (function or modifier) and child nodes.
+    /// * `function` - A reference to the `FunctionDefinition` node in the
+    ///   High-Level Intermediate Representation (HIR). This node contains
+    ///   information about the function, including its type (function or
+    ///   modifier) and child nodes.
     ///
     /// # Returns
-    /// A `Result` containing a vector of `Statement` objects that represent the body of the
-    /// function or modifier. In case of an error during statement generation, an error is returned.
+    /// A `Result` containing a vector of `Statement` objects that represent the
+    /// body of the function or modifier. In case of an error during
+    /// statement generation, an error is returned.
     ///
     /// # Errors
-    /// Returns an error if the generation of function statements encounters an issue, such as
-    /// failing to process a child node.
+    /// Returns an error if the generation of function statements encounters an
+    /// issue, such as failing to process a child node.
     fn gen_function_body(
         &mut self,
         function: &hir::FunctionDefinition,
@@ -299,36 +317,42 @@ impl TranslatorI {
 }
 
 impl Visitor for TranslatorI {
-    type RootOutput = SourceUnit;
-    type ContractDefinitionOutput = SourceUnitPart;
-    type FunctionDefinitionOutput = ContractPart;
     type CommentOutput = Statement;
-    type StatementOutput = Statement;
+    type ContractDefinitionOutput = SourceUnitPart;
     type Error = ();
+    type FunctionDefinitionOutput = ContractPart;
+    type RootOutput = SourceUnit;
+    type StatementOutput = Statement;
 
-    /// Visits the root node of a High-Level Intermediate Representation (HIR) and translates
-    /// it into a `SourceUnit` as part of a `solang_parser` parse tree (PT). This function
-    /// serves as the entry point for the translation process, converting the top-level structure
-    /// of the HIR into a corresponding PT structure.
+    /// Visits the root node of a High-Level Intermediate Representation (HIR)
+    /// and translates it into a `SourceUnit` as part of a `solang_parser`
+    /// parse tree (PT). This function serves as the entry point for the
+    /// translation process, converting the top-level structure of the HIR
+    /// into a corresponding PT structure.
     ///
-    /// The translation involves creating a `SourceUnit`, starting with a pragma directive
-    /// based on the translator's Solidity version as well as optional file imports (e.g. forge-std)
-    /// if required. It then iterates over each child node within the root.
-    /// Each contract definition is translated and incorporated into the `SourceUnit`.
+    /// The translation involves creating a `SourceUnit`, starting with a pragma
+    /// directive based on the translator's Solidity version as well as
+    /// optional file imports (e.g. forge-std) if required. It then iterates
+    /// over each child node within the root. Each contract definition is
+    /// translated and incorporated into the `SourceUnit`.
     ///
     /// # Arguments
-    /// * `root` - A reference to the root of the HIR structure, representing the highest level
-    ///   of the program's structure.
+    /// * `root` - A reference to the root of the HIR structure, representing
+    ///   the highest level of the program's structure.
     ///
     /// # Returns
-    /// A `Result` containing the `SourceUnit` if the translation is successful, or an `Error`
-    /// otherwise. The `SourceUnit` is a key component of the PT, representing the entire
-    /// translated program.
+    /// A `Result` containing the `SourceUnit` if the translation is successful,
+    /// or an `Error` otherwise. The `SourceUnit` is a key component of the
+    /// PT, representing the entire translated program.
     ///
     /// # Errors
-    /// This function may return an error if any part of the translation process fails, such
-    /// as issues in converting specific HIR nodes to their PT equivalents.
-    fn visit_root(&mut self, root: &hir::Root) -> Result<Self::RootOutput, Self::Error> {
+    /// This function may return an error if any part of the translation process
+    /// fails, such as issues in converting specific HIR nodes to their PT
+    /// equivalents.
+    fn visit_root(
+        &mut self,
+        root: &hir::Root,
+    ) -> Result<Self::RootOutput, Self::Error> {
         let mut source_unit = Vec::with_capacity(2);
 
         let pragma_start = self.offset.get();
@@ -353,14 +377,16 @@ impl Visitor for TranslatorI {
 
         // Add the forge-std's Test import, if needed.
         if self.translator.with_forge_std {
-            // Getting the relevant offsets for `import {Test} from "forge-std/Test.sol"`.
+            // Getting the relevant offsets for `import {Test} from
+            // "forge-std/Test.sol"`.
             let loc_import_start = self.offset.get();
             self.bump("import { ");
             let loc_identifier = self.bump("Test");
             self.bump(" } from \"");
             let loc_path = self.bump("forge-std/Test.sol");
 
-            // The import directive `Rename` corresponds to `import {x} from y.sol`.
+            // The import directive `Rename` corresponds to `import {x} from
+            // y.sol`.
             source_unit.push(SourceUnitPart::ImportDirective(Import::Rename(
                 ImportPath::Filename(StringLiteral {
                     loc: loc_path,
@@ -389,23 +415,27 @@ impl Visitor for TranslatorI {
         Ok(SourceUnit(source_unit))
     }
 
-    /// Visits a `ContractDefinition` node within the High-Level Intermediate Representation (HIR)
-    /// and translates it into a `SourceUnitPart` for inclusion in the `solang_parser` parse tree (PT).
-    /// This function handles the translation of contract definitions, turning them into a format
-    /// suitable for the PT, which includes converting each child node of the contract.
+    /// Visits a `ContractDefinition` node within the High-Level Intermediate
+    /// Representation (HIR) and translates it into a `SourceUnitPart` for
+    /// inclusion in the `solang_parser` parse tree (PT). This function
+    /// handles the translation of contract definitions, turning them into a
+    /// format suitable for the PT, which includes converting each child
+    /// node of the contract.
     ///
     /// # Arguments
-    /// * `contract` - A reference to the `ContractDefinition` node in the HIR, representing a
-    ///   single contract within the HIR structure.
+    /// * `contract` - A reference to the `ContractDefinition` node in the HIR,
+    ///   representing a single contract within the HIR structure.
     ///
     /// # Returns
-    /// A `Result` containing the `SourceUnitPart` representing the translated contract if the
-    /// translation is successful, or an `Error` otherwise. The `SourceUnitPart` encapsulates the
-    /// contract's PT representation, including its components like functions.
+    /// A `Result` containing the `SourceUnitPart` representing the translated
+    /// contract if the translation is successful, or an `Error` otherwise.
+    /// The `SourceUnitPart` encapsulates the contract's PT representation,
+    /// including its components like functions.
     ///
     /// # Errors
-    /// This function may return an error if the translation of any component within the contract
-    /// encounters issues, such as failing to translate a function definition.
+    /// This function may return an error if the translation of any component
+    /// within the contract encounters issues, such as failing to translate
+    /// a function definition.
     fn visit_contract(
         &mut self,
         contract: &hir::ContractDefinition,
@@ -463,30 +493,37 @@ impl Visitor for TranslatorI {
         Ok(SourceUnitPart::ContractDefinition(Box::new(contract_def)))
     }
 
-    /// Visits a `FunctionDefinition` node in the High-Level Intermediate Representation (HIR)
-    /// and translates it into a `ContractPart` for inclusion in the `solang_parser` parse tree (PT).
-    /// This function handles the translation of function definitions, converting them into a format
-    /// suitable for the PT.
+    /// Visits a `FunctionDefinition` node in the High-Level Intermediate
+    /// Representation (HIR) and translates it into a `ContractPart` for
+    /// inclusion in the `solang_parser` parse tree (PT). This function
+    /// handles the translation of function definitions, converting them into a
+    /// format suitable for the PT.
     ///
     /// The translation process involves several steps:
-    /// 1. Determining the function type and translating it to the corresponding PT representation.
-    /// 2. Translating the function identifier and storing its location information.
+    /// 1. Determining the function type and translating it to the corresponding
+    ///    PT representation.
+    /// 2. Translating the function identifier and storing its location
+    ///    information.
     /// 3. Generating function attributes based on the HIR function definition.
-    /// 4. Translating the function body, including statements and comments, into PT statements.
-    /// 5. Constructing the final `FunctionDefinition` object with the translated components.
+    /// 4. Translating the function body, including statements and comments,
+    ///    into PT statements.
+    /// 5. Constructing the final `FunctionDefinition` object with the
+    ///    translated components.
     ///
     /// # Arguments
-    /// * `function` - A reference to the `FunctionDefinition` node in the HIR, representing a
-    ///   single function within the HIR structure.
+    /// * `function` - A reference to the `FunctionDefinition` node in the HIR,
+    ///   representing a single function within the HIR structure.
     ///
     /// # Returns
-    /// A `Result` containing the `ContractPart::FunctionDefinition` representing the translated
-    /// function if the translation is successful, or an `Error` otherwise. The `ContractPart`
-    /// encapsulates the function's PT representation.
+    /// A `Result` containing the `ContractPart::FunctionDefinition`
+    /// representing the translated function if the translation is
+    /// successful, or an `Error` otherwise. The `ContractPart` encapsulates
+    /// the function's PT representation.
     ///
     /// # Errors
-    /// This function may return an error if the translation of any component within the function
-    /// encounters issues, such as failing to translate the function body.
+    /// This function may return an error if the translation of any component
+    /// within the function encounters issues, such as failing to translate
+    /// the function body.
     fn visit_function(
         &mut self,
         function: &hir::FunctionDefinition,
@@ -494,7 +531,8 @@ impl Visitor for TranslatorI {
         let start_offset = self.offset.get();
         let function_ty = self.translate_function_ty(&function.ty);
         self.bump(" ");
-        let function_identifier = self.translate_function_id(&function.identifier);
+        let function_identifier =
+            self.translate_function_id(&function.identifier);
         let function_id_loc = function_identifier.loc;
         let function_name = Some(function_identifier);
         self.bump("() "); // `(<identifier>) `.
@@ -524,33 +562,38 @@ impl Visitor for TranslatorI {
         Ok(ContractPart::FunctionDefinition(Box::new(func_def)))
     }
 
-    /// Visits a comment node in the High-Level Intermediate Representation (HIR) and
-    /// translates it into a `Statement` for inclusion in the parse tree (PT). This function
-    /// handles comments in a unique way by representing them as disguised `VariableDefinition`
-    /// statements in the PT.
+    /// Visits a comment node in the High-Level Intermediate Representation
+    /// (HIR) and translates it into a `Statement` for inclusion in the
+    /// parse tree (PT). This function handles comments in a unique way by
+    /// representing them as disguised `VariableDefinition` statements in
+    /// the PT.
     ///
-    /// The approach involves creating a `VariableDefinition` with a special name and assigning
-    /// the comment text to it as a string literal. This method allows for preserving comments
-    /// in the PT while maintaining compatibility with the structure of the PT. During a later
-    /// phase, we convert the variables back to comments.
+    /// The approach involves creating a `VariableDefinition` with a special
+    /// name and assigning the comment text to it as a string literal. This
+    /// method allows for preserving comments in the PT while maintaining
+    /// compatibility with the structure of the PT. During a later phase, we
+    /// convert the variables back to comments.
     ///
     /// # Arguments
-    /// * `comment` - A reference to the `Comment` node in the HIR, containing the comment text.
+    /// * `comment` - A reference to the `Comment` node in the HIR, containing
+    ///   the comment text.
     ///
     /// # Returns
-    /// A `Result` containing the `Statement` representing the comment. The `Statement` is a
-    /// `VariableDefinition` with the comment's content. In case of an error, a corresponding
-    /// error type is returned.
+    /// A `Result` containing the `Statement` representing the comment. The
+    /// `Statement` is a `VariableDefinition` with the comment's content. In
+    /// case of an error, a corresponding error type is returned.
     ///
     /// # Errors
-    /// This function currently does not generate errors but returns a `Result` for consistency
-    /// with other visit methods and to allow for error handling in future implementations.
+    /// This function currently does not generate errors but returns a `Result`
+    /// for consistency with other visit methods and to allow for error
+    /// handling in future implementations.
     fn visit_comment(
         &mut self,
         comment: &hir::Comment,
     ) -> Result<Self::CommentOutput, Self::Error> {
         // After exploring several paths forward, the least convoluted way to
-        // handle comments is to disguise them as `VariableDefinition` statements.
+        // handle comments is to disguise them as `VariableDefinition`
+        // statements.
         //
         // The idea is to remove the extra parts with a search and replace when
         // emitting the parse tree and leave the comment's lexeme as is.
@@ -560,11 +603,10 @@ impl Visitor for TranslatorI {
         self.bump(" "); // ` ` after type.
         let variable_name = "__bulloak_comment__";
         let variable_loc = self.bump(variable_name);
-        let declaration_loc = Loc::File(0, declaration_start, self.offset.get());
-        let name = Identifier {
-            loc: variable_loc,
-            name: variable_name.to_owned(),
-        };
+        let declaration_loc =
+            Loc::File(0, declaration_start, self.offset.get());
+        let name =
+            Identifier { loc: variable_loc, name: variable_name.to_owned() };
         let variable = VariableDeclaration {
             loc: declaration_loc,
             ty,
@@ -573,11 +615,12 @@ impl Visitor for TranslatorI {
         };
         self.bump(" = ");
         let comment_loc = self.bump(&format!(r#""{}""#, &comment.lexeme));
-        let string_literal = Some(Expression::StringLiteral(vec![StringLiteral {
-            loc: comment_loc,
-            unicode: false,
-            string: comment.lexeme.clone(),
-        }]));
+        let string_literal =
+            Some(Expression::StringLiteral(vec![StringLiteral {
+                loc: comment_loc,
+                unicode: false,
+                string: comment.lexeme.clone(),
+            }]));
         self.bump(";"); // `;` after string literal.
         let definition = Statement::VariableDefinition(
             Loc::File(0, definition_start, self.offset.get()),
@@ -606,10 +649,12 @@ impl Visitor for TranslatorI {
 
                 let vm_interface = Expression::MemberAccess(
                     Loc::File(0, start_offset, loc_skip.end()),
-                    Box::new(Expression::Variable(solang_parser::pt::Identifier {
-                        loc: loc_vm,
-                        name: "vm".to_owned(),
-                    })),
+                    Box::new(Expression::Variable(
+                        solang_parser::pt::Identifier {
+                            loc: loc_vm,
+                            name: "vm".to_owned(),
+                        },
+                    )),
                     solang_parser::pt::Identifier {
                         loc: loc_skip,
                         name: "skip".to_owned(),

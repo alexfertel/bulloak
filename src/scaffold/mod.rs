@@ -2,18 +2,20 @@
 //!
 //! This command scaffolds a Solidity file from a spec `.tree` file.
 
-use std::path::Path;
-use std::{fs, path::PathBuf};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 use clap::Parser;
 use forge_fmt::fmt;
 use owo_colors::OwoColorize;
 use serde::{Deserialize, Serialize};
 
-use crate::config::Config;
-use crate::constants::INTERNAL_DEFAULT_SOL_VERSION;
-use crate::hir::translate_and_combine_trees;
-use crate::sol;
+use crate::{
+    config::Config, constants::INTERNAL_DEFAULT_SOL_VERSION,
+    hir::translate_and_combine_trees, sol,
+};
 
 pub mod emitter;
 pub mod modifiers;
@@ -37,7 +39,12 @@ pub struct Scaffold {
     pub write_files: bool,
     /// When `--write-files` is passed, use `--force-write` to
     /// overwrite the output files.
-    #[arg(short = 'f', long, requires = "file-handling", default_value_t = false)]
+    #[arg(
+        short = 'f',
+        long,
+        requires = "file-handling",
+        default_value_t = false
+    )]
     pub force_write: bool,
     /// Sets a Solidity version for the test contracts.
     #[arg(short = 's', long, default_value = INTERNAL_DEFAULT_SOL_VERSION)]
@@ -142,7 +149,8 @@ pub fn scaffold(text: &str, cfg: &Config) -> crate::error::Result<String> {
     let hir = translate_and_combine_trees(text, cfg)?;
     let pt = sol::Translator::new(cfg).translate(&hir);
     let source = sol::Formatter::new().emit(pt);
-    let formatted = fmt(&source).expect("should format the emitted solidity code");
+    let formatted =
+        fmt(&source).expect("should format the emitted solidity code");
 
     Ok(formatted)
 }

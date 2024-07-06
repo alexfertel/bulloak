@@ -2,11 +2,12 @@
 //! high-level intermediate representation (HIR) -- AST -> HIR.
 use indexmap::IndexMap;
 
-use crate::config::Config;
-use crate::hir::{self, Hir};
-use crate::syntax::ast;
-use crate::syntax::visitor::Visitor;
-use crate::utils::{capitalize_first_letter, sanitize};
+use crate::{
+    config::Config,
+    hir::{self, Hir},
+    syntax::{ast, visitor::Visitor},
+    utils::{capitalize_first_letter, sanitize},
+};
 
 /// A translator between a bulloak tree abstract syntax tree (AST)
 /// and a high-level intermediate representation (HIR) -- AST -> HIR.
@@ -63,11 +64,7 @@ impl<'a> TranslatorI<'a> {
     /// Creates a new internal translator.
     fn new(modifiers: &'a IndexMap<String, String>, cfg: &Config) -> Self {
         let with_vm_skip = cfg.scaffold().with_vm_skip;
-        Self {
-            modifier_stack: Vec::new(),
-            modifiers,
-            with_vm_skip,
-        }
+        Self { modifier_stack: Vec::new(), modifiers, with_vm_skip }
     }
 
     /// Concrete implementation of the translation from AST to HIR.
@@ -84,58 +81,71 @@ impl<'a> TranslatorI<'a> {
 }
 
 impl<'a> Visitor for TranslatorI<'a> {
-    type Output = Vec<Hir>;
     type Error = ();
+    type Output = Vec<Hir>;
 
-    fn visit_root(&mut self, root: &crate::syntax::ast::Root) -> Result<Self::Output, Self::Error> {
+    fn visit_root(
+        &mut self,
+        root: &crate::syntax::ast::Root,
+    ) -> Result<Self::Output, Self::Error> {
         let mut root_children = Vec::new();
 
         let mut contract_children = Vec::new();
         for ast in &root.children {
             match ast {
-                // Root or ActionDescription nodes cannot be children of a root node. This
-                // must be handled in a previous pass.
-                ast::Ast::Root(_) | ast::Ast::ActionDescription(_) => unreachable!(),
+                // Root or ActionDescription nodes cannot be children of a root
+                // node. This must be handled in a previous
+                // pass.
+                ast::Ast::Root(_) | ast::Ast::ActionDescription(_) => {
+                    unreachable!()
+                }
                 // Found a top-level action. This corresponds to a function.
                 ast::Ast::Action(action) => {
                     let words = action.title.split_whitespace();
                     let words = words.skip(1); // Removes "it" from the test name.
 
-                    // Map an iterator over the words of an action to the test name.
+                    // Map an iterator over the words of an action to the test
+                    // name.
                     //
                     // Example: [do, stuff] -> DoStuff
-                    let test_name =
-                        words.fold(String::with_capacity(action.title.len()), |mut acc, w| {
+                    let test_name = words.fold(
+                        String::with_capacity(action.title.len()),
+                        |mut acc, w| {
                             acc.reserve(w.len() + 1);
                             acc.push_str(&capitalize_first_letter(w));
                             acc
-                        });
+                        },
+                    );
 
                     // We need to sanitize here and not in a previous compiler
-                    // phase because we want to emit the action as is in a comment.
+                    // phase because we want to emit the action as is in a
+                    // comment.
                     let test_name = sanitize(&test_name);
                     let test_name = format!("test_{test_name}");
 
                     let mut hirs = self.visit_action(action)?;
 
-                    // Include any optional statement for the first function node.
+                    // Include any optional statement for the first function
+                    // node.
                     if self.with_vm_skip {
                         hirs.push(Hir::Statement(hir::Statement {
                             ty: hir::StatementType::VmSkip,
                         }));
                     }
 
-                    let hir = Hir::FunctionDefinition(hir::FunctionDefinition {
-                        identifier: test_name,
-                        ty: hir::FunctionTy::Function,
-                        span: action.span,
-                        modifiers: None,
-                        children: Some(hirs),
-                    });
+                    let hir =
+                        Hir::FunctionDefinition(hir::FunctionDefinition {
+                            identifier: test_name,
+                            ty: hir::FunctionTy::Function,
+                            span: action.span,
+                            modifiers: None,
+                            children: Some(hirs),
+                        });
                     contract_children.push(hir);
                 }
                 ast::Ast::Condition(condition) => {
-                    contract_children.append(&mut self.visit_condition(condition)?);
+                    contract_children
+                        .append(&mut self.visit_condition(condition)?);
                 }
             }
         }
@@ -146,9 +156,7 @@ impl<'a> Visitor for TranslatorI<'a> {
             children: contract_children,
         }));
 
-        Ok(vec![Hir::Root(hir::Root {
-            children: root_children,
-        })])
+        Ok(vec![Hir::Root(hir::Root { children: root_children })])
     }
 
     fn visit_condition(
@@ -162,8 +170,9 @@ impl<'a> Visitor for TranslatorI<'a> {
             .iter()
             .filter(|child| ast::Ast::is_action(child))
             .count();
-        // If this condition only has actions as children, then we don't generate
-        // a modifier for it, since it would only be used in the emitted function.
+        // If this condition only has actions as children, then we don't
+        // generate a modifier for it, since it would only be used in
+        // the emitted function.
         if condition.children.len() != action_count {
             if let Some(modifier) = self.modifiers.get(&condition.title) {
                 self.modifier_stack.push(modifier);
@@ -190,11 +199,12 @@ impl<'a> Visitor for TranslatorI<'a> {
 
         // Add this condition's function definition if it has children actions.
         if !actions.is_empty() {
-            // If the only action is `it should revert`, we slightly change the function name
-            // to reflect this.
+            // If the only action is `it should revert`, we slightly change the
+            // function name to reflect this.
             let is_revert = actions.first().is_some_and(|action| {
                 if let hir::Hir::Comment(comment) = action {
-                    let sanitized_lexeme = sanitize(&comment.lexeme.trim().to_lowercase());
+                    let sanitized_lexeme =
+                        sanitize(&comment.lexeme.trim().to_lowercase());
                     sanitized_lexeme == "it should revert"
                 } else {
                     false
@@ -202,15 +212,19 @@ impl<'a> Visitor for TranslatorI<'a> {
             });
 
             let mut words = condition.title.split_whitespace();
-            // It is fine to unwrap because conditions have at least one word in them.
+            // It is fine to unwrap because conditions have at least one word in
+            // them.
             let keyword = capitalize_first_letter(words.next().unwrap());
 
             let function_name = if is_revert {
-                // Map an iterator over the words of a condition to the test name.
+                // Map an iterator over the words of a condition to the test
+                // name.
                 //
                 // Example: [when, something, happens] -> WhenSomethingHappens
                 let test_name = words.fold(
-                    String::with_capacity(condition.title.len() - keyword.len()),
+                    String::with_capacity(
+                        condition.title.len() - keyword.len(),
+                    ),
                     |mut acc, w| {
                         acc.reserve(w.len() + 1);
                         acc.push_str(&capitalize_first_letter(w));
@@ -225,7 +239,8 @@ impl<'a> Visitor for TranslatorI<'a> {
                 // where `KEYWORD` is the starting word of the condition.
                 format!("test_Revert{keyword}_{test_name}")
             } else {
-                // Map an iterator over the words of a condition to the test name.
+                // Map an iterator over the words of a condition to the test
+                // name.
                 //
                 // Example: [when, something, happens] -> WhenSomethingHappens
                 let test_name = words.fold(keyword, |mut acc, w| {
@@ -240,7 +255,9 @@ impl<'a> Visitor for TranslatorI<'a> {
             let modifiers = if self.modifier_stack.is_empty() {
                 None
             } else {
-                Some(self.modifier_stack.iter().map(|&m| m.to_owned()).collect())
+                Some(
+                    self.modifier_stack.iter().map(|&m| m.to_owned()).collect(),
+                )
             };
 
             // Add a `vm.skip(true);` at the start of the function.
@@ -307,12 +324,13 @@ mod tests {
     use anyhow::Result;
     use pretty_assertions::assert_eq;
 
-    use crate::config::Config;
-    use crate::hir::{self, Hir};
-    use crate::scaffold::modifiers;
-    use crate::span::{Position, Span};
-    use crate::syntax::parser::Parser;
-    use crate::syntax::tokenizer::Tokenizer;
+    use crate::{
+        config::Config,
+        hir::{self, Hir},
+        scaffold::modifiers,
+        span::{Position, Span},
+        syntax::{parser::Parser, tokenizer::Tokenizer},
+    };
 
     fn translate(text: &str) -> Result<hir::Hir> {
         let tokens = Tokenizer::new().tokenize(&text)?;
@@ -362,7 +380,8 @@ mod tests {
 
     #[test]
     fn one_child() {
-        let file_contents = "Foo_Test\n└── when something bad happens\n   └── it should revert";
+        let file_contents =
+            "Foo_Test\n└── when something bad happens\n   └── it should revert";
         assert_eq!(
             translate(file_contents).unwrap(),
             root(vec![contract(
@@ -396,7 +415,10 @@ mod tests {
                     function(
                         "test_RevertWhen_StuffCalled".to_owned(),
                         hir::FunctionTy::Function,
-                        Span::new(Position::new(19, 2, 1), Position::new(77, 3, 23)),
+                        Span::new(
+                            Position::new(19, 2, 1),
+                            Position::new(77, 3, 23)
+                        ),
                         None,
                         Some(vec![
                             comment("it should revert".to_owned()),
@@ -406,7 +428,10 @@ mod tests {
                     function(
                         "test_RevertGiven_NotStuffCalled".to_owned(),
                         hir::FunctionTy::Function,
-                        Span::new(Position::new(79, 4, 1), Position::new(140, 5, 23)),
+                        Span::new(
+                            Position::new(79, 4, 1),
+                            Position::new(140, 5, 23)
+                        ),
                         None,
                         Some(vec![
                             comment("it should revert".to_owned()),
@@ -440,14 +465,20 @@ Foo_Test
                     function(
                         "whenStuffCalled".to_owned(),
                         hir::FunctionTy::Modifier,
-                        Span::new(Position::new(10, 3, 1), Position::new(235, 9, 32)),
+                        Span::new(
+                            Position::new(10, 3, 1),
+                            Position::new(235, 9, 32)
+                        ),
                         None,
                         None
                     ),
                     function(
                         "test_WhenStuffCalled".to_owned(),
                         hir::FunctionTy::Function,
-                        Span::new(Position::new(10, 3, 1), Position::new(235, 9, 32)),
+                        Span::new(
+                            Position::new(10, 3, 1),
+                            Position::new(235, 9, 32)
+                        ),
                         Some(vec!["whenStuffCalled".to_owned()]),
                         Some(vec![
                             comment("It should do stuff.".to_owned()),
@@ -458,7 +489,10 @@ Foo_Test
                     function(
                         "test_RevertWhen_ACalled".to_owned(),
                         hir::FunctionTy::Function,
-                        Span::new(Position::new(76, 5, 5), Position::new(135, 6, 28)),
+                        Span::new(
+                            Position::new(76, 5, 5),
+                            Position::new(135, 6, 28)
+                        ),
                         Some(vec!["whenStuffCalled".to_owned()]),
                         Some(vec![
                             comment("it should revert".to_owned()),
@@ -468,7 +502,10 @@ Foo_Test
                     function(
                         "test_WhenBCalled".to_owned(),
                         hir::FunctionTy::Function,
-                        Span::new(Position::new(174, 8, 5), Position::new(235, 9, 32)),
+                        Span::new(
+                            Position::new(174, 8, 5),
+                            Position::new(235, 9, 32)
+                        ),
                         Some(vec!["whenStuffCalled".to_owned()]),
                         Some(vec![
                             comment("it should not revert".to_owned()),

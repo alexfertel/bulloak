@@ -1,5 +1,6 @@
-use crate::constants::TREES_SEPARATOR;
 use unicode_xid::UnicodeXID;
+
+use crate::constants::TREES_SEPARATOR;
 
 pub(crate) fn capitalize_first_letter(s: &str) -> String {
     let mut c = s.chars();
@@ -31,17 +32,18 @@ pub(crate) fn sanitize(identifier: &str) -> String {
 /// in the title and removing the spaces. For example, the sentence
 /// `when only owner` is converted to the `WhenOnlyOwner` string.
 pub(crate) fn to_pascal_case(sentence: &str) -> String {
-    sentence
-        .split_whitespace()
-        .map(capitalize_first_letter)
-        .collect::<String>()
+    sentence.split_whitespace().map(capitalize_first_letter).collect::<String>()
 }
 
 pub(crate) fn repeat_str(s: &str, n: usize) -> String {
     s.repeat(n)
 }
 
-pub(crate) fn pluralize<'a>(count: usize, singular: &'a str, plural: &'a str) -> &'a str {
+pub(crate) fn pluralize<'a>(
+    count: usize,
+    singular: &'a str,
+    plural: &'a str,
+) -> &'a str {
     if count == 1 {
         singular
     } else {

@@ -2,11 +2,12 @@
 
 use std::result;
 
-use crate::config::Config;
-use crate::constants::INTERNAL_DEFAULT_INDENTATION;
-use crate::hir::visitor::Visitor;
-use crate::hir::{self, Hir};
-use crate::utils::sanitize;
+use crate::{
+    config::Config,
+    constants::INTERNAL_DEFAULT_INDENTATION,
+    hir::{self, visitor::Visitor, Hir},
+    utils::sanitize,
+};
 
 /// Solidity code emitter.
 ///
@@ -66,11 +67,17 @@ impl EmitterI {
     fn emit(&mut self, hir: &hir::Hir) -> String {
         match hir {
             Hir::Root(ref inner) => self.visit_root(inner).unwrap(),
-            Hir::ContractDefinition(ref inner) => self.visit_contract(inner).unwrap(),
-            Hir::FunctionDefinition(ref inner) => self.visit_function(inner).unwrap(),
+            Hir::ContractDefinition(ref inner) => {
+                self.visit_contract(inner).unwrap()
+            }
+            Hir::FunctionDefinition(ref inner) => {
+                self.visit_function(inner).unwrap()
+            }
             Hir::Comment(ref inner) => self.visit_comment(inner).unwrap(),
             Hir::Statement(_) => {
-                unreachable!("a statement can't be a top-level source unit in Solidity")
+                unreachable!(
+                    "a statement can't be a top-level source unit in Solidity"
+                )
             }
         }
     }
@@ -80,10 +87,14 @@ impl EmitterI {
     /// This includes:
     /// - The Solidity version pragma.
     /// - The contract's name.
-    fn emit_contract_header(&self, contract: &hir::ContractDefinition) -> String {
+    fn emit_contract_header(
+        &self,
+        contract: &hir::ContractDefinition,
+    ) -> String {
         let mut emitted = String::new();
 
-        // It's fine to unwrap here because we check that the filename always has an extension.
+        // It's fine to unwrap here because we check that the filename always
+        // has an extension.
         let contract_name = sanitize(&contract.identifier);
         emitted.push_str(format!("contract {contract_name} {{\n").as_str());
 
@@ -124,19 +135,28 @@ impl EmitterI {
         let has_modifiers = function.modifiers.is_some();
         if has_modifiers {
             emitted.push_str(
-                format!("{}function {}()\n", fn_indentation, function.identifier).as_str(),
+                format!(
+                    "{}function {}()\n",
+                    fn_indentation, function.identifier
+                )
+                .as_str(),
             );
-            emitted.push_str(format!("{fn_body_indentation}external\n").as_str());
-        } else {
             emitted
-                .push_str(format!("{}function {}()", fn_indentation, function.identifier).as_str());
+                .push_str(format!("{fn_body_indentation}external\n").as_str());
+        } else {
+            emitted.push_str(
+                format!("{}function {}()", fn_indentation, function.identifier)
+                    .as_str(),
+            );
             emitted.push_str(" external");
         }
 
         // Emit the modifiers that should be applied to this function.
         if let Some(ref modifiers) = function.modifiers {
             for modifier in modifiers {
-                emitted.push_str(format!("{fn_body_indentation}{modifier}\n").as_str());
+                emitted.push_str(
+                    format!("{fn_body_indentation}{modifier}\n").as_str(),
+                );
             }
         }
 
@@ -156,14 +176,17 @@ impl EmitterI {
 /// passes ensure that the HIR is valid. In case an error
 /// is found, it should be added to a previous pass.
 impl Visitor for EmitterI {
-    type RootOutput = String;
-    type ContractDefinitionOutput = String;
-    type FunctionDefinitionOutput = String;
     type CommentOutput = String;
-    type StatementOutput = String;
+    type ContractDefinitionOutput = String;
     type Error = ();
+    type FunctionDefinitionOutput = String;
+    type RootOutput = String;
+    type StatementOutput = String;
 
-    fn visit_root(&mut self, root: &hir::Root) -> result::Result<Self::RootOutput, Self::Error> {
+    fn visit_root(
+        &mut self,
+        root: &hir::Root,
+    ) -> result::Result<Self::RootOutput, Self::Error> {
         let mut emitted = String::new();
         emitted.push_str("// SPDX-License-Identifier: UNLICENSED\n");
         emitted.push_str(&format!(
@@ -173,7 +196,9 @@ impl Visitor for EmitterI {
 
         for hir in &root.children {
             let result = match hir {
-                Hir::ContractDefinition(contract) => self.visit_contract(contract)?,
+                Hir::ContractDefinition(contract) => {
+                    self.visit_contract(contract)?
+                }
                 _ => unreachable!(),
             };
 
@@ -241,7 +266,8 @@ impl Visitor for EmitterI {
     ) -> result::Result<Self::CommentOutput, Self::Error> {
         let mut emitted = String::new();
         let indentation = self.emitter.indent().repeat(2);
-        emitted.push_str(format!("{indentation}// {}\n", comment.lexeme).as_str());
+        emitted
+            .push_str(format!("{indentation}// {}\n", comment.lexeme).as_str());
 
         Ok(emitted)
     }
@@ -256,7 +282,9 @@ impl Visitor for EmitterI {
         // Match any supported statement to its string representation
         match statement.ty {
             hir::StatementType::VmSkip => {
-                emitted.push_str(format!("{indentation}vm.skip(true);\n").as_str());
+                emitted.push_str(
+                    format!("{indentation}vm.skip(true);\n").as_str(),
+                );
             }
         }
 
@@ -268,13 +296,15 @@ impl Visitor for EmitterI {
 mod tests {
     use pretty_assertions::assert_eq;
 
-    use crate::config::Config;
-    use crate::error::Result;
-    use crate::hir::{translate_and_combine_trees, Hir, Statement, StatementType};
-    use crate::scaffold::emitter;
+    use crate::{
+        config::Config,
+        error::Result,
+        hir::{translate_and_combine_trees, Hir, Statement, StatementType},
+        scaffold::emitter,
+    };
 
     fn scaffold(text: &str) -> Result<String> {
-        let cfg = Default::default();
+        let cfg = Config::default();
         let hir = translate_and_combine_trees(text, &cfg)?;
         Ok(emitter::Emitter::new(&cfg).emit(&hir))
     }
@@ -297,8 +327,9 @@ contract FileTest {
         );
 
         // Test that "it should revert" actions change the test name.
-        let file_contents =
-            String::from("FileTest\n└── when something bad happens\n   └── it should revert");
+        let file_contents = String::from(
+            "FileTest\n└── when something bad happens\n   └── it should revert",
+        );
 
         assert_eq!(
             &scaffold(&file_contents)?,
@@ -317,7 +348,9 @@ contract FileTest {
 
     #[test]
     fn actions_without_conditions() -> Result<()> {
-        let file_contents = String::from("FileTest\n├── it should do st-ff\n└── It never reverts.");
+        let file_contents = String::from(
+            "FileTest\n├── it should do st-ff\n└── It never reverts.",
+        );
 
         assert_eq!(
             &scaffold(&file_contents)?,
@@ -432,7 +465,7 @@ contract FileTest {
     #[test]
     fn with_vm_skip() -> Result<()> {
         let file_contents = "FileTest\n└── when something bad happens\n   └── it should not revert";
-        let cfg: Config = Default::default();
+        let cfg: Config = Config::default();
         let cfg = cfg.with_vm_skip(true);
         let hir = translate_and_combine_trees(file_contents, &cfg)?;
         let emitted = emitter::Emitter::new(&cfg).emit(&hir);
@@ -456,11 +489,9 @@ contract FileTest {
     #[test]
     #[should_panic]
     fn with_vm_skip_top_level_statement() {
-        let hir = Hir::Statement(Statement {
-            ty: StatementType::VmSkip,
-        });
+        let hir = Hir::Statement(Statement { ty: StatementType::VmSkip });
 
-        let _ = emitter::Emitter::new(&Default::default()).emit(&hir);
+        let _ = emitter::Emitter::new(&Config::default()).emit(&hir);
     }
 
     #[test]

@@ -20,22 +20,27 @@ pub trait Visitor {
     /// An error that might occur when visiting the HIR.
     type Error;
 
-    /// Visits the root node of the HIR. This method is typically where the traversal
-    /// of the HIR begins.
+    /// Visits the root node of the HIR. This method is typically where the
+    /// traversal of the HIR begins.
     ///
     /// # Arguments
     /// * `root` - A reference to the root node of the HIR.
     ///
     /// # Returns
-    /// A `Result` containing either the output of visiting the root node or an error.
-    fn visit_root(&mut self, root: &hir::Root) -> Result<Self::RootOutput, Self::Error>;
+    /// A `Result` containing either the output of visiting the root node or an
+    /// error.
+    fn visit_root(
+        &mut self,
+        root: &hir::Root,
+    ) -> Result<Self::RootOutput, Self::Error>;
     /// Visits a contract definition node within the HIR.
     ///
     /// # Arguments
     /// * `contract` - A reference to the contract definition node in the HIR.
     ///
     /// # Returns
-    /// A `Result` containing either the output of visiting the contract definition node or an error.
+    /// A `Result` containing either the output of visiting the contract
+    /// definition node or an error.
     fn visit_contract(
         &mut self,
         contract: &hir::ContractDefinition,
@@ -46,29 +51,34 @@ pub trait Visitor {
     /// * `function` - A reference to the function definition node in the HIR.
     ///
     /// # Returns
-    /// A `Result` containing either the output of visiting the function definition node or an error.
+    /// A `Result` containing either the output of visiting the function
+    /// definition node or an error.
     fn visit_function(
         &mut self,
         function: &hir::FunctionDefinition,
     ) -> Result<Self::FunctionDefinitionOutput, Self::Error>;
-    /// Visits a comment node within the HIR. This allows for handling comments in the
-    /// context of the HIR, potentially for documentation generation or other purposes.
+    /// Visits a comment node within the HIR. This allows for handling comments
+    /// in the context of the HIR, potentially for documentation generation
+    /// or other purposes.
     ///
     /// # Arguments
     /// * `comment` - A reference to the comment node in the HIR.
     ///
     /// # Returns
-    /// A `Result` containing either the output of visiting the comment node or an error.
-    fn visit_comment(&mut self, comment: &hir::Comment)
-        -> Result<Self::CommentOutput, Self::Error>;
+    /// A `Result` containing either the output of visiting the comment node or
+    /// an error.
+    fn visit_comment(
+        &mut self,
+        comment: &hir::Comment,
+    ) -> Result<Self::CommentOutput, Self::Error>;
 
     /// Visits a statement node within the HIR.
     ///     
     /// # Arguments
     /// * `statement` - A reference to the statement node in the HIR.
-    ///   
     /// # Returns
-    /// A `Result` containing either the output of visiting the statement node or an error.
+    /// A `Result` containing either the output of visiting the statement node
+    /// or an error.
     fn visit_statement(
         &mut self,
         statement: &hir::Statement,

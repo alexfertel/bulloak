@@ -1,15 +1,13 @@
-use std::cmp;
-use std::fmt;
-use std::result;
+use std::{cmp, fmt, result};
 
 use thiserror::Error;
 
-use crate::hir::combiner;
-use crate::span;
-use crate::syntax::parser;
-use crate::syntax::semantics;
-use crate::syntax::tokenizer;
-use crate::utils::repeat_str;
+use crate::{
+    hir::combiner,
+    span,
+    syntax::{parser, semantics, tokenizer},
+    utils::repeat_str,
+};
 
 /// A type alias for dealing with this crate's errors.
 pub(crate) type Result<T> = result::Result<T, Error>;
@@ -57,7 +55,8 @@ impl<E: fmt::Display> Formatter<'_, E> {
             notated.push_str(line);
             notated.push('\n');
             notated.push_str(&repeat_str(" ", self.span.start.column - 1));
-            let note_len = self.span.end.column.saturating_sub(self.span.start.column) + 1;
+            let note_len =
+                self.span.end.column.saturating_sub(self.span.start.column) + 1;
             let note_len = cmp::max(1, note_len);
             notated.push_str(&repeat_str("^", note_len));
             notated.push('\n');
@@ -120,11 +119,14 @@ impl_error_format!(
 
 #[cfg(test)]
 mod test {
-    use super::repeat_str;
-    use crate::error::Formatter;
-    use crate::span::{Position, Span};
-    use crate::syntax::{parser, semantics};
     use pretty_assertions::assert_eq;
+
+    use super::repeat_str;
+    use crate::{
+        error::Formatter,
+        span::{Position, Span},
+        syntax::{parser, semantics},
+    };
 
     #[test]
     fn test_notate() {
@@ -140,7 +142,8 @@ mod test {
         let mut expected = String::from("");
         expected.push_str(&repeat_str("•", 79));
         expected.push('\n');
-        expected.push_str(format!("bulloak error: {}\n\n", formatter.err).as_str());
+        expected
+            .push_str(format!("bulloak error: {}\n\n", formatter.err).as_str());
         expected.push_str("world\n");
         expected.push_str("^^^^^\n\n");
         expected.push_str(
