@@ -1,5 +1,7 @@
 use std::{cmp, fmt, result};
 
+use thiserror::Error;
+
 use crate::{
     hir::combiner,
     span,
@@ -7,65 +9,27 @@ use crate::{
     utils::repeat_str,
 };
 
-/// A type alias for dealing with errors returned when parsing.
+/// A type alias for dealing with this crate's errors.
 pub(crate) type Result<T> = result::Result<T, Error>;
 
 /// This error type encompasses any error that can be returned when parsing.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Error, Clone, Debug, Eq, PartialEq)]
 #[non_exhaustive]
 pub enum Error {
     /// An error that occurred while tokenizing the input text.
-    Tokenize(tokenizer::Error),
+    #[error("{0}")]
+    Tokenize(#[from] tokenizer::Error),
     /// An error that occurred while translating concrete syntax into abstract
     /// syntax.
-    Parse(parser::Error),
+    #[error("{0}")]
+    Parse(#[from] parser::Error),
     /// An error that occurred while combining HIRs.
-    Combine(combiner::Error),
+    #[error("{0}")]
+    Combine(#[from] combiner::Error),
     /// An error that occurred while doing semantic analysis on the abstract
     /// syntax tree.
-    Semantic(Vec<semantics::Error>),
-}
-
-impl std::error::Error for Error {}
-
-impl From<parser::Error> for Error {
-    fn from(err: parser::Error) -> Self {
-        Self::Parse(err)
-    }
-}
-
-impl From<tokenizer::Error> for Error {
-    fn from(err: tokenizer::Error) -> Self {
-        Self::Tokenize(err)
-    }
-}
-
-impl From<combiner::Error> for Error {
-    fn from(err: combiner::Error) -> Self {
-        Self::Combine(err)
-    }
-}
-
-impl From<Vec<semantics::Error>> for Error {
-    fn from(errors: Vec<semantics::Error>) -> Self {
-        Self::Semantic(errors)
-    }
-}
-
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Parse(x) => x.fmt(f),
-            Self::Tokenize(x) => x.fmt(f),
-            Self::Combine(x) => x.fmt(f),
-            Self::Semantic(errors) => {
-                for x in errors {
-                    x.fmt(f)?;
-                }
-                Ok(())
-            }
-        }
-    }
+    #[error("{0}")]
+    Semantic(#[from] semantics::Errors),
 }
 
 /// A helper type for formatting nice error messages.
@@ -73,7 +37,7 @@ impl fmt::Display for Error {
 /// This type is responsible for reporting errors in a nice human readable
 /// format.
 #[derive(Debug)]
-pub(crate) struct Formatter<'e, E> {
+pub(crate) struct Formatter<'e, E: fmt::Display> {
     /// The original .tree text in which the error occurred.
     text: &'e str,
     /// The error kind. It must impl `fmt::Display`.
@@ -82,27 +46,23 @@ pub(crate) struct Formatter<'e, E> {
     span: &'e span::Span,
 }
 
-impl<'e> From<&'e parser::Error> for Formatter<'e, parser::ErrorKind> {
-    fn from(err: &'e parser::Error) -> Self {
-        Formatter { text: err.text(), err: err.kind(), span: err.span() }
-    }
-}
+impl<E: fmt::Display> Formatter<'_, E> {
+    /// Notate the text string with carets (`^`) pointing at the span where the
+    /// error happened.
+    fn notate(&self) -> String {
+        let mut notated = String::new();
+        if let Some(line) = self.text.lines().nth(self.span.start.line - 1) {
+            notated.push_str(line);
+            notated.push('\n');
+            notated.push_str(&repeat_str(" ", self.span.start.column - 1));
+            let note_len =
+                self.span.end.column.saturating_sub(self.span.start.column) + 1;
+            let note_len = cmp::max(1, note_len);
+            notated.push_str(&repeat_str("^", note_len));
+            notated.push('\n');
+        }
 
-impl<'e> From<&'e tokenizer::Error> for Formatter<'e, tokenizer::ErrorKind> {
-    fn from(err: &'e tokenizer::Error) -> Self {
-        Formatter { text: err.text(), err: err.kind(), span: err.span() }
-    }
-}
-
-impl<'e> From<&'e combiner::Error> for Formatter<'e, combiner::ErrorKind> {
-    fn from(err: &'e combiner::Error) -> Self {
-        Formatter { text: err.text(), err: err.kind(), span: err.span() }
-    }
-}
-
-impl<'e> From<&'e semantics::Error> for Formatter<'e, semantics::ErrorKind> {
-    fn from(err: &'e semantics::Error) -> Self {
-        Formatter { text: err.text(), err: err.kind(), span: err.span() }
+        notated
     }
 }
 
@@ -119,7 +79,7 @@ impl<'e, E: fmt::Display> fmt::Display for Formatter<'e, E> {
         }
 
         writeln!(f, "bulloak error: {}\n", self.err)?;
-        let notated = notate(self);
+        let notated = self.notate();
         writeln!(f, "{notated}")?;
         writeln!(
             f,
@@ -130,22 +90,32 @@ impl<'e, E: fmt::Display> fmt::Display for Formatter<'e, E> {
     }
 }
 
-/// Notate the text string with carets (`^`) pointing at the span.
-fn notate<E>(f: &Formatter<'_, E>) -> String {
-    let mut notated = String::new();
-    if let Some(line) = f.text.lines().nth(f.span.start.line - 1) {
-        notated.push_str(line);
-        notated.push('\n');
-        notated.push_str(&repeat_str(" ", f.span.start.column - 1));
-        let note_len =
-            f.span.end.column.saturating_sub(f.span.start.column) + 1;
-        let note_len = cmp::max(1, note_len);
-        notated.push_str(&repeat_str("^", note_len));
-        notated.push('\n');
-    }
+macro_rules! impl_error_format {
+    ($($error:ty => $kind:ty),+ $(,)*) => {
+        $(impl<'e> From<&'e $error> for Formatter<'e, $kind> {
+            fn from(err: &'e $error) -> Self {
+                Formatter {
+                    text: err.text(),
+                    err: err.kind(),
+                    span: err.span(),
+                }
+            }
+        })*
 
-    notated
+        $(impl fmt::Display for $error {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                $crate::error::Formatter::from(self).fmt(f)
+            }
+        })*
+    };
 }
+
+impl_error_format!(
+    parser::Error => parser::ErrorKind,
+    tokenizer::Error => tokenizer::ErrorKind,
+    combiner::Error => combiner::ErrorKind,
+    semantics::Error => semantics::ErrorKind,
+);
 
 #[cfg(test)]
 mod test {
@@ -193,7 +163,7 @@ mod test {
 └── when 2"
             .to_owned();
 
-        let errors = crate::error::Error::from(vec![
+        let errors = crate::error::Error::from(semantics::Errors(vec![
             semantics::Error::new(
                 semantics::ErrorKind::ConditionEmpty,
                 text.clone(),
@@ -204,7 +174,7 @@ mod test {
                 text.clone(),
                 Span::new(Position::new(20, 3, 1), Position::new(29, 3, 10)),
             ),
-        ]);
+        ]));
         let actual = format!("{errors}");
 
         let expected = r"•••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••

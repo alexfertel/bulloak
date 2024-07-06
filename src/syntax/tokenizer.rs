@@ -2,15 +2,18 @@
 
 use std::{borrow::Borrow, cell::Cell, fmt, result};
 
+use thiserror::Error;
+
 use crate::span::{Position, Span};
 
 type Result<T> = result::Result<T, Error>;
 
 /// An error that occurred while tokenizing a .tree string into a sequence of
 /// tokens.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Error, Clone, Debug, Eq, PartialEq)]
 pub struct Error {
     /// The kind of error.
+    #[source]
     kind: ErrorKind,
     /// The original text that the tokenizer generated the error from. Every
     /// span in an error is a valid range into this string.
@@ -19,18 +22,14 @@ pub struct Error {
     span: Span,
 }
 
-impl std::error::Error for Error {}
-
 impl Error {
     /// Return the type of this error.
     #[must_use]
-    pub const fn kind(&self) -> &ErrorKind {
+    pub fn kind(&self) -> &ErrorKind {
         &self.kind
     }
 
     /// The original text string in which this error occurred.
-    ///
-    /// Every span reported by this error is reported in terms of this string.
     #[must_use]
     pub fn text(&self) -> &str {
         &self.text
@@ -38,32 +37,18 @@ impl Error {
 
     /// Return the span at which this error occurred.
     #[must_use]
-    pub const fn span(&self) -> &Span {
+    pub fn span(&self) -> &Span {
         &self.span
     }
 }
 
 /// The type of an error that occurred while tokenizing a tree.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Error, Clone, Debug, Eq, PartialEq)]
 #[non_exhaustive]
 pub enum ErrorKind {
     /// Found an invalid identifier character.
+    #[error("invalid identifier: {0}")]
     IdentifierCharInvalid(char),
-}
-
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        crate::error::Formatter::from(self).fmt(f)
-    }
-}
-
-impl fmt::Display for ErrorKind {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        use self::ErrorKind::IdentifierCharInvalid;
-        match self {
-            IdentifierCharInvalid(c) => write!(f, "invalid identifier: {c}"),
-        }
-    }
 }
 
 /// `Token` represents a single unit of meaning in a .tree.

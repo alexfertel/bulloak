@@ -1,6 +1,7 @@
 //! Implementation of the semantic analysis of a bulloak tree.
+use std::{collections::HashMap, result};
 
-use std::{collections::HashMap, fmt, result};
+use thiserror::Error;
 
 use super::ast::{self, Ast};
 use crate::{
@@ -9,13 +10,19 @@ use crate::{
     utils::{lower_first_letter, sanitize, to_pascal_case},
 };
 
-type Result<T> = result::Result<T, Vec<Error>>;
+type Result<T> = result::Result<T, Errors>;
+
+/// A collection of errors that occurred during semantic analysis.
+#[derive(Error, Clone, Debug, PartialEq, Eq)]
+#[error("{}", .0.iter().map(|e| e.to_string()).collect::<Vec<_>>().join(""))]
+pub struct Errors(pub Vec<Error>);
 
 /// An error that occurred while doing semantic analysis on the abstract
 /// syntax tree.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Error, Clone, Debug, Eq, PartialEq)]
 pub struct Error {
     /// The kind of error.
+    #[source]
     kind: ErrorKind,
     /// The original text that the visitor generated the error from. Every
     /// span in an error is a valid range into this string.
@@ -49,51 +56,31 @@ impl Error {
     }
 }
 
-impl std::error::Error for Error {}
+fn format_spans(spans: &[Span]) -> String {
+    spans
+        .iter()
+        .map(|s| s.start.line.to_string())
+        .collect::<Vec<_>>()
+        .join(", ")
+}
 
 /// The type of an error that occurred while building an AST.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Error, Clone, Debug, Eq, PartialEq)]
 #[non_exhaustive]
 pub enum ErrorKind {
     /// Found two conditions or top-level actions with the same title.
+    #[error("found an identifier more than once in lines: {}", format_spans(.0))]
     IdentifierDuplicated(Vec<Span>),
     /// Found a condition with no children.
+    #[error("found a condition with no children")]
     ConditionEmpty,
     /// Found an unexpected node. This is most probably a bug in the
     /// parser implementation.
+    #[error("unexpected child node")]
     NodeUnexpected,
     /// Found no rules to emit.
+    #[error("no rules where defined")]
     TreeEmpty,
-}
-
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        crate::error::Formatter::from(self).fmt(f)
-    }
-}
-
-impl fmt::Display for ErrorKind {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        use self::ErrorKind::{
-            ConditionEmpty, IdentifierDuplicated, NodeUnexpected, TreeEmpty,
-        };
-        match *self {
-            IdentifierDuplicated(ref spans) => {
-                let lines = spans
-                    .iter()
-                    .map(|s| s.start.line.to_string())
-                    .collect::<Vec<String>>()
-                    .join(", ");
-                write!(
-                    f,
-                    "found an identifier more than once in lines: {lines}"
-                )
-            }
-            ConditionEmpty => write!(f, "found a condition with no children"),
-            NodeUnexpected => write!(f, "unexpected child node"),
-            TreeEmpty => write!(f, "no rules where defined"),
-        }
-    }
 }
 
 /// A visitor that performs semantic analysis on an AST.
@@ -145,9 +132,8 @@ impl<'t> SemanticAnalyzer<'t> {
             if spans.len() > 1 {
                 self.error(
                     // FIXME: This is a patch until we start storing locations
-                    // for parts of an AST node. In this
-                    // case, we need the location of
-                    // the condition's title.
+                    // for parts of an AST node. In this case, we need the
+                    // location of the condition's title.
                     spans[0].with_end(spans[0].start),
                     ErrorKind::IdentifierDuplicated(spans),
                 );
@@ -155,7 +141,7 @@ impl<'t> SemanticAnalyzer<'t> {
         }
 
         if !self.errors.is_empty() {
-            return Err(self.errors.clone());
+            return Err(Errors(self.errors.clone()));
         }
 
         Ok(())
@@ -292,7 +278,7 @@ mod tests {
         let mut analyzer = semantics::SemanticAnalyzer::new("Foo_Test");
         let result = analyzer.analyze(&ast);
         assert_eq!(
-            result.unwrap_err(),
+            result.unwrap_err().0,
             vec![semantics::Error {
                 kind: NodeUnexpected,
                 text: "Foo_Test".to_owned(),
@@ -313,7 +299,7 @@ mod tests {
 └── when dup
     └── It 3",
         )
-        .unwrap_err(),
+        .unwrap_err().0,
             vec![semantics::Error {
                 kind: IdentifierDuplicated(
                     vec![
@@ -336,7 +322,8 @@ mod tests {
 ├── It should, match the result.
 └── It should' match the result.",
             )
-            .unwrap_err(),
+            .unwrap_err()
+            .0,
             vec![semantics::Error {
                 kind: IdentifierDuplicated(vec![
                     Span::new(Position::new(9, 2, 1), Position::new(46, 2, 32)),
@@ -353,7 +340,7 @@ mod tests {
     #[test]
     fn condition_empty() {
         assert_eq!(
-            analyze("Foo_Test\n└── when something").unwrap_err(),
+            analyze("Foo_Test\n└── when something").unwrap_err().0,
             vec![semantics::Error {
                 kind: ConditionEmpty,
                 text: "Foo_Test\n└── when something".to_owned(),
