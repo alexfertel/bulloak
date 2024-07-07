@@ -1,6 +1,7 @@
 //! Defines a rule-checking error object.
-
 use std::{borrow::Cow, collections::HashSet, fmt};
+
+use thiserror::Error;
 
 use forge_fmt::{
     parse,
@@ -22,9 +23,10 @@ use crate::{
 
 /// An error that occurred while checking specification rules between
 /// a tree and a Solidity contract.
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub(crate) struct Violation {
     /// The kind of violation.
+    #[source]
     pub(crate) kind: ViolationKind,
     /// The location information about this violation.
     pub(crate) location: Location,
@@ -48,31 +50,44 @@ impl Violation {
 /// NOTE: Adding a variant to this enum most certainly will mean adding a
 /// variant to the `Rules` section of `bulloak`'s README. Please, do not forget
 /// to add it if you are implementing a rule.
-#[derive(Debug)]
+#[derive(Debug, Error)]
 #[non_exhaustive]
 pub(crate) enum ViolationKind {
     /// Found no matching Solidity contract.
     ///
     /// (contract name)
+    #[error("contract \"{0}\" is missing in .sol")]
     ContractMissing(String),
+
     /// Contract name doesn't match.
     ///
     /// (tree name, sol name)
+    #[error("contract \"{0}\" is missing in .sol -- found \"{1}\" instead")]
     ContractNameNotMatches(String, String),
+
     /// The corresponding Solidity file does not exist.
+    #[error("the tree is missing its matching Solidity file: {0}")]
     SolidityFileMissing(String),
+
     /// Couldn't read the corresponding Solidity file.
+    #[error("bulloak couldn't read the file")]
     FileUnreadable,
+
     /// Found an incorrectly ordered element.
     ///
     /// (pt function, current position, insertion position)
+    #[error("incorrect position for function `{}`", .0.name.safe_unwrap())]
     FunctionOrderMismatch(pt::FunctionDefinition, usize, usize),
+
     /// Found a tree element without its matching codegen.
     ///
     /// (hir function, insertion position)
+    #[error("function \"{}\" is missing in .sol", .0.identifier.clone())]
     MatchingFunctionMissing(hir::FunctionDefinition, usize),
+
     /// The parsing of a tree or a Solidity file failed.
-    ParsingFailed(anyhow::Error),
+    #[error("{}", format_frontend_error(.0))]
+    ParsingFailed(#[from] anyhow::Error),
 }
 
 impl fmt::Display for Violation {
@@ -92,66 +107,27 @@ impl fmt::Display for Violation {
     }
 }
 
-impl fmt::Display for ViolationKind {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        use self::ViolationKind::{
-            ContractMissing, ContractNameNotMatches, FileUnreadable,
-            FunctionOrderMismatch, MatchingFunctionMissing, ParsingFailed,
-            SolidityFileMissing,
-        };
-        match self {
-            ContractMissing(contract) => {
-                write!(f, r#"contract "{contract}" is missing in .sol"#)
-            }
-            ContractNameNotMatches(tree_name, sol_name) => write!(
-                f,
-                r#"contract "{tree_name}" is missing in .sol -- found "{sol_name}" instead"#
+fn format_frontend_error(error: &anyhow::Error) -> String {
+    if let Some(error) = error.downcast_ref::<error::Error>() {
+        match error {
+            error::Error::Tokenize(error) => format!(
+                "an error occurred while parsing the tree: {}",
+                error.kind()
             ),
-            SolidityFileMissing(_) => {
-                write!(f, "the tree is missing its matching Solidity file")
-            }
-            FileUnreadable => {
-                write!(f, "bulloak couldn't read the file")
-            }
-            FunctionOrderMismatch(fn_sol, _, _) => {
-                let name = fn_sol.name.safe_unwrap();
-                write!(f, r#"incorrect position for function `{name}`"#)
-            }
-            MatchingFunctionMissing(fn_hir, _) => {
-                let name = fn_hir.identifier.clone();
-                write!(f, r#"function "{name}" is missing in .sol"#)
-            }
-            ParsingFailed(error) => {
-                if let Some(error) = error.downcast_ref::<error::Error>() {
-                    match error {
-                        error::Error::Tokenize(error) => write!(
-                            f,
-                            "an error occurred while parsing the tree: {}",
-                            error.kind()
-                        ),
-                        error::Error::Parse(error) => write!(
-                            f,
-                            "an error occurred while parsing the tree: {}",
-                            error.kind()
-                        ),
-                        error::Error::Combine(error) => write!(
-                            f,
-                            "an error occurred while parsing the tree: {}",
-                            error.kind()
-                        ),
-                        error::Error::Semantic(_) => write!(
-                            f,
-                            "at least one semantic error occurred while parsing the tree"
-                        ),
-                    }
-                } else {
-                    write!(
-                        f,
-                        "an error occurred while parsing the solidity file"
-                    )
-                }
-            }
+            error::Error::Parse(error) => format!(
+                "an error occurred while parsing the tree: {}",
+                error.kind()
+            ),
+            error::Error::Combine(error) => format!(
+                "an error occurred while parsing the tree: {}",
+                error.kind()
+            ),
+            error::Error::Semantic(_) => format!(
+                "at least one semantic error occurred while parsing the tree"
+            ),
         }
+    } else {
+        format!("an error occurred while parsing the solidity file")
     }
 }
 
