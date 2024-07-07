@@ -1,8 +1,6 @@
 //! Defines a rule-checking error object.
 use std::{borrow::Cow, collections::HashSet, fmt};
 
-use thiserror::Error;
-
 use forge_fmt::{
     parse,
     solang_ext::{CodeLocationExt, SafeUnwrap},
@@ -12,6 +10,7 @@ use solang_parser::{
     pt,
     pt::{ContractDefinition, ContractPart},
 };
+use thiserror::Error;
 
 use super::{context::Context, location::Location};
 use crate::{
