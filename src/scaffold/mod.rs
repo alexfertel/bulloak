@@ -64,59 +64,51 @@ impl Default for Scaffold {
 }
 
 impl Scaffold {
+    /// Runs the scaffold command, processing all specified files.
+    ///
+    /// This method iterates through all input files, processes them, and either
+    /// writes the output to files or prints to stdout based on the config.
+    ///
+    /// If any errors occur during processing, they are collected and reported.
     pub(crate) fn run(&self, cfg: &Config) -> anyhow::Result<()> {
-        // For each input file, compile it and print it or write it
-        // to the filesystem.
-        let mut errors = Vec::with_capacity(self.files.len());
-        for file in &self.files {
-            let text = fs::read_to_string(file)?;
-            let emitted = scaffold(&text, cfg);
-
-            if let Err(e) = emitted {
-                errors.push((file, e));
-                continue;
-            }
-
-            let emitted = emitted.unwrap();
-            let emitted = fmt(&emitted).unwrap_or_else(|err| {
-                eprintln!("{}: {}", "WARN".yellow(), err);
-                emitted
-            });
-
-            if !self.write_files {
-                println!("{emitted}");
-                continue;
-            }
-
-            let file = Self::to_test_file(file);
-            self.write_file(&emitted, &file);
-        }
+        let errors: Vec<_> = self
+            .files
+            .iter()
+            .filter_map(|file| {
+                self.process_file(file, cfg)
+                    .map_err(|e| (file.as_path(), e))
+                    .err()
+            })
+            .collect();
 
         if !errors.is_empty() {
-            let error_count = errors.len();
-            for (file, err) in errors {
-                eprintln!("{err}");
-                eprintln!("file: {}", file.display());
-            }
-
-            eprintln!(
-                "\n{}: Could not scaffold {} files. Check the output above or run {}, which might prove helpful.",
-                "warn".yellow(),
-                error_count.yellow(),
-                "bulloak check".blue()
-            );
-
+            self.report_errors(&errors);
             std::process::exit(1);
         }
 
         Ok(())
     }
 
-    /// Gets the `t.sol` path equivalent of `file`.
-    fn to_test_file(file: &Path) -> PathBuf {
-        let mut file = file.to_path_buf();
-        file.set_extension("t.sol");
-        file
+    /// Processes a single input file.
+    ///
+    /// This method reads the input file, scaffolds the Solidity code, formats
+    /// it, and either writes it to a file or prints it to stdout.
+    fn process_file(&self, file: &Path, cfg: &Config) -> anyhow::Result<()> {
+        let text = fs::read_to_string(file)?;
+        let emitted = scaffold(&text, cfg)?;
+        let formatted = fmt(&emitted).unwrap_or_else(|err| {
+            eprintln!("{}: {}", "WARN".yellow(), err);
+            emitted
+        });
+
+        if self.write_files {
+            let file = file.with_extension("t.sol");
+            self.write_file(&formatted, &file);
+        } else {
+            println!("{formatted}");
+        }
+
+        Ok(())
     }
 
     /// Writes the provided `text` to `file`.
@@ -142,9 +134,31 @@ impl Scaffold {
             eprintln!("{}: {err}", "error".red());
         };
     }
+
+    /// Reports errors that occurred during file processing.
+    ///
+    /// This method prints error messages for each file that failed to process,
+    /// along with a summary of the total number of failed files.
+    fn report_errors(&self, errors: &[(&Path, anyhow::Error)]) {
+        for (file, err) in errors {
+            eprintln!("{err}");
+            eprintln!("file: {}", file.display());
+        }
+
+        eprintln!(
+            "\n{}: Could not scaffold {} files. Check the output above or run {}, which might prove helpful.",
+            "warn".yellow(),
+            errors.len().yellow(),
+            "bulloak check".blue()
+        );
+    }
 }
 
 /// Generates Solidity code from a `.tree` file.
+///
+/// This function takes the content of a `.tree` file and a configuration,
+/// translates it to an intermediate representation, then to Solidity, and
+/// finally formats the resulting Solidity code.
 pub fn scaffold(text: &str, cfg: &Config) -> crate::error::Result<String> {
     let hir = translate_and_combine_trees(text, cfg)?;
     let pt = sol::Translator::new(cfg).translate(&hir);
