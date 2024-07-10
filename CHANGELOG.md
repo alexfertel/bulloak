@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.4] - 2024-07-10
+
+### Bug Fixes
+
+- Skip any comment in .tree files
+
+
+### Refactor
+
+- *(check)* Use the thiserror crate (#73)
+- *(scaffold)* Use the thiserror crate (#71)
+- Revamp the scaffold entrypoint (#74)
+
+
 ## [0.7.3] - 2024-07-02
 
 ### Bug Fixes

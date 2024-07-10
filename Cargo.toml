@@ -1,6 +1,6 @@
 [package]
 authors = ["Alexander Gonzalez <alexfertel97@gmail.com>"]
-version = "0.7.3"
+version = "0.7.4"
 name = "bulloak"
 license = "MIT OR Apache-2.0"
 edition = "2021"
