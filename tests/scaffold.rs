@@ -18,6 +18,7 @@ fn scaffolds_trees() {
         "removes_invalid_title_chars.tree",
         "hash_pair.tree",
         "revert_when.tree",
+        "spurious_comments.tree",
     ];
 
     for tree_name in trees {
