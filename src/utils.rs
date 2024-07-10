@@ -51,19 +51,24 @@ pub(crate) fn pluralize<'a>(
     }
 }
 
-/// Splits the input text into distinct trees,
-/// delimited by two successive newlines.
+/// Splits the input text into distinct trees, delimited by two consecutive
+/// newlines.
 #[inline]
 pub(crate) fn split_trees(text: &str) -> Box<dyn Iterator<Item = &str> + '_> {
     if text.trim().is_empty() {
-        Box::new(std::iter::once(""))
-    } else {
-        Box::new(
-            text.split(TREES_SEPARATOR)
-                .map(str::trim)
-                .filter(|s| !s.is_empty()),
-        )
+        return Box::new(std::iter::once(""));
     }
+
+    let trees = text.split(TREES_SEPARATOR).map(str::trim);
+    let non_empty_trees = trees.filter(|s| !s.is_empty());
+    let no_isolated_comments =
+        non_empty_trees.filter(|tree| !only_comments(tree));
+
+    Box::new(no_isolated_comments)
+}
+
+fn only_comments(tree: &str) -> bool {
+    tree.lines().all(|l| l.trim().starts_with("//"))
 }
 
 #[cfg(test)]
