@@ -24,10 +24,9 @@ impl Emitter {
     /// Create a new emitter with the given configuration.
     #[must_use]
     pub fn new(cfg: &Config) -> Self {
-        let cfg = cfg.scaffold();
         Self {
             indent: INTERNAL_DEFAULT_INDENTATION,
-            solidity_version: cfg.solidity_version,
+            solidity_version: cfg.solidity_version.clone(),
         }
     }
 
@@ -465,8 +464,8 @@ contract FileTest {
     #[test]
     fn with_vm_skip() -> Result<()> {
         let file_contents = "FileTest\n└── when something bad happens\n   └── it should not revert";
-        let cfg: Config = Config::default();
-        let cfg = cfg.with_vm_skip(true);
+        let mut cfg: Config = Config::default();
+        cfg.emit_vm_skip = true;
         let hir = translate_and_combine_trees(file_contents, &cfg)?;
         let emitted = emitter::Emitter::new(&cfg).emit(&hir);
 

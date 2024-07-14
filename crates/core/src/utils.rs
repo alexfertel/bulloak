@@ -39,7 +39,7 @@ pub(crate) fn repeat_str(s: &str, n: usize) -> String {
     s.repeat(n)
 }
 
-pub(crate) fn pluralize<'a>(
+pub fn pluralize<'a>(
     count: usize,
     singular: &'a str,
     plural: &'a str,

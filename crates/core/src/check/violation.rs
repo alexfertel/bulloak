@@ -23,22 +23,22 @@ use crate::{
 /// An error that occurred while checking specification rules between
 /// a tree and a Solidity contract.
 #[derive(Debug, Error)]
-pub(crate) struct Violation {
+pub struct Violation {
     /// The kind of violation.
     #[source]
-    pub(crate) kind: ViolationKind,
+    pub kind: ViolationKind,
     /// The location information about this violation.
-    pub(crate) location: Location,
+    pub location: Location,
 }
 
 impl Violation {
     /// Create a new violation.
-    pub(crate) fn new(kind: ViolationKind, location: Location) -> Self {
+    pub fn new(kind: ViolationKind, location: Location) -> Self {
         Self { kind, location }
     }
 
     /// Determines whether a given violation is fixable.
-    pub(crate) fn is_fixable(&self) -> bool {
+    pub fn is_fixable(&self) -> bool {
         self.kind.is_fixable()
     }
 }
@@ -51,7 +51,7 @@ impl Violation {
 /// to add it if you are implementing a rule.
 #[derive(Debug, Error)]
 #[non_exhaustive]
-pub(crate) enum ViolationKind {
+pub enum ViolationKind {
     /// Found no matching Solidity contract.
     ///
     /// (contract name)
@@ -132,7 +132,7 @@ fn format_frontend_error(error: &anyhow::Error) -> String {
 
 impl ViolationKind {
     /// Whether this violation kind is fixable.
-    pub(crate) fn is_fixable(&self) -> bool {
+    pub fn is_fixable(&self) -> bool {
         matches!(
             self,
             ViolationKind::ContractMissing(_)
@@ -144,7 +144,7 @@ impl ViolationKind {
 
     /// Optionally returns a help text to be used when displaying the violation
     /// kind.
-    pub(crate) fn help(&self) -> Option<Cow<'static, str>> {
+    pub fn help(&self) -> Option<Cow<'static, str>> {
         let text = match self {
             ViolationKind::ContractMissing(name) => {
                 format!(r#"consider adding a contract with name "{name}""#)
@@ -166,7 +166,8 @@ impl ViolationKind {
         Some(text)
     }
 
-    pub(crate) fn fix(&self, mut ctx: Context) -> Context {
+    /// Returns a new context with this violation fixed.
+    pub fn fix(&self, mut ctx: Context) -> Context {
         match self {
             ViolationKind::ContractMissing(_) => {
                 let pt = sol::Translator::new(&Config::default())
@@ -316,7 +317,7 @@ fn get_insertion_offset(
 /// # Panics
 /// The function will panic if the reconstructed Solidity string fails to parse.
 /// This is a safeguard to ensure the output is always a valid Solidity code.
-pub(crate) fn fix_order(
+pub fn fix_order(
     violations: &[Violation],
     contract_sol: &Box<ContractDefinition>,
     contract_hir: &hir::ContractDefinition,

@@ -32,7 +32,7 @@ use crate::{
 /// Read more at the [module-level documentation].
 ///
 /// module-level documentation: self
-pub(crate) struct StructuralMatcher;
+pub struct StructuralMatcher;
 
 impl Checker for StructuralMatcher {
     fn check(ctx: &Context) -> Vec<Violation> {
@@ -144,7 +144,7 @@ fn check_fns_structure(
                 // We didn't find a matching function, so this is a
                 // violation.
                 None => {
-                    if !ctx.cfg.check().skip_modifiers {
+                    if !ctx.cfg.skip_modifiers {
                         violations.push(Violation::new(
                             ViolationKind::MatchingFunctionMissing(
                                 fn_hir.clone(),

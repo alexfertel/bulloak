@@ -13,7 +13,7 @@ use solang_parser::pt::SourceUnit;
 
 use super::{location::Location, violation::ViolationKind};
 use crate::{
-    check::Violation,
+    check::violation::Violation,
     config::Config,
     hir::{self, Hir},
     scaffold::emitter::Emitter,
@@ -27,22 +27,22 @@ use crate::{
 /// If you need any additional information for your rule, feel free to add it
 /// here.
 #[derive(Clone, Debug)]
-pub(crate) struct Context {
+pub struct Context {
     /// The path to the tree file.
-    pub(crate) tree: PathBuf,
+    pub tree: PathBuf,
     /// The high-level intermediate representation
     /// of the bulloak tree.
-    pub(crate) hir: Hir,
+    pub hir: Hir,
     /// The path to the Solidity file.
-    pub(crate) sol: PathBuf,
+    pub sol: PathBuf,
     /// The contents of the Solidity file.
-    pub(crate) src: String,
+    pub src: String,
     /// The abstract syntax tree of the Solidity file.
-    pub(crate) pt: SourceUnit,
+    pub pt: SourceUnit,
     /// The comments present in the Solidity file.
-    pub(crate) comments: Comments,
+    pub comments: Comments,
     /// The config passed to `bulloak check`.
-    pub(crate) cfg: Config,
+    pub cfg: Config,
 }
 
 impl Context {
@@ -50,7 +50,7 @@ impl Context {
     ///
     /// This structure contains everything necessary to perform checks between
     /// trees and Solidity files.
-    pub(crate) fn new(tree: PathBuf, cfg: Config) -> Result<Self, Violation> {
+    pub fn new(tree: PathBuf, cfg: &Config) -> Result<Self, Violation> {
         let tree_path_cow = tree.to_string_lossy();
         let tree_contents = try_read_to_string(&tree)?;
         let hir = crate::hir::translate(&tree_contents, &Config::default())
@@ -80,7 +80,7 @@ impl Context {
 
     /// Updates this `Context` with the result of parsing a Solidity file.
     #[inline]
-    pub(crate) fn from_parsed(mut self, parsed: Parsed) -> Self {
+    pub fn from_parsed(mut self, parsed: Parsed) -> Self {
         parsed.src.clone_into(&mut self.src);
         self.pt = parsed.pt;
         self.comments = parsed.comments;
@@ -89,7 +89,7 @@ impl Context {
 
     /// Updates the context with a formatted representation of the Solidity
     /// file.
-    pub(crate) fn fmt(self) -> anyhow::Result<String, FormatterError> {
+    pub fn fmt(self) -> anyhow::Result<String, FormatterError> {
         let mut formatted = String::new();
         format(
             &mut formatted,
@@ -119,7 +119,7 @@ impl Context {
     ///   inserted.
     /// * `offset` - The character position in the source string where the
     ///   function definition should be inserted.
-    pub(crate) fn insert_function_at(
+    pub fn insert_function_at(
         &mut self,
         function: &hir::FunctionDefinition,
         offset: usize,

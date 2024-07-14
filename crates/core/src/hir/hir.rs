@@ -33,7 +33,9 @@ impl Default for Hir {
 }
 
 impl Hir {
-    pub(crate) fn find_contract(&self) -> Option<&ContractDefinition> {
+    /// Returns the first contract object found starting from a root or a
+    /// contract definition if it exists.
+    pub fn find_contract(&self) -> Option<&ContractDefinition> {
         match self {
             Hir::Root(root) => root.find_contract(),
             Hir::ContractDefinition(contract) => Some(contract),

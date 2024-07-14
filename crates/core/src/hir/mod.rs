@@ -28,7 +28,7 @@ pub fn translate(text: &str, cfg: &Config) -> anyhow::Result<Hir> {
 /// This function leverages [`translate_tree_to_hir`] to generate the HIR for
 /// each tree, and [`crate::hir::combiner::Combiner::combine`] to combine the
 /// HIRs into a single HIR.
-pub(crate) fn translate_and_combine_trees(
+pub fn translate_and_combine_trees(
     text: &str,
     cfg: &Config,
 ) -> error::Result<Hir> {

@@ -5,12 +5,13 @@
 
 use super::{context::Context, violation::Violation};
 
-pub(crate) mod structural_match;
-pub(crate) use structural_match::StructuralMatcher;
+pub mod structural_match;
+pub use structural_match::StructuralMatcher;
 
 /// Trait definition for a rule checker object.
 ///
 /// All children modules must export an implementor of this trait.
-pub(crate) trait Checker {
+pub trait Checker {
+    /// Defines a rule to be checked by the `bulloak check` command.
     fn check(ctx: &Context) -> Vec<Violation>;
 }

@@ -49,13 +49,12 @@ impl Translator {
     /// Create a new translator.
     #[must_use]
     pub(crate) fn new(cfg: &Config) -> Self {
-        let scaffold_cfg = cfg.scaffold();
-        let with_forge_std = [scaffold_cfg.with_vm_skip].into_iter().any(|f| f);
+        let with_forge_std = [cfg.emit_vm_skip].into_iter().any(|f| f);
 
         Self {
-            sol_version: scaffold_cfg.solidity_version,
+            sol_version: cfg.solidity_version.clone(),
             with_forge_std,
-            skip_modifiers: scaffold_cfg.skip_modifiers,
+            skip_modifiers: cfg.skip_modifiers,
         }
     }
 

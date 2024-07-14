@@ -63,7 +63,7 @@ struct TranslatorI<'a> {
 impl<'a> TranslatorI<'a> {
     /// Creates a new internal translator.
     fn new(modifiers: &'a IndexMap<String, String>, cfg: &Config) -> Self {
-        let with_vm_skip = cfg.scaffold().with_vm_skip;
+        let with_vm_skip = cfg.emit_vm_skip;
         Self { modifier_stack: Vec::new(), modifiers, with_vm_skip }
     }
 
@@ -338,8 +338,8 @@ mod tests {
         let mut discoverer = modifiers::ModifierDiscoverer::new();
         let modifiers = discoverer.discover(&ast);
 
-        let cfg: Config = Default::default();
-        let cfg = cfg.with_vm_skip(true);
+        let mut cfg: Config = Config::default();
+        cfg.emit_vm_skip = true;
         Ok(hir::translator::Translator::new().translate(&ast, modifiers, &cfg))
     }
 

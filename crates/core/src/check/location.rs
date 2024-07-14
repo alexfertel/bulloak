@@ -1,3 +1,4 @@
+//! Location utilities.
 use std::fmt;
 
 type Filename = String;
@@ -5,7 +6,7 @@ type Line = usize;
 
 /// A code location.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub(crate) enum Location {
+pub enum Location {
     /// A code location inside a file.
     Code(Filename, Line),
     /// A file name.
@@ -13,7 +14,8 @@ pub(crate) enum Location {
 }
 
 impl Location {
-    pub(crate) fn file(&self) -> String {
+    /// Returns the filename of this code location.
+    pub fn file(&self) -> String {
         match self {
             Location::Code(file, _) | Location::File(file) => file.clone(),
         }
