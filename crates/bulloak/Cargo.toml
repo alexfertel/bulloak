@@ -30,6 +30,7 @@ unicode-xid = "0.2.4"
 zerocopy = "0.7.31"
 
 [dev-dependencies]
+pretty_assertions = { version = "1.4.0" }
 criterion = "0.5.1"
 
 [[bench]]

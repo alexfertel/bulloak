@@ -39,9 +39,11 @@ impl From<&Config> for bulloak_core::config::Config {
                 skip_modifiers: cmd.skip_modifiers,
                 ..Self::default()
             },
-            Commands::Check(cmd) => {
-                Self { files: cmd.files.clone(), ..Self::default() }
-            }
+            Commands::Check(cmd) => Self {
+                files: cmd.files.clone(),
+                skip_modifiers: cmd.skip_modifiers,
+                ..Self::default()
+            },
         }
     }
 }
