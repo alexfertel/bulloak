@@ -1,4 +1,4 @@
-use bulloak::{self, scaffold};
+use bulloak_core::{self, scaffold};
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 
 fn big_tree(c: &mut Criterion) {

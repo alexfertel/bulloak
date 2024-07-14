@@ -332,9 +332,16 @@ checksum = "b4ae4235e6dac0694637c763029ecea1a2ec9e4e06ec2729bd21ba4d9c863eb7"
 name = "bulloak"
 version = "0.7.4"
 dependencies = [
+ "bulloak-core",
+ "criterion",
+]
+
+[[package]]
+name = "bulloak-core"
+version = "0.7.4"
+dependencies = [
  "anyhow",
  "clap",
- "criterion",
  "figment",
  "forge-fmt",
  "indexmap",

@@ -1,0 +1,23 @@
+[package]
+name = "bulloak"
+version = "0.7.4"
+authors.workspace = true
+license.workspace = true
+edition.workspace = true
+readme.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+description.workspace = true
+keywords.workspace = true
+categories.workspace = true
+
+[dependencies]
+bulloak-core = { path = "../core" }
+
+[dev-dependencies]
+criterion = "0.5.1"
+
+[[bench]]
+name = "bench"
+harness = false
