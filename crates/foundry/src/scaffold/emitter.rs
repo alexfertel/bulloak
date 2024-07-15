@@ -2,12 +2,11 @@
 
 use std::result;
 
-use crate::{
-    config::Config,
-    constants::INTERNAL_DEFAULT_INDENTATION,
-    hir::{self, visitor::Visitor, Hir},
-    utils::sanitize,
+use bulloak_core::{
+    config::Config, constants::INTERNAL_DEFAULT_INDENTATION, utils::sanitize,
 };
+
+use crate::hir::{self, visitor::Visitor, Hir};
 
 /// Solidity code emitter.
 ///
@@ -296,20 +295,19 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     use crate::{
-        config::Config,
-        error::Result,
         hir::{translate_and_combine_trees, Hir, Statement, StatementType},
         scaffold::emitter,
     };
+    use bulloak_core::config::Config;
 
-    fn scaffold(text: &str) -> Result<String> {
+    fn scaffold(text: &str) -> anyhow::Result<String> {
         let cfg = Config::default();
         let hir = translate_and_combine_trees(text, &cfg)?;
         Ok(emitter::Emitter::new(&cfg).emit(&hir))
     }
 
     #[test]
-    fn one_child() -> Result<()> {
+    fn one_child() -> anyhow::Result<()> {
         let file_contents =
             String::from("FileTest\n└── when something bad happens\n   └── it should not revert");
 
@@ -346,7 +344,7 @@ contract FileTest {
     }
 
     #[test]
-    fn actions_without_conditions() -> Result<()> {
+    fn actions_without_conditions() -> anyhow::Result<()> {
         let file_contents = String::from(
             "FileTest\n├── it should do st-ff\n└── It never reverts.",
         );
@@ -422,7 +420,7 @@ contract FileTest {
     }
 
     #[test]
-    fn unsanitized_input() -> Result<()> {
+    fn unsanitized_input() -> anyhow::Result<()> {
         let file_contents =
             String::from("Fi-eTest\n└── when something bad happens\n   └── it should not revert");
 
@@ -442,7 +440,7 @@ contract Fi_eTest {
     }
 
     #[test]
-    fn indentation() -> Result<()> {
+    fn indentation() -> anyhow::Result<()> {
         let file_contents =
             String::from("FileTest\n└── when something bad happens\n   └── it should not revert");
 
@@ -462,7 +460,7 @@ contract FileTest {
     }
 
     #[test]
-    fn with_vm_skip() -> Result<()> {
+    fn with_vm_skip() -> anyhow::Result<()> {
         let file_contents = "FileTest\n└── when something bad happens\n   └── it should not revert";
         let mut cfg: Config = Config::default();
         cfg.emit_vm_skip = true;
@@ -494,7 +492,7 @@ contract FileTest {
     }
 
     #[test]
-    fn two_children() -> Result<()> {
+    fn two_children() -> anyhow::Result<()> {
         let file_contents = String::from(
             r"TwoChildren_Test
 ├── when stuff called
@@ -523,7 +521,7 @@ contract TwoChildren_Test {
     }
 
     #[test]
-    fn action_with_sibling_condition() -> Result<()> {
+    fn action_with_sibling_condition() -> anyhow::Result<()> {
         let file_contents = String::from(
             r"
 Foo_Test
@@ -574,7 +572,7 @@ contract Foo_Test {
     }
 
     #[test]
-    fn action_recollection() -> Result<()> {
+    fn action_recollection() -> anyhow::Result<()> {
         let file_contents = String::from(
             r"ActionsTest
 └── when stuff called
@@ -602,7 +600,7 @@ contract ActionsTest {
     }
 
     #[test]
-    fn first_action_revert_emits_revert_when() -> Result<()> {
+    fn first_action_revert_emits_revert_when() -> anyhow::Result<()> {
         let file_contents = String::from(
             r"ActionsTest
 └── when stuff called
@@ -630,7 +628,7 @@ contract ActionsTest {
     }
 
     #[test]
-    fn weird_it_should_revert_emits_revert_when() -> Result<()> {
+    fn weird_it_should_revert_emits_revert_when() -> anyhow::Result<()> {
         let file_contents = String::from(
             r"ActionsTest
 └── when stuff called
@@ -654,7 +652,8 @@ contract ActionsTest {
     }
 
     #[test]
-    fn non_firt_child_it_should_revert_doesnt_emit_revert_when() -> Result<()> {
+    fn non_firt_child_it_should_revert_doesnt_emit_revert_when(
+    ) -> anyhow::Result<()> {
         let file_contents = String::from(
             r"ActionsTest
 └── when stuff called
@@ -682,7 +681,7 @@ contract ActionsTest {
     }
 
     #[test]
-    fn action_descriptions() -> Result<()> {
+    fn action_descriptions() -> anyhow::Result<()> {
         let file_contents = String::from(
             r"DescriptionsTest
 └── when something bad happens
@@ -711,7 +710,7 @@ contract DescriptionsTest {
     }
 
     #[test]
-    fn deep_tree() -> Result<()> {
+    fn deep_tree() -> anyhow::Result<()> {
         let file_contents = String::from(
             r#"DeepTest
 ├── when stuff called

@@ -1,3 +1,5 @@
+//! Locations of a construct in a file.
+
 use std::{cmp::Ordering, fmt};
 
 /// Span represents the position information of a single token.

@@ -4,7 +4,8 @@
 
 use forge_fmt::fmt;
 
-use crate::{config::Config, hir::translate_and_combine_trees, sol};
+use crate::{hir::translate_and_combine_trees, sol};
+use bulloak_core::config::Config;
 
 pub mod emitter;
 pub mod modifiers;
@@ -14,7 +15,7 @@ pub mod modifiers;
 /// This function takes the content of a `.tree` file and a configuration,
 /// translates it to an intermediate representation, then to Solidity, and
 /// finally formats the resulting Solidity code.
-pub fn scaffold(text: &str, cfg: &Config) -> crate::error::Result<String> {
+pub fn scaffold(text: &str, cfg: &Config) -> anyhow::Result<String> {
     let hir = translate_and_combine_trees(text, cfg)?;
     let pt = sol::Translator::new(cfg).translate(&hir);
     let source = sol::Formatter::new().emit(pt);

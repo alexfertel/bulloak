@@ -13,7 +13,7 @@ use owo_colors::OwoColorize;
 use serde::{Deserialize, Serialize};
 
 use crate::{cli::Config, constants::DEFAULT_SOL_VERSION};
-use bulloak_core::scaffold::scaffold;
+use bulloak_foundry::scaffold::scaffold;
 
 /// Generate Solidity tests based on your spec.
 #[doc(hidden)]

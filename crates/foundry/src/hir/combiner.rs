@@ -1,11 +1,12 @@
 //! The implementation of a high-level intermediate representation (HIR)
 //! combiner.
-use std::{collections::HashSet, mem, result};
+use std::{collections::HashSet, fmt, mem, result};
 
+use bulloak_syntax::error::BulloakError;
 use thiserror::Error;
 
 use super::{ContractDefinition, Hir, Root};
-use crate::{
+use bulloak_core::{
     constants::CONTRACT_IDENTIFIER_SEPARATOR, span::Span,
     utils::capitalize_first_letter,
 };
@@ -25,23 +26,26 @@ pub struct Error {
     span: Span,
 }
 
-impl Error {
+impl BulloakError<ErrorKind> for Error {
     /// Return the type of this error.
-    #[must_use]
-    pub fn kind(&self) -> &ErrorKind {
+    fn kind(&self) -> &ErrorKind {
         &self.kind
     }
 
     /// The original text string in which this error occurred.
-    #[must_use]
-    pub fn text(&self) -> &str {
+    fn text(&self) -> &str {
         &self.text
     }
 
     /// Return the span at which this error occurred.
-    #[must_use]
-    pub fn span(&self) -> &Span {
+    fn span(&self) -> &Span {
         &self.span
+    }
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.format_error(f)
     }
 }
 
@@ -261,12 +265,12 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     use crate::{
-        config::Config,
         hir::{self, Hir},
         scaffold::modifiers,
-        span::{Position, Span},
-        syntax::{parser::Parser, tokenizer::Tokenizer},
     };
+    use bulloak_core::config::Config;
+    use bulloak_core::span::{Position, Span};
+    use bulloak_syntax::{parser::Parser, tokenizer::Tokenizer};
 
     fn translate(text: &str) -> Result<Hir> {
         let tokens = Tokenizer::new().tokenize(&text)?;

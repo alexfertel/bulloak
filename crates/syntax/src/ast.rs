@@ -1,6 +1,6 @@
 //! The AST for a bulloak tree file.
 
-use crate::span::Span;
+use bulloak_core::span::Span;
 
 /// An Abstract Syntax Tree (AST) that describes the semantic
 /// structure of a bulloak tree.

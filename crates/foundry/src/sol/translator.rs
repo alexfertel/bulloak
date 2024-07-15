@@ -24,11 +24,8 @@ use solang_parser::pt::{
     Statement, StringLiteral, Type, VariableDeclaration, Visibility,
 };
 
-use crate::{
-    config::Config,
-    hir::{self, visitor::Visitor, Hir},
-    utils::sanitize,
-};
+use crate::hir::{self, visitor::Visitor, Hir};
+use bulloak_core::{config::Config, utils::sanitize};
 
 /// The implementation of a translator between a bulloak tree HIR and a
 /// `solang_parser` parse tree -- HIR -> PT.

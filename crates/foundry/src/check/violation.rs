@@ -1,6 +1,7 @@
 //! Defines a rule-checking error object.
 use std::{borrow::Cow, collections::HashSet, fmt};
 
+use bulloak_syntax::error::BulloakError;
 use forge_fmt::{
     parse,
     solang_ext::{CodeLocationExt, SafeUnwrap},
@@ -14,11 +15,10 @@ use thiserror::Error;
 
 use super::{context::Context, location::Location};
 use crate::{
-    config::Config,
-    error,
     hir::{self, Hir},
     sol::{self, find_contract, find_matching_fn},
 };
+use bulloak_core::config::Config;
 
 /// An error that occurred while checking specification rules between
 /// a tree and a Solidity contract.
@@ -107,24 +107,22 @@ impl fmt::Display for Violation {
 }
 
 fn format_frontend_error(error: &anyhow::Error) -> String {
-    if let Some(error) = error.downcast_ref::<error::Error>() {
-        match error {
-            error::Error::Tokenize(error) => format!(
-                "an error occurred while parsing the tree: {}",
-                error.kind()
-            ),
-            error::Error::Parse(error) => format!(
-                "an error occurred while parsing the tree: {}",
-                error.kind()
-            ),
-            error::Error::Combine(error) => format!(
-                "an error occurred while parsing the tree: {}",
-                error.kind()
-            ),
-            error::Error::Semantic(_) => format!(
-                "at least one semantic error occurred while parsing the tree"
-            ),
-        }
+    if let Some(error) =
+        error.downcast_ref::<bulloak_syntax::tokenizer::Error>()
+    {
+        format!("an error occurred while parsing the tree: {}", error.kind())
+    } else if let Some(error) =
+        error.downcast_ref::<bulloak_syntax::parser::Error>()
+    {
+        format!("an error occurred while parsing the tree: {}", error.kind())
+    } else if let Some(error) =
+        error.downcast_ref::<crate::hir::combiner::Error>()
+    {
+        format!("an error occurred while parsing the tree: {}", error.kind())
+    } else if let Some(_) =
+        error.downcast_ref::<bulloak_syntax::semantics::Error>()
+    {
+        format!("at least one semantic error occurred while parsing the tree")
     } else {
         format!("an error occurred while parsing the solidity file")
     }

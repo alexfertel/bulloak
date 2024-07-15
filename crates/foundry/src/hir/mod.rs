@@ -9,10 +9,8 @@ pub mod visitor;
 
 pub use hir::*;
 
-use crate::{
-    config::Config, error, scaffold::modifiers::ModifierDiscoverer, syntax,
-    utils::split_trees,
-};
+use crate::scaffold::modifiers::ModifierDiscoverer;
+use bulloak_core::{config::Config, utils::split_trees};
 
 /// High-level function that returns a HIR given the contents of a `.tree` file.
 ///
@@ -31,11 +29,11 @@ pub fn translate(text: &str, cfg: &Config) -> anyhow::Result<Hir> {
 pub fn translate_and_combine_trees(
     text: &str,
     cfg: &Config,
-) -> error::Result<Hir> {
+) -> anyhow::Result<Hir> {
     let trees = split_trees(text);
     let hirs = trees
         .map(|tree| translate_tree_to_hir(tree, cfg))
-        .collect::<error::Result<Vec<Hir>>>()?;
+        .collect::<anyhow::Result<Vec<Hir>>>()?;
     Ok(combiner::Combiner::new().combine(text, hirs)?)
 }
 
@@ -44,8 +42,8 @@ pub fn translate_and_combine_trees(
 /// This function leverages [`crate::syntax::parse`] and
 /// [`crate::hir::translator::Translator::translate`] to hide away most of the
 /// complexity of `bulloak`'s internal compiler.
-pub fn translate_tree_to_hir(tree: &str, cfg: &Config) -> error::Result<Hir> {
-    let ast = syntax::parse(tree)?;
+pub fn translate_tree_to_hir(tree: &str, cfg: &Config) -> anyhow::Result<Hir> {
+    let ast = bulloak_syntax::parse(tree)?;
     let mut discoverer = ModifierDiscoverer::new();
     let modifiers = discoverer.discover(&ast);
     Ok(translator::Translator::new().translate(&ast, modifiers, cfg))

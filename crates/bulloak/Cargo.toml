@@ -13,25 +13,27 @@ keywords.workspace = true
 categories.workspace = true
 
 [dependencies]
-bulloak-core = { path = "../core" }
-anyhow = "1.0.75"
-clap = { version = "4.3.19", features = ["derive"] }
-figment = "0.10.19"
-forge-fmt = "0.2.0"
-indexmap = "2.0.0"
-once_cell = "1.18.0"
-owo-colors = "3.5.0"
-regex = "1.10.2"
-serde = "1.0.203"
-solang-parser = "0.3.2"
-thiserror = "1.0.61"
-unicode-xid = "0.2.4"
+bulloak-core.workspace = true
+bulloak-foundry.workspace = true
+
+anyhow.workspace = true
+clap.workspace = true
+figment.workspace = true
+forge-fmt.workspace = true
+indexmap.workspace = true
+once_cell.workspace = true
+owo-colors.workspace = true
+regex.workspace = true
+serde.workspace = true
+solang-parser.workspace = true
+thiserror.workspace = true
+unicode-xid.workspace = true
 # Security patch
-zerocopy = "0.7.31"
+zerocopy.workspace = true
 
 [dev-dependencies]
-pretty_assertions = { version = "1.4.0" }
-criterion = "0.5.1"
+pretty_assertions.workspace = true
+criterion.workspace = true
 
 [[bench]]
 name = "bench"

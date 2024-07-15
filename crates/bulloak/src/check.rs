@@ -5,16 +5,14 @@
 
 use std::{fs, path::PathBuf};
 
-use bulloak_core::check::context::Context;
-use bulloak_core::check::rules::{self, Checker};
+use bulloak_core::utils::pluralize;
+use bulloak_foundry::check::context::Context;
+use bulloak_foundry::check::rules::{self, Checker};
+use bulloak_foundry::violation::{Violation, ViolationKind};
+use bulloak_foundry::{check::violation::fix_order, sol::find_contract};
 use clap::Parser;
 use owo_colors::OwoColorize;
 use serde::{Deserialize, Serialize};
-
-use bulloak_core::violation::{Violation, ViolationKind};
-use bulloak_core::{
-    check::violation::fix_order, sol::find_contract, utils::pluralize,
-};
 
 use crate::cli::Config;
 

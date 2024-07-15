@@ -5,12 +5,10 @@
 
 use indexmap::IndexMap;
 
-use crate::{
-    syntax::{
-        ast::{self, Ast},
-        visitor::Visitor,
-    },
-    utils::{lower_first_letter, to_pascal_case},
+use bulloak_core::utils::{lower_first_letter, to_pascal_case};
+use bulloak_syntax::{
+    ast::{self, Ast},
+    visitor::Visitor,
 };
 
 /// AST visitor that discovers modifiers.
@@ -59,7 +57,7 @@ impl Visitor for ModifierDiscoverer {
     fn visit_root(
         &mut self,
         root: &ast::Root,
-    ) -> Result<Self::Output, Self::Error> {
+    ) -> anyhow::Result<Self::Output, Self::Error> {
         for condition in &root.children {
             if let Ast::Condition(condition) = condition {
                 self.visit_condition(condition)?;
@@ -72,7 +70,7 @@ impl Visitor for ModifierDiscoverer {
     fn visit_condition(
         &mut self,
         condition: &ast::Condition,
-    ) -> Result<Self::Output, Self::Error> {
+    ) -> anyhow::Result<Self::Output, Self::Error> {
         self.modifiers.insert(
             condition.title.clone(),
             lower_first_letter(&to_pascal_case(&condition.title)),
@@ -90,7 +88,7 @@ impl Visitor for ModifierDiscoverer {
     fn visit_action(
         &mut self,
         _action: &ast::Action,
-    ) -> Result<Self::Output, Self::Error> {
+    ) -> anyhow::Result<Self::Output, Self::Error> {
         // No-op.
         Ok(())
     }
@@ -98,7 +96,7 @@ impl Visitor for ModifierDiscoverer {
     fn visit_description(
         &mut self,
         _description: &ast::Description,
-    ) -> Result<Self::Output, Self::Error> {
+    ) -> anyhow::Result<Self::Output, Self::Error> {
         // No-op.
         Ok(())
     }
@@ -109,13 +107,12 @@ mod tests {
     use indexmap::IndexMap;
     use pretty_assertions::assert_eq;
 
-    use crate::{
-        error::Result,
-        scaffold::modifiers::ModifierDiscoverer,
-        syntax::{parser::Parser, tokenizer::Tokenizer},
-    };
+    use crate::scaffold::modifiers::ModifierDiscoverer;
+    use bulloak_syntax::{parser::Parser, tokenizer::Tokenizer};
 
-    fn discover(file_contents: &str) -> Result<IndexMap<String, String>> {
+    fn discover(
+        file_contents: &str,
+    ) -> anyhow::Result<IndexMap<String, String>> {
         let tokens = Tokenizer::new().tokenize(file_contents)?;
         let ast = Parser::new().parse(file_contents, &tokens)?;
         let mut discoverer = ModifierDiscoverer::new();

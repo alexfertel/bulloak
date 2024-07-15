@@ -8,7 +8,7 @@ use solang_parser::pt::{
 };
 
 use super::visitor::Visitor;
-use crate::utils::sanitize;
+use bulloak_core::utils::sanitize;
 
 trait Identified {
     fn name(&self) -> String;

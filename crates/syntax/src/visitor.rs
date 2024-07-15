@@ -1,6 +1,6 @@
 //! Defines a trait for visiting a bulloak tree AST in depth-first order.
 
-use crate::syntax::ast;
+use crate::ast;
 
 /// A trait for visiting a tree AST in depth-first order.
 ///

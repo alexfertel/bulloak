@@ -1,13 +1,15 @@
 //! A parser implementation for a stream of tokens representing a bulloak tree.
-use std::{borrow::Borrow, cell::Cell, result};
+use std::{borrow::Borrow, cell::Cell, fmt, result};
 
 use thiserror::Error;
+
+use crate::error::BulloakError;
 
 use super::{
     ast::{Action, Ast, Condition, Description, Root},
     tokenizer::{Token, TokenKind},
 };
-use crate::{
+use bulloak_core::{
     span::Span,
     utils::{repeat_str, sanitize},
 };
@@ -28,23 +30,26 @@ pub struct Error {
     span: Span,
 }
 
-impl Error {
+impl BulloakError<ErrorKind> for Error {
     /// Return the type of this error.
-    #[must_use]
-    pub fn kind(&self) -> &ErrorKind {
+    fn kind(&self) -> &ErrorKind {
         &self.kind
     }
 
     /// The original text string in which this error occurred.
-    #[must_use]
-    pub fn text(&self) -> &str {
+    fn text(&self) -> &str {
         &self.text
     }
 
     /// Return the span at which this error occurred.
-    #[must_use]
-    pub fn span(&self) -> &Span {
+    fn span(&self) -> &Span {
         &self.span
+    }
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.format_error(f)
     }
 }
 
@@ -513,14 +518,12 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     use crate::{
-        span::Span,
-        syntax::{
-            ast::{Action, Ast, Condition, Description, Root},
-            parser::{self, ErrorKind, Parser},
-            test_utils::{p, s, TestError},
-            tokenizer::Tokenizer,
-        },
+        ast::{Action, Ast, Condition, Description, Root},
+        parser::{self, ErrorKind, Parser},
+        test_utils::{p, s, TestError},
+        tokenizer::Tokenizer,
     };
+    use bulloak_core::span::Span;
 
     impl PartialEq<parser::Error> for TestError<parser::ErrorKind> {
         fn eq(&self, other: &parser::Error) -> bool {

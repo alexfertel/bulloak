@@ -2,7 +2,7 @@ use unicode_xid::UnicodeXID;
 
 use crate::constants::TREES_SEPARATOR;
 
-pub(crate) fn capitalize_first_letter(s: &str) -> String {
+pub fn capitalize_first_letter(s: &str) -> String {
     let mut c = s.chars();
     match c.next() {
         None => String::new(),
@@ -10,7 +10,7 @@ pub(crate) fn capitalize_first_letter(s: &str) -> String {
     }
 }
 
-pub(crate) fn lower_first_letter(s: &str) -> String {
+pub fn lower_first_letter(s: &str) -> String {
     let mut c = s.chars();
     match c.next() {
         None => String::new(),
@@ -20,7 +20,7 @@ pub(crate) fn lower_first_letter(s: &str) -> String {
 
 /// This function makes the appropriate changes to a string to
 /// make it a valid identifier.
-pub(crate) fn sanitize(identifier: &str) -> String {
+pub fn sanitize(identifier: &str) -> String {
     identifier
         .replace('-', "_")
         .replace(|c: char| !c.is_xid_continue() && c != ' ', "")
@@ -31,11 +31,11 @@ pub(crate) fn sanitize(identifier: &str) -> String {
 /// The conversion is done by capitalizing the first letter of each word
 /// in the title and removing the spaces. For example, the sentence
 /// `when only owner` is converted to the `WhenOnlyOwner` string.
-pub(crate) fn to_pascal_case(sentence: &str) -> String {
+pub fn to_pascal_case(sentence: &str) -> String {
     sentence.split_whitespace().map(capitalize_first_letter).collect::<String>()
 }
 
-pub(crate) fn repeat_str(s: &str, n: usize) -> String {
+pub fn repeat_str(s: &str, n: usize) -> String {
     s.repeat(n)
 }
 
@@ -53,8 +53,7 @@ pub fn pluralize<'a>(
 
 /// Splits the input text into distinct trees, delimited by two consecutive
 /// newlines.
-#[inline]
-pub(crate) fn split_trees(text: &str) -> Box<dyn Iterator<Item = &str> + '_> {
+pub fn split_trees(text: &str) -> Box<dyn Iterator<Item = &str> + '_> {
     if text.trim().is_empty() {
         return Box::new(std::iter::once(""));
     }

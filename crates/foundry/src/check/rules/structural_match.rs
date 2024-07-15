@@ -24,8 +24,8 @@ use crate::{
     },
     hir::{self, Hir},
     sol::{find_contract, find_matching_fn},
-    utils::sanitize,
 };
+use bulloak_core::utils::sanitize;
 
 /// An implementation of a structural matching rule.
 ///

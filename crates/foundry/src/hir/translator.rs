@@ -2,12 +2,10 @@
 //! high-level intermediate representation (HIR) -- AST -> HIR.
 use indexmap::IndexMap;
 
-use crate::{
-    config::Config,
-    hir::{self, Hir},
-    syntax::{ast, visitor::Visitor},
-    utils::{capitalize_first_letter, sanitize},
-};
+use crate::hir::{self, Hir};
+use bulloak_core::config::Config;
+use bulloak_core::utils::{capitalize_first_letter, sanitize};
+use bulloak_syntax::{ast, visitor::Visitor};
 
 /// A translator between a bulloak tree abstract syntax tree (AST)
 /// and a high-level intermediate representation (HIR) -- AST -> HIR.
@@ -86,7 +84,7 @@ impl<'a> Visitor for TranslatorI<'a> {
 
     fn visit_root(
         &mut self,
-        root: &crate::syntax::ast::Root,
+        root: &bulloak_syntax::ast::Root,
     ) -> Result<Self::Output, Self::Error> {
         let mut root_children = Vec::new();
 
@@ -161,7 +159,7 @@ impl<'a> Visitor for TranslatorI<'a> {
 
     fn visit_condition(
         &mut self,
-        condition: &crate::syntax::ast::Condition,
+        condition: &bulloak_syntax::ast::Condition,
     ) -> Result<Self::Output, Self::Error> {
         let mut children = Vec::new();
 
@@ -293,7 +291,7 @@ impl<'a> Visitor for TranslatorI<'a> {
 
     fn visit_action(
         &mut self,
-        action: &crate::syntax::ast::Action,
+        action: &bulloak_syntax::ast::Action,
     ) -> Result<Self::Output, Self::Error> {
         let mut descriptions = vec![];
         for description in &action.children {
@@ -311,7 +309,7 @@ impl<'a> Visitor for TranslatorI<'a> {
 
     fn visit_description(
         &mut self,
-        description: &crate::syntax::ast::Description,
+        description: &bulloak_syntax::ast::Description,
     ) -> Result<Self::Output, Self::Error> {
         Ok(vec![hir::Hir::Comment(hir::Comment {
             lexeme: description.text.clone(),
@@ -325,12 +323,12 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     use crate::{
-        config::Config,
         hir::{self, Hir},
         scaffold::modifiers,
-        span::{Position, Span},
-        syntax::{parser::Parser, tokenizer::Tokenizer},
     };
+    use bulloak_core::config::Config;
+    use bulloak_core::span::{Position, Span};
+    use bulloak_syntax::{parser::Parser, tokenizer::Tokenizer};
 
     fn translate(text: &str) -> Result<hir::Hir> {
         let tokens = Tokenizer::new().tokenize(&text)?;

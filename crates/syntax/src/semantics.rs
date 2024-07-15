@@ -1,12 +1,12 @@
 //! Implementation of the semantic analysis of a bulloak tree.
-use std::{collections::HashMap, result};
+use std::{collections::HashMap, fmt, result};
 
 use thiserror::Error;
 
 use super::ast::{self, Ast};
-use crate::{
+use crate::{error::BulloakError, visitor::Visitor};
+use bulloak_core::{
     span::Span,
-    syntax::visitor::Visitor,
     utils::{lower_first_letter, sanitize, to_pascal_case},
 };
 
@@ -32,27 +32,32 @@ pub struct Error {
 }
 
 impl Error {
+    #[cfg(test)]
+    pub fn new(kind: ErrorKind, text: String, span: Span) -> Self {
+        Error { kind, text, span }
+    }
+}
+
+impl BulloakError<ErrorKind> for Error {
     /// Return the type of this error.
-    #[must_use]
-    pub fn kind(&self) -> &ErrorKind {
+    fn kind(&self) -> &ErrorKind {
         &self.kind
     }
 
     /// The original text string in which this error occurred.
-    #[must_use]
-    pub fn text(&self) -> &str {
+    fn text(&self) -> &str {
         &self.text
     }
 
     /// Return the span at which this error occurred.
-    #[must_use]
-    pub fn span(&self) -> &Span {
+    fn span(&self) -> &Span {
         &self.span
     }
+}
 
-    #[cfg(test)]
-    pub fn new(kind: ErrorKind, text: String, span: Span) -> Self {
-        Error { kind, text, span }
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.format_error(f)
     }
 }
 
@@ -245,14 +250,12 @@ impl Visitor for SemanticAnalyzer<'_> {
 mod tests {
 
     use crate::{
-        span::{Position, Span},
-        syntax::{
-            ast,
-            parser::Parser,
-            semantics::{self, ErrorKind::*},
-            tokenizer::Tokenizer,
-        },
+        ast,
+        parser::Parser,
+        semantics::{self, ErrorKind::*},
+        tokenizer::Tokenizer,
     };
+    use bulloak_core::span::{Position, Span};
 
     fn analyze(text: &str) -> semantics::Result<()> {
         let tokens = Tokenizer::new().tokenize(text).unwrap();
@@ -355,5 +358,45 @@ mod tests {
     #[test]
     fn allow_action_without_conditions() {
         assert!(analyze("Foo_Test\n└── it a something").is_ok());
+    }
+
+    #[test]
+    fn test_multiple_errors() {
+        let text = r"test.sol
+├── when 1
+└── when 2"
+            .to_owned();
+
+        let errors = semantics::Errors(vec![
+            semantics::Error::new(
+                semantics::ErrorKind::ConditionEmpty,
+                text.clone(),
+                Span::new(Position::new(9, 2, 1), Position::new(18, 2, 10)),
+            ),
+            semantics::Error::new(
+                semantics::ErrorKind::ConditionEmpty,
+                text.clone(),
+                Span::new(Position::new(20, 3, 1), Position::new(29, 3, 10)),
+            ),
+        ]);
+        let actual = format!("{errors}");
+
+        let expected = r"•••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••
+bulloak error: found a condition with no children
+
+├── when 1
+^^^^^^^^^^
+
+--- (line 2, column 1) ---
+•••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••
+bulloak error: found a condition with no children
+
+└── when 2
+^^^^^^^^^^
+
+--- (line 3, column 1) ---
+";
+
+        assert_eq!(expected, actual);
     }
 }
