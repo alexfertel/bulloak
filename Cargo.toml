@@ -42,5 +42,3 @@ serde = "1.0.203"
 solang-parser = "0.3.2"
 thiserror = "1.0.61"
 unicode-xid = "0.2.4"
-# Security patch
-zerocopy = "0.7.31"

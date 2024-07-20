@@ -13,20 +13,7 @@ keywords.workspace = true
 categories.workspace = true
 
 [dependencies]
-anyhow.workspace = true
-clap.workspace = true
-figment.workspace = true
-forge-fmt.workspace = true
-indexmap.workspace = true
-once_cell.workspace = true
-owo-colors.workspace = true
-regex.workspace = true
-serde.workspace = true
-solang-parser.workspace = true
-thiserror.workspace = true
 unicode-xid.workspace = true
-# Security patch
-zerocopy.workspace = true
 
 [dev-dependencies]
 pretty_assertions.workspace = true
