@@ -5,12 +5,14 @@ pub mod combiner;
 #[allow(clippy::module_inception)]
 pub mod hir;
 pub mod translator;
+mod utils;
 pub mod visitor;
 
 pub use hir::*;
 
 use crate::scaffold::modifiers::ModifierDiscoverer;
-use bulloak_core::{config::Config, utils::split_trees};
+use bulloak_core::config::Config;
+use utils::split_trees;
 
 /// High-level function that returns a HIR given the contents of a `.tree` file.
 ///
