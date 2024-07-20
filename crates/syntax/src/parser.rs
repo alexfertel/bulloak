@@ -3,7 +3,7 @@ use std::{borrow::Borrow, cell::Cell, fmt, result};
 
 use thiserror::Error;
 
-use crate::error::BulloakError;
+use crate::error::FrontendError;
 
 use super::{
     ast::{Action, Ast, Condition, Description, Root},
@@ -30,7 +30,7 @@ pub struct Error {
     span: Span,
 }
 
-impl BulloakError<ErrorKind> for Error {
+impl FrontendError<ErrorKind> for Error {
     /// Return the type of this error.
     fn kind(&self) -> &ErrorKind {
         &self.kind

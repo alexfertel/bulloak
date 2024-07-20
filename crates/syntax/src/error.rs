@@ -2,7 +2,7 @@ use std::{cmp, fmt};
 
 use bulloak_core::{span::Span, utils::repeat_str};
 
-pub trait BulloakError<K: fmt::Display>: std::error::Error {
+pub trait FrontendError<K: fmt::Display>: std::error::Error {
     /// Return the type of this error.
     #[must_use]
     fn kind(&self) -> &K;
@@ -15,7 +15,7 @@ pub trait BulloakError<K: fmt::Display>: std::error::Error {
     #[must_use]
     fn span(&self) -> &Span;
 
-    /// Format a type implementing `BulloakError`.
+    /// Format a type implementing `FrontendError`.
     fn format_error(&self, f: &mut fmt::Formatter<'_>) -> std::fmt::Result {
         let divider = repeat_str("•", 79);
         writeln!(f, "{divider}")?;
@@ -68,7 +68,7 @@ mod test {
     use pretty_assertions::assert_eq;
     use thiserror::Error;
 
-    use super::{repeat_str, BulloakError};
+    use super::{repeat_str, FrontendError};
 
     #[derive(Error, Clone, Debug, Eq, PartialEq)]
     pub struct Error {
@@ -85,7 +85,7 @@ mod test {
         TokenUnexpected(String),
     }
 
-    impl BulloakError<ErrorKind> for Error {
+    impl FrontendError<ErrorKind> for Error {
         fn kind(&self) -> &ErrorKind {
             &self.kind
         }

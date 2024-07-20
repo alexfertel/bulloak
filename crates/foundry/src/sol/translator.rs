@@ -1,7 +1,7 @@
-//! This module implements a translator between a Bulloak tree's High-Level
+//! This module implements a translator between a `bulloak` tree's High-Level
 //! Intermediate Representation (HIR) and a `solang_parser` parse tree (PT). The
 //! primary purpose of this module is to facilitate the conversion of a custom
-//! HIR into a format that is compatible with the `solang_parser`, which is used
+//! HIR into a format that is compatible with `solang_parser`, which is used
 //! for further processing or compilation in the Solidity language context.
 //!
 //! The translator operates by traversing the HIR in a depth-first order and

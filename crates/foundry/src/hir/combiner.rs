@@ -2,7 +2,7 @@
 //! combiner.
 use std::{collections::HashSet, fmt, mem, result};
 
-use bulloak_syntax::error::BulloakError;
+use bulloak_syntax::error::FrontendError;
 use thiserror::Error;
 
 use super::{ContractDefinition, Hir, Root};
@@ -26,7 +26,7 @@ pub struct Error {
     span: Span,
 }
 
-impl BulloakError<ErrorKind> for Error {
+impl FrontendError<ErrorKind> for Error {
     /// Return the type of this error.
     fn kind(&self) -> &ErrorKind {
         &self.kind

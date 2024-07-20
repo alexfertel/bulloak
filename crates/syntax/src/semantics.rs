@@ -4,7 +4,7 @@ use std::{collections::HashMap, fmt, result};
 use thiserror::Error;
 
 use super::ast::{self, Ast};
-use crate::{error::BulloakError, visitor::Visitor};
+use crate::{error::FrontendError, visitor::Visitor};
 use bulloak_core::{
     span::Span,
     utils::{lower_first_letter, sanitize, to_pascal_case},
@@ -38,7 +38,7 @@ impl Error {
     }
 }
 
-impl BulloakError<ErrorKind> for Error {
+impl FrontendError<ErrorKind> for Error {
     /// Return the type of this error.
     fn kind(&self) -> &ErrorKind {
         &self.kind
