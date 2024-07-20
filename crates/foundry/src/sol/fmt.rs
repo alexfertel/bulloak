@@ -1,3 +1,4 @@
+use bulloak_syntax::utils::sanitize;
 use once_cell::sync::Lazy;
 use regex::Regex;
 use solang_parser::pt::{
@@ -8,7 +9,6 @@ use solang_parser::pt::{
 };
 
 use super::visitor::Visitor;
-use bulloak_core::utils::sanitize;
 
 trait Identified {
     fn name(&self) -> String;

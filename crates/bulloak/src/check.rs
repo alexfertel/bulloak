@@ -5,16 +5,21 @@
 
 use std::{fs, path::PathBuf};
 
-use bulloak_core::utils::pluralize;
-use bulloak_foundry::check::context::Context;
-use bulloak_foundry::check::rules::{self, Checker};
-use bulloak_foundry::violation::{Violation, ViolationKind};
-use bulloak_foundry::{check::violation::fix_order, sol::find_contract};
+use bulloak_foundry::{
+    check::{
+        context::Context,
+        rules::{self, Checker},
+        violation::fix_order,
+    },
+    sol::find_contract,
+    violation::{Violation, ViolationKind},
+};
+use bulloak_syntax::utils::pluralize;
 use clap::Parser;
 use owo_colors::OwoColorize;
 use serde::{Deserialize, Serialize};
 
-use crate::cli::Config;
+use crate::cli::Cli;
 
 /// Check that the tests match the spec.
 #[doc(hidden)]
@@ -46,7 +51,7 @@ impl Check {
     /// Entrypoint for `bulloak check`.
     ///
     /// Note that we don't deal with `solang_parser` errors at all.
-    pub(crate) fn run(&self, cfg: &Config) -> anyhow::Result<()> {
+    pub(crate) fn run(&self, cfg: &Cli) -> anyhow::Result<()> {
         let mut violations = Vec::new();
         let ctxs: Vec<Context> = self
             .files

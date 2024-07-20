@@ -17,6 +17,7 @@
 
 use std::cell::Cell;
 
+use bulloak_syntax::utils::sanitize;
 use solang_parser::pt::{
     Base, ContractDefinition, ContractPart, ContractTy, Expression,
     FunctionAttribute, FunctionDefinition, FunctionTy, Identifier,
@@ -24,8 +25,10 @@ use solang_parser::pt::{
     Statement, StringLiteral, Type, VariableDeclaration, Visibility,
 };
 
-use crate::hir::{self, visitor::Visitor, Hir};
-use bulloak_core::{config::Config, utils::sanitize};
+use crate::{
+    config::Config,
+    hir::{self, visitor::Visitor, Hir},
+};
 
 /// The implementation of a translator between a bulloak tree HIR and a
 /// `solang_parser` parse tree -- HIR -> PT.

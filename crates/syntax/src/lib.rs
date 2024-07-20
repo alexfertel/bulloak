@@ -7,8 +7,10 @@ pub mod ast;
 pub mod error;
 pub mod parser;
 pub mod semantics;
+pub mod span;
 mod test_utils;
 pub mod tokenizer;
+pub mod utils;
 pub mod visitor;
 
 /// Parses a tree file into an AST.

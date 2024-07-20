@@ -15,10 +15,10 @@ use thiserror::Error;
 
 use super::{context::Context, location::Location};
 use crate::{
+    config::Config,
     hir::{self, Hir},
     sol::{self, find_contract, find_matching_fn},
 };
-use bulloak_core::config::Config;
 
 /// An error that occurred while checking specification rules between
 /// a tree and a Solidity contract.
@@ -119,12 +119,11 @@ fn format_frontend_error(error: &anyhow::Error) -> String {
         error.downcast_ref::<crate::hir::combiner::Error>()
     {
         format!("an error occurred while parsing the tree: {}", error.kind())
-    } else if let Some(_) =
-        error.downcast_ref::<bulloak_syntax::semantics::Error>()
+    } else if error.downcast_ref::<bulloak_syntax::semantics::Error>().is_some()
     {
-        format!("at least one semantic error occurred while parsing the tree")
+        "at least one semantic error occurred while parsing the tree".to_owned()
     } else {
-        format!("an error occurred while parsing the solidity file")
+        "an error occurred while parsing the solidity file".to_owned()
     }
 }
 

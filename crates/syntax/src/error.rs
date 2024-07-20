@@ -1,6 +1,6 @@
 use std::{cmp, fmt};
 
-use bulloak_core::{span::Span, utils::repeat_str};
+use crate::{span::Span, utils::repeat_str};
 
 pub trait FrontendError<K: fmt::Display>: std::error::Error {
     /// Return the type of this error.
@@ -64,11 +64,11 @@ pub trait FrontendError<K: fmt::Display>: std::error::Error {
 mod test {
     use std::fmt;
 
-    use bulloak_core::span::{Position, Span};
     use pretty_assertions::assert_eq;
     use thiserror::Error;
 
     use super::{repeat_str, FrontendError};
+    use crate::span::{Position, Span};
 
     #[derive(Error, Clone, Debug, Eq, PartialEq)]
     pub struct Error {
@@ -89,9 +89,11 @@ mod test {
         fn kind(&self) -> &ErrorKind {
             &self.kind
         }
+
         fn text(&self) -> &str {
             &self.text
         }
+
         fn span(&self) -> &Span {
             &self.span
         }

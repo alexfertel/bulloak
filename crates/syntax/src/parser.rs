@@ -3,13 +3,12 @@ use std::{borrow::Borrow, cell::Cell, fmt, result};
 
 use thiserror::Error;
 
-use crate::error::FrontendError;
-
 use super::{
     ast::{Action, Ast, Condition, Description, Root},
     tokenizer::{Token, TokenKind},
 };
-use bulloak_core::{
+use crate::{
+    error::FrontendError,
     span::Span,
     utils::{repeat_str, sanitize},
 };
@@ -520,10 +519,10 @@ mod tests {
     use crate::{
         ast::{Action, Ast, Condition, Description, Root},
         parser::{self, ErrorKind, Parser},
+        span::Span,
         test_utils::{p, s, TestError},
         tokenizer::Tokenizer,
     };
-    use bulloak_core::span::Span;
 
     impl PartialEq<parser::Error> for TestError<parser::ErrorKind> {
         fn eq(&self, other: &parser::Error) -> bool {

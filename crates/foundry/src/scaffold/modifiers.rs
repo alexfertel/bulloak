@@ -3,13 +3,12 @@
 //! It visits the AST in depth-first order, storing modifiers for use in later
 //! phases.
 
-use indexmap::IndexMap;
-
-use bulloak_core::utils::{lower_first_letter, to_pascal_case};
 use bulloak_syntax::{
     ast::{self, Ast},
+    utils::{lower_first_letter, to_pascal_case},
     visitor::Visitor,
 };
+use indexmap::IndexMap;
 
 /// AST visitor that discovers modifiers.
 ///
@@ -104,11 +103,11 @@ impl Visitor for ModifierDiscoverer {
 
 #[cfg(test)]
 mod tests {
+    use bulloak_syntax::{parser::Parser, tokenizer::Tokenizer};
     use indexmap::IndexMap;
     use pretty_assertions::assert_eq;
 
     use crate::scaffold::modifiers::ModifierDiscoverer;
-    use bulloak_syntax::{parser::Parser, tokenizer::Tokenizer};
 
     fn discover(
         file_contents: &str,

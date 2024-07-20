@@ -1,11 +1,16 @@
 //! The implementation of a translator between a bulloak tree AST and a
 //! high-level intermediate representation (HIR) -- AST -> HIR.
+use bulloak_syntax::{
+    ast,
+    utils::{capitalize_first_letter, sanitize},
+    visitor::Visitor,
+};
 use indexmap::IndexMap;
 
-use crate::hir::{self, Hir};
-use bulloak_core::config::Config;
-use bulloak_core::utils::{capitalize_first_letter, sanitize};
-use bulloak_syntax::{ast, visitor::Visitor};
+use crate::{
+    config::Config,
+    hir::{self, Hir},
+};
 
 /// A translator between a bulloak tree abstract syntax tree (AST)
 /// and a high-level intermediate representation (HIR) -- AST -> HIR.
@@ -320,15 +325,18 @@ impl<'a> Visitor for TranslatorI<'a> {
 #[cfg(test)]
 mod tests {
     use anyhow::Result;
+    use bulloak_syntax::{
+        parser::Parser,
+        span::{Position, Span},
+        tokenizer::Tokenizer,
+    };
     use pretty_assertions::assert_eq;
 
     use crate::{
+        config::Config,
         hir::{self, Hir},
         scaffold::modifiers,
     };
-    use bulloak_core::config::Config;
-    use bulloak_core::span::{Position, Span};
-    use bulloak_syntax::{parser::Parser, tokenizer::Tokenizer};
 
     fn translate(text: &str) -> Result<hir::Hir> {
         let tokens = Tokenizer::new().tokenize(&text)?;

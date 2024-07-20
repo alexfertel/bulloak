@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/bulloak", "crates/core", "crates/foundry", "crates/syntax"]
+members = ["crates/bulloak", "crates/foundry", "crates/syntax"]
 
 [workspace.package]
 authors = ["Alexander Gonzalez <alexfertel97@gmail.com>"]
@@ -24,7 +24,6 @@ categories = [
 exclude = ["/.github/*"]
 
 [workspace.dependencies]
-bulloak-core = { path = "crates/core" }
 bulloak-syntax = { path = "crates/syntax" }
 bulloak-foundry = { path = "crates/foundry" }
 

@@ -13,10 +13,9 @@ keywords.workspace = true
 categories.workspace = true
 
 [dependencies]
-bulloak-core.workspace = true
-
 anyhow.workspace = true
 thiserror.workspace = true
+unicode-xid.workspace = true
 
 [dev-dependencies]
 pretty_assertions.workspace = true

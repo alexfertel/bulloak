@@ -1,4 +1,4 @@
-use bulloak_core::constants::TREES_SEPARATOR;
+use crate::constants::TREES_SEPARATOR;
 
 /// Splits the input text into distinct trees, delimited by two consecutive
 /// newlines.

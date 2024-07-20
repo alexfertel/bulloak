@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 /// `bulloak`'s configuration.
 #[derive(Parser, Debug, Clone, Default, Serialize, Deserialize)]
 #[command(author, version, about, long_about = None)] // Read from `Cargo.toml`
-pub struct Config {
+pub struct Cli {
     /// `bulloak`'s commands.
     #[clap(subcommand)]
     pub command: Commands,
@@ -29,8 +29,8 @@ impl Default for Commands {
     }
 }
 
-impl From<&Config> for bulloak_core::config::Config {
-    fn from(cli: &Config) -> Self {
+impl From<&Cli> for bulloak_foundry::config::Config {
+    fn from(cli: &Cli) -> Self {
         match &cli.command {
             Commands::Scaffold(cmd) => Self {
                 files: cmd.files.clone(),
@@ -50,9 +50,8 @@ impl From<&Config> for bulloak_core::config::Config {
 
 /// Main entrypoint of `bulloak`'s execution.
 pub fn run() -> anyhow::Result<()> {
-    let config: Config = Figment::new()
-        .merge(Serialized::defaults(Config::parse()))
-        .extract()?;
+    let config: Cli =
+        Figment::new().merge(Serialized::defaults(Cli::parse())).extract()?;
 
     match &config.command {
         Commands::Scaffold(command) => command.run(&config),

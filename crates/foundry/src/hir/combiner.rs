@@ -2,14 +2,13 @@
 //! combiner.
 use std::{collections::HashSet, fmt, mem, result};
 
-use bulloak_syntax::error::FrontendError;
+use bulloak_syntax::{
+    error::FrontendError, span::Span, utils::capitalize_first_letter,
+};
 use thiserror::Error;
 
 use super::{ContractDefinition, Hir, Root};
-use bulloak_core::{
-    constants::CONTRACT_IDENTIFIER_SEPARATOR, span::Span,
-    utils::capitalize_first_letter,
-};
+use crate::constants::CONTRACT_IDENTIFIER_SEPARATOR;
 
 type Result<T> = result::Result<T, Error>;
 
@@ -262,15 +261,18 @@ fn collect_modifier(
 #[cfg(test)]
 mod tests {
     use anyhow::{Error, Result};
+    use bulloak_syntax::{
+        parser::Parser,
+        span::{Position, Span},
+        tokenizer::Tokenizer,
+    };
     use pretty_assertions::assert_eq;
 
     use crate::{
+        config::Config,
         hir::{self, Hir},
         scaffold::modifiers,
     };
-    use bulloak_core::config::Config;
-    use bulloak_core::span::{Position, Span};
-    use bulloak_syntax::{parser::Parser, tokenizer::Tokenizer};
 
     fn translate(text: &str) -> Result<Hir> {
         let tokens = Tokenizer::new().tokenize(&text)?;

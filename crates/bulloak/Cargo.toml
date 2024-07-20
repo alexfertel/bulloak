@@ -13,7 +13,7 @@ keywords.workspace = true
 categories.workspace = true
 
 [dependencies]
-bulloak-core.workspace = true
+bulloak-syntax.workspace = true
 bulloak-foundry.workspace = true
 
 anyhow.workspace = true

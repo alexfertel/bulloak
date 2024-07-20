@@ -7,13 +7,13 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use bulloak_foundry::scaffold::scaffold;
 use clap::Parser;
 use forge_fmt::fmt;
 use owo_colors::OwoColorize;
 use serde::{Deserialize, Serialize};
 
-use crate::{cli::Config, constants::DEFAULT_SOL_VERSION};
-use bulloak_foundry::scaffold::scaffold;
+use crate::{cli::Cli, constants::DEFAULT_SOL_VERSION};
 
 /// Generate Solidity tests based on your spec.
 #[doc(hidden)]
@@ -65,7 +65,7 @@ impl Scaffold {
     /// writes the output to files or prints to stdout based on the config.
     ///
     /// If any errors occur during processing, they are collected and reported.
-    pub(crate) fn run(&self, cfg: &Config) -> anyhow::Result<()> {
+    pub(crate) fn run(&self, cfg: &Cli) -> anyhow::Result<()> {
         let errors: Vec<_> = self
             .files
             .iter()
@@ -88,7 +88,7 @@ impl Scaffold {
     ///
     /// This method reads the input file, scaffolds the Solidity code, formats
     /// it, and either writes it to a file or prints it to stdout.
-    fn process_file(&self, file: &Path, cfg: &Config) -> anyhow::Result<()> {
+    fn process_file(&self, file: &Path, cfg: &Cli) -> anyhow::Result<()> {
         let text = fs::read_to_string(file)?;
         let emitted = scaffold(&text, &cfg.into())?;
         let formatted = fmt(&emitted).unwrap_or_else(|err| {

@@ -9,10 +9,9 @@ mod utils;
 pub mod visitor;
 
 pub use hir::*;
-
-use crate::scaffold::modifiers::ModifierDiscoverer;
-use bulloak_core::config::Config;
 use utils::split_trees;
+
+use crate::{config::Config, scaffold::modifiers::ModifierDiscoverer};
 
 /// High-level function that returns a HIR given the contents of a `.tree` file.
 ///
@@ -20,7 +19,7 @@ use utils::split_trees;
 /// each tree, and [`crate::hir::combiner::Combiner::combine`] to combine the
 /// HIRs into a single HIR.
 pub fn translate(text: &str, cfg: &Config) -> anyhow::Result<Hir> {
-    Ok(translate_and_combine_trees(text, cfg)?)
+    translate_and_combine_trees(text, cfg)
 }
 
 /// High-level function that returns a HIR given the contents of a `.tree` file.

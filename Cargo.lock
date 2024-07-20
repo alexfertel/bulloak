@@ -333,8 +333,8 @@ name = "bulloak"
 version = "0.7.4"
 dependencies = [
  "anyhow",
- "bulloak-core",
  "bulloak-foundry",
+ "bulloak-syntax",
  "clap",
  "criterion",
  "figment",
@@ -345,19 +345,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "bulloak-core"
-version = "0.1.0"
-dependencies = [
- "pretty_assertions",
- "unicode-xid",
-]
-
-[[package]]
 name = "bulloak-foundry"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "bulloak-core",
  "bulloak-syntax",
  "forge-fmt",
  "indexmap",
@@ -374,9 +365,9 @@ name = "bulloak-syntax"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "bulloak-core",
  "pretty_assertions",
  "thiserror",
+ "unicode-xid",
 ]
 
 [[package]]

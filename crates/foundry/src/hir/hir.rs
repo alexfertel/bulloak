@@ -1,6 +1,6 @@
 //! Defines a high-level intermediate representation (HIR).
 
-use bulloak_core::span::Span;
+use bulloak_syntax::span::Span;
 
 /// A high-level intermediate representation (HIR) that describes
 /// the semantic structure of a Solidity contract as emitted by `bulloak`.

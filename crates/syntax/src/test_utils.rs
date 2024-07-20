@@ -1,5 +1,5 @@
 #![allow(missing_docs, unreachable_pub, unused)]
-use bulloak_core::span::{Position, Span};
+use crate::span::{Position, Span};
 
 #[derive(Clone, Debug)]
 pub(crate) struct TestError<K> {

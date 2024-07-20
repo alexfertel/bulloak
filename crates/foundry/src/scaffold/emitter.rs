@@ -2,11 +2,13 @@
 
 use std::result;
 
-use bulloak_core::{
-    config::Config, constants::INTERNAL_DEFAULT_INDENTATION, utils::sanitize,
-};
+use bulloak_syntax::utils::sanitize;
 
-use crate::hir::{self, visitor::Visitor, Hir};
+use crate::{
+    config::Config,
+    constants::INTERNAL_DEFAULT_INDENTATION,
+    hir::{self, visitor::Visitor, Hir},
+};
 
 /// Solidity code emitter.
 ///
@@ -295,10 +297,10 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     use crate::{
+        config::Config,
         hir::{translate_and_combine_trees, Hir, Statement, StatementType},
         scaffold::emitter,
     };
-    use bulloak_core::config::Config;
 
     fn scaffold(text: &str) -> anyhow::Result<String> {
         let cfg = Config::default();

@@ -14,10 +14,10 @@ use solang_parser::pt::SourceUnit;
 use super::{location::Location, violation::ViolationKind};
 use crate::{
     check::violation::Violation,
+    config::Config,
     hir::{self, Hir},
     scaffold::emitter::Emitter,
 };
-use bulloak_core::config::Config;
 
 /// The context in which rule-checking happens.
 ///

@@ -4,10 +4,11 @@ use std::{collections::HashMap, fmt, result};
 use thiserror::Error;
 
 use super::ast::{self, Ast};
-use crate::{error::FrontendError, visitor::Visitor};
-use bulloak_core::{
+use crate::{
+    error::FrontendError,
     span::Span,
     utils::{lower_first_letter, sanitize, to_pascal_case},
+    visitor::Visitor,
 };
 
 type Result<T> = result::Result<T, Errors>;
@@ -253,9 +254,9 @@ mod tests {
         ast,
         parser::Parser,
         semantics::{self, ErrorKind::*},
+        span::{Position, Span},
         tokenizer::Tokenizer,
     };
-    use bulloak_core::span::{Position, Span};
 
     fn analyze(text: &str) -> semantics::Result<()> {
         let tokens = Tokenizer::new().tokenize(text).unwrap();

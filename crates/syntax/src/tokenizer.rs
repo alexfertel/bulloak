@@ -4,8 +4,10 @@ use std::{borrow::Borrow, cell::Cell, fmt, result};
 
 use thiserror::Error;
 
-use crate::error::FrontendError;
-use bulloak_core::span::{Position, Span};
+use crate::{
+    error::FrontendError,
+    span::{Position, Span},
+};
 
 type Result<T> = result::Result<T, Error>;
 
@@ -401,12 +403,12 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     use crate::{
+        span::Span,
         test_utils::{p, s, TestError},
         tokenizer::{
             self, ErrorKind::IdentifierCharInvalid, Token, TokenKind, Tokenizer,
         },
     };
-    use bulloak_core::span::Span;
 
     impl PartialEq<tokenizer::Error> for TestError<tokenizer::ErrorKind> {
         fn eq(&self, other: &tokenizer::Error) -> bool {

@@ -4,8 +4,7 @@
 
 use forge_fmt::fmt;
 
-use crate::{hir::translate_and_combine_trees, sol};
-use bulloak_core::config::Config;
+use crate::{config::Config, hir::translate_and_combine_trees, sol};
 
 pub mod emitter;
 pub mod modifiers;

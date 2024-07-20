@@ -13,6 +13,7 @@
 
 use std::collections::BTreeSet;
 
+use bulloak_syntax::utils::sanitize;
 use solang_parser::pt;
 
 use super::{Checker, Context};
@@ -25,7 +26,6 @@ use crate::{
     hir::{self, Hir},
     sol::{find_contract, find_matching_fn},
 };
-use bulloak_core::utils::sanitize;
 
 /// An implementation of a structural matching rule.
 ///
