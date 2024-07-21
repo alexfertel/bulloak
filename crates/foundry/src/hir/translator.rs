@@ -1,9 +1,8 @@
 //! The implementation of a translator between a bulloak tree AST and a
 //! high-level intermediate representation (HIR) -- AST -> HIR.
 use bulloak_syntax::{
-    ast,
     utils::{capitalize_first_letter, sanitize},
-    visitor::Visitor,
+    Action, Ast, Condition, Description, Visitor,
 };
 use indexmap::IndexMap;
 
@@ -33,7 +32,7 @@ impl Translator {
     #[must_use]
     pub fn translate(
         &self,
-        ast: &ast::Ast,
+        ast: &Ast,
         modifiers: &IndexMap<String, String>,
         cfg: &Config,
     ) -> Hir {
@@ -71,9 +70,9 @@ impl<'a> TranslatorI<'a> {
     }
 
     /// Concrete implementation of the translation from AST to HIR.
-    fn translate(&mut self, ast: &ast::Ast) -> Hir {
+    fn translate(&mut self, ast: &Ast) -> Hir {
         let mut hirs = match ast {
-            ast::Ast::Root(ref root) => self.visit_root(root).unwrap(),
+            Ast::Root(ref root) => self.visit_root(root).unwrap(),
             _ => unreachable!(),
         };
 
@@ -89,7 +88,7 @@ impl<'a> Visitor for TranslatorI<'a> {
 
     fn visit_root(
         &mut self,
-        root: &bulloak_syntax::ast::Root,
+        root: &bulloak_syntax::Root,
     ) -> Result<Self::Output, Self::Error> {
         let mut root_children = Vec::new();
 
@@ -99,11 +98,11 @@ impl<'a> Visitor for TranslatorI<'a> {
                 // Root or ActionDescription nodes cannot be children of a root
                 // node. This must be handled in a previous
                 // pass.
-                ast::Ast::Root(_) | ast::Ast::ActionDescription(_) => {
+                Ast::Root(_) | Ast::ActionDescription(_) => {
                     unreachable!()
                 }
                 // Found a top-level action. This corresponds to a function.
-                ast::Ast::Action(action) => {
+                Ast::Action(action) => {
                     let words = action.title.split_whitespace();
                     let words = words.skip(1); // Removes "it" from the test name.
 
@@ -146,7 +145,7 @@ impl<'a> Visitor for TranslatorI<'a> {
                         });
                     contract_children.push(hir);
                 }
-                ast::Ast::Condition(condition) => {
+                Ast::Condition(condition) => {
                     contract_children
                         .append(&mut self.visit_condition(condition)?);
                 }
@@ -164,14 +163,14 @@ impl<'a> Visitor for TranslatorI<'a> {
 
     fn visit_condition(
         &mut self,
-        condition: &bulloak_syntax::ast::Condition,
+        condition: &Condition,
     ) -> Result<Self::Output, Self::Error> {
         let mut children = Vec::new();
 
         let action_count = condition
             .children
             .iter()
-            .filter(|child| ast::Ast::is_action(child))
+            .filter(|child| Ast::is_action(child))
             .count();
         // If this condition only has actions as children, then we don't
         // generate a modifier for it, since it would only be used in
@@ -195,7 +194,7 @@ impl<'a> Visitor for TranslatorI<'a> {
         // in the same order that they appear in the source .tree text.
         let mut actions = Vec::new();
         for action in &condition.children {
-            if let ast::Ast::Action(action) = action {
+            if let Ast::Action(action) = action {
                 actions.append(&mut self.visit_action(action)?);
             }
         }
@@ -282,7 +281,7 @@ impl<'a> Visitor for TranslatorI<'a> {
 
         // Then we recursively visit all child conditions.
         for condition in &condition.children {
-            if let ast::Ast::Condition(condition) = condition {
+            if let Ast::Condition(condition) = condition {
                 children.append(&mut self.visit_condition(condition)?);
             }
         }
@@ -296,11 +295,11 @@ impl<'a> Visitor for TranslatorI<'a> {
 
     fn visit_action(
         &mut self,
-        action: &bulloak_syntax::ast::Action,
+        action: &Action,
     ) -> Result<Self::Output, Self::Error> {
         let mut descriptions = vec![];
         for description in &action.children {
-            if let ast::Ast::ActionDescription(description) = description {
+            if let Ast::ActionDescription(description) = description {
                 descriptions.append(&mut self.visit_description(description)?);
             }
         }
@@ -314,7 +313,7 @@ impl<'a> Visitor for TranslatorI<'a> {
 
     fn visit_description(
         &mut self,
-        description: &bulloak_syntax::ast::Description,
+        description: &Description,
     ) -> Result<Self::Output, Self::Error> {
         Ok(vec![hir::Hir::Comment(hir::Comment {
             lexeme: description.text.clone(),
@@ -325,11 +324,7 @@ impl<'a> Visitor for TranslatorI<'a> {
 #[cfg(test)]
 mod tests {
     use anyhow::Result;
-    use bulloak_syntax::{
-        parser::Parser,
-        span::{Position, Span},
-        tokenizer::Tokenizer,
-    };
+    use bulloak_syntax::{parse_one, Position, Span};
     use pretty_assertions::assert_eq;
 
     use crate::{
@@ -339,8 +334,7 @@ mod tests {
     };
 
     fn translate(text: &str) -> Result<hir::Hir> {
-        let tokens = Tokenizer::new().tokenize(&text)?;
-        let ast = Parser::new().parse(&text, &tokens)?;
+        let ast = parse_one(text)?;
         let mut discoverer = modifiers::ModifierDiscoverer::new();
         let modifiers = discoverer.discover(&ast);
 

@@ -1,7 +1,7 @@
 //! Defines a rule-checking error object.
 use std::{borrow::Cow, collections::HashSet, fmt};
 
-use bulloak_syntax::error::FrontendError;
+use bulloak_syntax::FrontendError;
 use forge_fmt::{
     parse,
     solang_ext::{CodeLocationExt, SafeUnwrap},

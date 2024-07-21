@@ -2,6 +2,10 @@ use std::{cmp, fmt};
 
 use crate::{span::Span, utils::repeat_str};
 
+/// A trait for representing frontend errors in the `bulloak-syntax` crate.
+///
+/// This trait is implemented by various error types in the crate to provide
+/// a consistent interface for error handling and formatting.
 pub trait FrontendError<K: fmt::Display>: std::error::Error {
     /// Return the type of this error.
     #[must_use]
@@ -15,7 +19,17 @@ pub trait FrontendError<K: fmt::Display>: std::error::Error {
     #[must_use]
     fn span(&self) -> &Span;
 
-    /// Format a type implementing `FrontendError`.
+    /// Formats the error message with additional context.
+    ///
+    /// This method provides a default implementation that creates a formatted
+    /// error message including the error kind, the relevant text, and visual
+    /// indicators of where the error occurred.
+    ///
+    /// # Arguments
+    /// * `f` - A mutable reference to a `fmt::Formatter`.
+    ///
+    /// # Returns
+    /// A `fmt::Result` indicating whether the formatting was successful.
     fn format_error(&self, f: &mut fmt::Formatter<'_>) -> std::fmt::Result {
         let divider = repeat_str("•", 79);
         writeln!(f, "{divider}")?;
@@ -39,8 +53,14 @@ pub trait FrontendError<K: fmt::Display>: std::error::Error {
         Ok(())
     }
 
-    /// Notate the text string with carets (`^`) pointing at the span where the
-    /// error happened.
+    /// Creates a string with carets (^) pointing at the span where the error
+    /// occurred.
+    ///
+    /// This method provides a visual representation of where in the text the
+    /// error was found.
+    ///
+    /// # Returns
+    /// A `String` containing the relevant line of text with carets underneath.
     fn notate(&self) -> String {
         let mut notated = String::new();
         if let Some(line) = self.text().lines().nth(self.span().start.line - 1)

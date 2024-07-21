@@ -90,7 +90,7 @@ pub enum ErrorKind {
 }
 
 /// A visitor that performs semantic analysis on an AST.
-pub struct SemanticAnalyzer<'t> {
+pub(crate) struct SemanticAnalyzer<'t> {
     /// A list of errors that occurred while analyzing the AST.
     errors: Vec<Error>,
     /// The original text that the visitor generated the errors from. Every
@@ -103,7 +103,7 @@ pub struct SemanticAnalyzer<'t> {
 impl<'t> SemanticAnalyzer<'t> {
     /// Create a new semantic analyzer.
     #[must_use]
-    pub fn new(text: &'t str) -> SemanticAnalyzer {
+    pub(crate) fn new(text: &'t str) -> SemanticAnalyzer {
         SemanticAnalyzer {
             text,
             errors: Vec::new(),
@@ -120,7 +120,7 @@ impl<'t> SemanticAnalyzer<'t> {
     ///
     /// Note that this implementation is a bit weird in that we
     /// create the `Err` variant of the result by hand.
-    pub fn analyze(&mut self, ast: &ast::Ast) -> Result<()> {
+    pub(crate) fn analyze(&mut self, ast: &ast::Ast) -> Result<()> {
         match ast {
             Ast::Root(root) => self.visit_root(root),
             Ast::Condition(condition) => self.visit_condition(condition),

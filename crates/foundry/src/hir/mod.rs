@@ -9,8 +9,9 @@ pub use hir::*;
 pub mod translator;
 pub mod visitor;
 
+use bulloak_syntax::Ast;
+
 use crate::{config::Config, scaffold::modifiers::ModifierDiscoverer};
-use bulloak_syntax::ast::Ast;
 
 /// Translates the contents of a `.tree` file into a HIR.
 ///

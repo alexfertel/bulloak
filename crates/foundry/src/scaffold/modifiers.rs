@@ -4,9 +4,8 @@
 //! phases.
 
 use bulloak_syntax::{
-    ast::{self, Ast},
     utils::{lower_first_letter, to_pascal_case},
-    visitor::Visitor,
+    Action, Ast, Condition, Description, Root, Visitor,
 };
 use indexmap::IndexMap;
 
@@ -55,7 +54,7 @@ impl Visitor for ModifierDiscoverer {
 
     fn visit_root(
         &mut self,
-        root: &ast::Root,
+        root: &Root,
     ) -> anyhow::Result<Self::Output, Self::Error> {
         for condition in &root.children {
             if let Ast::Condition(condition) = condition {
@@ -68,7 +67,7 @@ impl Visitor for ModifierDiscoverer {
 
     fn visit_condition(
         &mut self,
-        condition: &ast::Condition,
+        condition: &Condition,
     ) -> anyhow::Result<Self::Output, Self::Error> {
         self.modifiers.insert(
             condition.title.clone(),
@@ -86,7 +85,7 @@ impl Visitor for ModifierDiscoverer {
 
     fn visit_action(
         &mut self,
-        _action: &ast::Action,
+        _action: &Action,
     ) -> anyhow::Result<Self::Output, Self::Error> {
         // No-op.
         Ok(())
@@ -94,7 +93,7 @@ impl Visitor for ModifierDiscoverer {
 
     fn visit_description(
         &mut self,
-        _description: &ast::Description,
+        _description: &Description,
     ) -> anyhow::Result<Self::Output, Self::Error> {
         // No-op.
         Ok(())
@@ -103,17 +102,14 @@ impl Visitor for ModifierDiscoverer {
 
 #[cfg(test)]
 mod tests {
-    use bulloak_syntax::{parser::Parser, tokenizer::Tokenizer};
+    use bulloak_syntax::parse_one;
     use indexmap::IndexMap;
     use pretty_assertions::assert_eq;
 
     use crate::scaffold::modifiers::ModifierDiscoverer;
 
-    fn discover(
-        file_contents: &str,
-    ) -> anyhow::Result<IndexMap<String, String>> {
-        let tokens = Tokenizer::new().tokenize(file_contents)?;
-        let ast = Parser::new().parse(file_contents, &tokens)?;
+    fn discover(text: &str) -> anyhow::Result<IndexMap<String, String>> {
+        let ast = parse_one(text)?;
         let mut discoverer = ModifierDiscoverer::new();
         discoverer.discover(&ast);
 

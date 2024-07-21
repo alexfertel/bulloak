@@ -116,7 +116,7 @@ pub enum TokenKind {
 ///
 /// This struct represents the state of the tokenizer. It is not
 /// tied to any particular input, while `TokenizerI` is.
-pub struct Tokenizer {
+pub(crate) struct Tokenizer {
     /// The current position of the tokenizer in the input.
     ///
     /// By default this is set to the start of the input.
@@ -138,7 +138,7 @@ impl Default for Tokenizer {
 impl Tokenizer {
     /// Create a new tokenizer.
     #[must_use]
-    pub const fn new() -> Self {
+    pub(crate) const fn new() -> Self {
         Self {
             pos: Cell::new(Position::new(0, 1, 1)),
             identifier_mode: Cell::new(false),
@@ -149,7 +149,7 @@ impl Tokenizer {
     ///
     /// `tokenize` is the entry point of the Tokenizer.
     /// It takes a string of .tree text and returns a vector of tokens.
-    pub fn tokenize(&mut self, text: &str) -> Result<Vec<Token>> {
+    pub(crate) fn tokenize(&mut self, text: &str) -> Result<Vec<Token>> {
         TokenizerI::new(self, text).tokenize()
     }
 

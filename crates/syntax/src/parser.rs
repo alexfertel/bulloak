@@ -115,7 +115,7 @@ pub enum ErrorKind {
 /// This struct represents the state of the parser. It is not
 /// tied to any particular input, while `ParserI` is.
 #[derive(Clone, Default)]
-pub struct Parser {
+pub(crate) struct Parser {
     /// The index of the current token.
     current: Cell<usize>,
 }
@@ -123,7 +123,7 @@ pub struct Parser {
 impl Parser {
     /// Create a new parser.
     #[must_use]
-    pub const fn new() -> Self {
+    pub(crate) const fn new() -> Self {
         Self { current: Cell::new(0) }
     }
 
@@ -131,7 +131,11 @@ impl Parser {
     ///
     /// `parse` is the entry point for the parser. It takes a sequence of
     /// tokens and returns an AST.
-    pub fn parse(&mut self, text: &str, tokens: &[Token]) -> Result<Ast> {
+    pub(crate) fn parse(
+        &mut self,
+        text: &str,
+        tokens: &[Token],
+    ) -> Result<Ast> {
         ParserI::new(self, text, tokens).parse()
     }
 
