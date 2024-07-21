@@ -4,7 +4,7 @@
 
 use forge_fmt::fmt;
 
-use crate::{config::Config, hir::translate_and_combine_trees, sol};
+use crate::{config::Config, hir::translate, sol};
 
 pub mod emitter;
 pub mod modifiers;
@@ -15,7 +15,7 @@ pub mod modifiers;
 /// translates it to an intermediate representation, then to Solidity, and
 /// finally formats the resulting Solidity code.
 pub fn scaffold(text: &str, cfg: &Config) -> anyhow::Result<String> {
-    let hir = translate_and_combine_trees(text, cfg)?;
+    let hir = translate(text, cfg)?;
     let pt = sol::Translator::new(cfg).translate(&hir);
     let source = sol::Formatter::new().emit(pt);
     let formatted =

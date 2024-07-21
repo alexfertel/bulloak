@@ -298,13 +298,13 @@ mod tests {
 
     use crate::{
         config::Config,
-        hir::{translate_and_combine_trees, Hir, Statement, StatementType},
+        hir::{translate, Hir, Statement, StatementType},
         scaffold::emitter,
     };
 
     fn scaffold(text: &str) -> anyhow::Result<String> {
         let cfg = Config::default();
-        let hir = translate_and_combine_trees(text, &cfg)?;
+        let hir = translate(text, &cfg)?;
         Ok(emitter::Emitter::new(&cfg).emit(&hir))
     }
 
@@ -466,7 +466,7 @@ contract FileTest {
         let file_contents = "FileTest\n└── when something bad happens\n   └── it should not revert";
         let mut cfg: Config = Config::default();
         cfg.emit_vm_skip = true;
-        let hir = translate_and_combine_trees(file_contents, &cfg)?;
+        let hir = translate(file_contents, &cfg)?;
         let emitted = emitter::Emitter::new(&cfg).emit(&hir);
 
         assert_eq!(

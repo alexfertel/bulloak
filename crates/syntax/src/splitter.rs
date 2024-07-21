@@ -1,4 +1,6 @@
-use crate::constants::TREES_SEPARATOR;
+/// The separator used between trees when parsing `.tree` files with multiple
+/// trees.
+pub const TREES_SEPARATOR: &str = "\n\n";
 
 /// Splits the input text into distinct trees, delimited by two consecutive
 /// newlines.

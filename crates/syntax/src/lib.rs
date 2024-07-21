@@ -8,13 +8,19 @@ pub mod error;
 pub mod parser;
 pub mod semantics;
 pub mod span;
+pub mod splitter;
 mod test_utils;
 pub mod tokenizer;
 pub mod utils;
 pub mod visitor;
 
-/// Parses a tree file into an AST.
-pub fn parse(text: &str) -> anyhow::Result<ast::Ast> {
+/// Parses a string containing trees into ASTs.
+pub fn parse(text: &str) -> anyhow::Result<Vec<ast::Ast>> {
+    splitter::split_trees(text).map(parse_one).collect()
+}
+
+/// Parses a string containing a single tree into an AST.
+fn parse_one(text: &str) -> anyhow::Result<ast::Ast> {
     let tokens = tokenizer::Tokenizer::new().tokenize(text)?;
     let ast = parser::Parser::new().parse(text, &tokens)?;
     let mut analyzer = semantics::SemanticAnalyzer::new(text);

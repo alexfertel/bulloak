@@ -1,51 +1,50 @@
-//! Defines a high-level intermediate representation (HIR) and a translate fn
-//! that takes a tree and returns its corresponding HIR.
+//! Defines a high-level intermediate representation (HIR) and translation
+//! functions that convert abstract syntax trees (ASTs) to their corresponding
+//! HIR.
 
 pub mod combiner;
 #[allow(clippy::module_inception)]
 pub mod hir;
+pub use hir::*;
 pub mod translator;
-mod utils;
 pub mod visitor;
 
-pub use hir::*;
-use utils::split_trees;
-
 use crate::{config::Config, scaffold::modifiers::ModifierDiscoverer};
+use bulloak_syntax::ast::Ast;
 
-/// High-level function that returns a HIR given the contents of a `.tree` file.
+/// Translates the contents of a `.tree` file into a HIR.
 ///
-/// This function leverages [`translate_tree_to_hir`] to generate the HIR for
-/// each tree, and [`crate::hir::combiner::Combiner::combine`] to combine the
-/// HIRs into a single HIR.
+/// # Arguments
+///
+/// * `text` - The contents of the `.tree` file.
+/// * `cfg` - The configuration for the translation process.
+///
+/// # Returns
+///
+/// Returns a `Result` containing the translated `Hir` or a `TranslationError`.
 pub fn translate(text: &str, cfg: &Config) -> anyhow::Result<Hir> {
-    translate_and_combine_trees(text, cfg)
-}
+    let asts = bulloak_syntax::parse(text)?;
 
-/// High-level function that returns a HIR given the contents of a `.tree` file.
-///
-/// This function leverages [`translate_tree_to_hir`] to generate the HIR for
-/// each tree, and [`crate::hir::combiner::Combiner::combine`] to combine the
-/// HIRs into a single HIR.
-pub fn translate_and_combine_trees(
-    text: &str,
-    cfg: &Config,
-) -> anyhow::Result<Hir> {
-    let trees = split_trees(text);
-    let hirs = trees
-        .map(|tree| translate_tree_to_hir(tree, cfg))
-        .collect::<anyhow::Result<Vec<Hir>>>()?;
+    if asts.len() == 1 {
+        return Ok(ast_to_hir(&asts[0], cfg));
+    }
+
+    let hirs = asts.into_iter().map(|ast| ast_to_hir(&ast, cfg));
     Ok(combiner::Combiner::new().combine(text, hirs)?)
 }
 
-/// Generates the HIR for a single tree.
+/// Generates the HIR for a single AST.
 ///
-/// This function leverages [`crate::syntax::parse`] and
-/// [`crate::hir::translator::Translator::translate`] to hide away most of the
-/// complexity of `bulloak`'s internal compiler.
-pub fn translate_tree_to_hir(tree: &str, cfg: &Config) -> anyhow::Result<Hir> {
-    let ast = bulloak_syntax::parse(tree)?;
+/// # Arguments
+///
+/// * `ast` - The Abstract Syntax Tree to translate.
+/// * `cfg` - The configuration for the translation process.
+///
+/// # Returns
+///
+/// Returns the translated `Hir`.
+pub fn ast_to_hir(ast: &Ast, cfg: &Config) -> Hir {
     let mut discoverer = ModifierDiscoverer::new();
     let modifiers = discoverer.discover(&ast);
-    Ok(translator::Translator::new().translate(&ast, modifiers, cfg))
+    translator::Translator::new().translate(ast, modifiers, cfg)
 }

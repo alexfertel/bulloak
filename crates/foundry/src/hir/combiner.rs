@@ -98,7 +98,11 @@ impl Combiner {
     /// iterating over each HIR and merging their children into the contract
     /// definition of the first HIR, while verifying the contract identifiers
     /// match and filtering out duplicate modifiers.
-    pub fn combine(self, text: &str, hirs: Vec<Hir>) -> Result<Hir> {
+    pub fn combine(
+        self,
+        text: &str,
+        hirs: impl Iterator<Item = Hir>,
+    ) -> Result<Hir> {
         CombinerI::new(text).combine(hirs)
     }
 }
@@ -120,12 +124,8 @@ impl<'t> CombinerI<'t> {
     }
 
     /// Internal implementation of `Combiner::combine`.
-    fn combine(&self, hirs: Vec<Hir>) -> Result<Hir> {
+    fn combine(&self, hirs: impl Iterator<Item = Hir>) -> Result<Hir> {
         // For `.tree` files with a single root, we don't need to do any work.
-        if hirs.len() == 1 {
-            return Ok(hirs[0].clone());
-        }
-
         let acc_contract = &mut ContractDefinition::default();
         let mut unique_modifiers = HashSet::new();
 
@@ -285,7 +285,10 @@ mod tests {
         Ok(hir::translator::Translator::new().translate(&ast, modifiers, &cfg))
     }
 
-    fn combine(text: &str, hirs: Vec<Hir>) -> Result<Hir, Error> {
+    fn combine(
+        text: &str,
+        hirs: impl Iterator<Item = Hir>,
+    ) -> Result<Hir, Error> {
         Ok(crate::hir::combiner::Combiner::new().combine(text, hirs)?)
     }
 
@@ -330,7 +333,7 @@ mod tests {
             "::orphanedFunction\n└── when something bad happens\n   └── it should revert",
             "Contract::function\n└── when something bad happens\n   └── it should revert",
         ];
-        let hirs = trees.iter().map(|tree| translate(tree).unwrap()).collect();
+        let hirs = trees.iter().map(|tree| translate(tree).unwrap());
         let text = trees.join("\n\n");
         let result = combine(&text, hirs);
 
@@ -343,7 +346,7 @@ mod tests {
             "Contract::function\n└── when something bad happens\n   └── it should revert",
             "::orphanedFunction\n└── when something bad happens\n   └── it should revert",
         ];
-        let hirs = trees.iter().map(|tree| translate(tree).unwrap()).collect();
+        let hirs = trees.iter().map(|tree| translate(tree).unwrap());
 
         let expected = r"•••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••
 bulloak error: contract name missing at tree root #2";
@@ -368,7 +371,7 @@ bulloak error: contract name missing at tree root #2";
         hirs.push(root(vec![comment("this is a random comment".to_owned())]));
 
         let text = trees.join("\n\n");
-        let children = match combine(&text, hirs).unwrap() {
+        let children = match combine(&text, hirs.into_iter()).unwrap() {
             Hir::Root(root) => root.children,
             _ => unreachable!(),
         };
@@ -424,7 +427,7 @@ bulloak error: contract name missing at tree root #2";
         hirs.push(root(vec![comment("this is a random comment".to_owned())]));
 
         let text = trees.join("\n\n");
-        let children = match combine(&text, hirs).unwrap() {
+        let children = match combine(&text, hirs.into_iter()).unwrap() {
             Hir::Root(root) => root.children,
             _ => unreachable!(),
         };
