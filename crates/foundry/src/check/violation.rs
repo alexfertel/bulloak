@@ -261,7 +261,8 @@ fn get_insertion_offset(
 /// * `src` - Full source code string
 ///
 /// # Returns
-/// `Result` with the position immediately after the opening brace, or an error if not found
+/// `Result` with the position immediately after the opening brace, or an error
+/// if not found
 fn find_contract_body_start(
     contract_sol: &pt::ContractDefinition,
     src: &str,

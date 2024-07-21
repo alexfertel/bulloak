@@ -4,8 +4,8 @@ use unicode_xid::UnicodeXID;
 
 /// Capitalizes the first letter of a given string.
 ///
-/// This function takes a string slice and returns a new `String` with the first letter capitalized.
-/// If the string is empty, it returns an empty string.
+/// This function takes a string slice and returns a new `String` with the first
+/// letter capitalized. If the string is empty, it returns an empty string.
 ///
 /// # Arguments
 ///
@@ -32,8 +32,8 @@ pub fn upper_first_letter(s: &str) -> String {
 
 /// Converts the first letter of a given string to lowercase.
 ///
-/// This function takes a string slice and returns a new `String` with the first letter in lowercase.
-/// If the string is empty, it returns an empty string.
+/// This function takes a string slice and returns a new `String` with the first
+/// letter in lowercase. If the string is empty, it returns an empty string.
 ///
 /// # Arguments
 ///
@@ -61,7 +61,8 @@ pub fn lower_first_letter(s: &str) -> String {
 /// Sanitizes a string to make it a valid identifier.
 ///
 /// This function replaces hyphens with underscores and removes any characters
-/// that are not valid in an identifier according to the Unicode Standard Annex #31.
+/// that are not valid in an identifier according to the Unicode Standard Annex
+/// #31.
 ///
 /// # Arguments
 ///
