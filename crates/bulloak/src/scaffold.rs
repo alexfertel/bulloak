@@ -7,13 +7,13 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use bulloak_foundry::scaffold::scaffold;
+use bulloak_foundry::{constants::DEFAULT_SOL_VERSION, scaffold::scaffold};
 use clap::Parser;
 use forge_fmt::fmt;
 use owo_colors::OwoColorize;
 use serde::{Deserialize, Serialize};
 
-use crate::{cli::Cli, constants::DEFAULT_SOL_VERSION};
+use crate::cli::Cli;
 
 /// Generate Solidity tests based on your spec.
 #[doc(hidden)]

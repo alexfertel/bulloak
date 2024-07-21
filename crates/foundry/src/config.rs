@@ -2,7 +2,7 @@
 
 use std::path::PathBuf;
 
-use crate::constants::INTERNAL_DEFAULT_SOL_VERSION;
+use crate::constants::DEFAULT_SOL_VERSION;
 
 /// `bulloak-core`'s configuration.
 ///
@@ -25,7 +25,7 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             files: vec![],
-            solidity_version: INTERNAL_DEFAULT_SOL_VERSION.to_owned(),
+            solidity_version: DEFAULT_SOL_VERSION.to_owned(),
             emit_vm_skip: false,
             skip_modifiers: false,
         }

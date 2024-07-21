@@ -3,7 +3,6 @@ use std::process;
 
 mod check;
 mod cli;
-mod constants;
 mod scaffold;
 
 fn main() {
