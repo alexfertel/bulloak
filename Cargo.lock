@@ -333,20 +333,41 @@ name = "bulloak"
 version = "0.7.4"
 dependencies = [
  "anyhow",
+ "bulloak-foundry",
+ "bulloak-syntax",
  "clap",
  "criterion",
  "figment",
+ "forge-fmt",
+ "owo-colors",
+ "pretty_assertions",
+ "serde",
+]
+
+[[package]]
+name = "bulloak-foundry"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bulloak-syntax",
  "forge-fmt",
  "indexmap",
  "once_cell",
  "owo-colors",
  "pretty_assertions",
  "regex",
- "serde",
  "solang-parser",
  "thiserror",
+]
+
+[[package]]
+name = "bulloak-syntax"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "pretty_assertions",
+ "thiserror",
  "unicode-xid",
- "zerocopy",
 ]
 
 [[package]]
@@ -3470,7 +3491,6 @@ version = "0.7.32"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "74d4d3961e53fa4c9a25a8637fc2bfaf2595b3d3ae34875568a5cf64787716be"
 dependencies = [
- "byteorder",
  "zerocopy-derive",
 ]
 

@@ -1,0 +1,21 @@
+[package]
+name = "bulloak-syntax"
+version = "0.1.0"
+authors.workspace = true
+license.workspace = true
+edition.workspace = true
+readme.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+description.workspace = true
+keywords.workspace = true
+categories.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+thiserror.workspace = true
+unicode-xid.workspace = true
+
+[dev-dependencies]
+pretty_assertions.workspace = true

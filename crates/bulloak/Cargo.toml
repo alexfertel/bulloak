@@ -1,0 +1,32 @@
+[package]
+name = "bulloak"
+version = "0.7.4"
+authors.workspace = true
+license.workspace = true
+edition.workspace = true
+readme.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+description.workspace = true
+keywords.workspace = true
+categories.workspace = true
+
+[dependencies]
+bulloak-syntax.workspace = true
+bulloak-foundry.workspace = true
+
+anyhow.workspace = true
+clap.workspace = true
+figment.workspace = true
+forge-fmt.workspace = true
+owo-colors.workspace = true
+serde.workspace = true
+
+[dev-dependencies]
+pretty_assertions.workspace = true
+criterion.workspace = true
+
+[[bench]]
+name = "bench"
+harness = false
