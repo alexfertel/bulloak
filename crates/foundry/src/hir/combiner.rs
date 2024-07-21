@@ -2,7 +2,7 @@
 //! combiner.
 use std::{collections::HashSet, fmt, mem, result};
 
-use bulloak_syntax::{utils::capitalize_first_letter, FrontendError, Span};
+use bulloak_syntax::{utils::upper_first_letter, FrontendError, Span};
 use thiserror::Error;
 
 use super::{ContractDefinition, Hir, Root};
@@ -232,7 +232,7 @@ fn update_children(
 
 /// Prefix the suffix of a test name.
 fn prefix_test_with(test_name: &str, prefix: &str) -> String {
-    let capitalized_fn_name = capitalize_first_letter(prefix);
+    let capitalized_fn_name = upper_first_letter(prefix);
     let test_suffix = test_name.trim_start_matches("test_");
     format!("test_{capitalized_fn_name}{test_suffix}")
 }

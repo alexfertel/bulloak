@@ -4,7 +4,7 @@ use std::{
     process::{Command, Output},
 };
 
-pub fn get_binary_path() -> PathBuf {
+pub(crate) fn get_binary_path() -> PathBuf {
     let root = env::current_exe()
         .unwrap()
         .parent()
@@ -14,7 +14,7 @@ pub fn get_binary_path() -> PathBuf {
 }
 
 /// Runs a command with the specified args.
-pub fn cmd(
+pub(crate) fn cmd(
     binary_path: &PathBuf,
     command: &str,
     tree_path: &PathBuf,

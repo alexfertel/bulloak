@@ -51,7 +51,7 @@ impl Check {
     /// Entrypoint for `bulloak check`.
     ///
     /// Note that we don't deal with `solang_parser` errors at all.
-    pub(crate) fn run(&self, cfg: &Cli) -> anyhow::Result<()> {
+    pub(crate) fn run(&self, cfg: &Cli) {
         let mut violations = Vec::new();
         let ctxs: Vec<Context> = self
             .files
@@ -129,8 +129,6 @@ impl Check {
 
             exit(&violations);
         }
-
-        Ok(())
     }
 
     /// Handles writing the output of the `check` command.

@@ -49,12 +49,14 @@ impl From<&Cli> for bulloak_foundry::config::Config {
 }
 
 /// Main entrypoint of `bulloak`'s execution.
-pub fn run() -> anyhow::Result<()> {
+pub(crate) fn run() -> anyhow::Result<()> {
     let config: Cli =
         Figment::new().merge(Serialized::defaults(Cli::parse())).extract()?;
 
     match &config.command {
         Commands::Scaffold(command) => command.run(&config),
         Commands::Check(command) => command.run(&config),
-    }
+    };
+
+    Ok(())
 }

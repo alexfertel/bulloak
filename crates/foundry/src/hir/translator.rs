@@ -1,7 +1,7 @@
 //! The implementation of a translator between a bulloak tree AST and a
 //! high-level intermediate representation (HIR) -- AST -> HIR.
 use bulloak_syntax::{
-    utils::{capitalize_first_letter, sanitize},
+    utils::{sanitize, upper_first_letter},
     Action, Ast, Condition, Description, Visitor,
 };
 use indexmap::IndexMap;
@@ -114,7 +114,7 @@ impl<'a> Visitor for TranslatorI<'a> {
                         String::with_capacity(action.title.len()),
                         |mut acc, w| {
                             acc.reserve(w.len() + 1);
-                            acc.push_str(&capitalize_first_letter(w));
+                            acc.push_str(&upper_first_letter(w));
                             acc
                         },
                     );
@@ -216,7 +216,7 @@ impl<'a> Visitor for TranslatorI<'a> {
             let mut words = condition.title.split_whitespace();
             // It is fine to unwrap because conditions have at least one word in
             // them.
-            let keyword = capitalize_first_letter(words.next().unwrap());
+            let keyword = upper_first_letter(words.next().unwrap());
 
             let function_name = if is_revert {
                 // Map an iterator over the words of a condition to the test
@@ -229,7 +229,7 @@ impl<'a> Visitor for TranslatorI<'a> {
                     ),
                     |mut acc, w| {
                         acc.reserve(w.len() + 1);
-                        acc.push_str(&capitalize_first_letter(w));
+                        acc.push_str(&upper_first_letter(w));
                         acc
                     },
                 );
@@ -247,7 +247,7 @@ impl<'a> Visitor for TranslatorI<'a> {
                 // Example: [when, something, happens] -> WhenSomethingHappens
                 let test_name = words.fold(keyword, |mut acc, w| {
                     acc.reserve(w.len() + 1);
-                    acc.push_str(&capitalize_first_letter(w));
+                    acc.push_str(&upper_first_letter(w));
                     acc
                 });
 

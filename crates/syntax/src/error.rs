@@ -91,7 +91,7 @@ mod test {
     use crate::span::{Position, Span};
 
     #[derive(Error, Clone, Debug, Eq, PartialEq)]
-    pub struct Error {
+    struct Error {
         #[source]
         kind: ErrorKind,
         text: String,
@@ -100,7 +100,7 @@ mod test {
 
     #[derive(Error, Clone, Debug, Eq, PartialEq)]
     #[non_exhaustive]
-    pub enum ErrorKind {
+    enum ErrorKind {
         #[error("unexpected token '{0}'")]
         TokenUnexpected(String),
     }

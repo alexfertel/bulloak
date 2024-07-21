@@ -17,7 +17,7 @@ pub struct Config {
     pub skip_modifiers: bool,
     /// Sets a Solidity version for the test contracts.
     pub solidity_version: String,
-    /// Whether to add `vm.skip(true)` at the begining of each test.
+    /// Whether to add `vm.skip(true)` at the beginning of each test.
     pub emit_vm_skip: bool,
 }
 

@@ -654,7 +654,7 @@ contract ActionsTest {
     }
 
     #[test]
-    fn non_firt_child_it_should_revert_doesnt_emit_revert_when(
+    fn non_first_child_it_should_revert_doesnt_emit_revert_when(
     ) -> anyhow::Result<()> {
         let file_contents = String::from(
             r"ActionsTest

@@ -44,8 +44,9 @@ pub fn translate(text: &str, cfg: &Config) -> anyhow::Result<Hir> {
 /// # Returns
 ///
 /// Returns the translated `Hir`.
+#[must_use]
 pub fn ast_to_hir(ast: &Ast, cfg: &Config) -> Hir {
     let mut discoverer = ModifierDiscoverer::new();
-    let modifiers = discoverer.discover(&ast);
+    let modifiers = discoverer.discover(ast);
     translator::Translator::new().translate(ast, modifiers, cfg)
 }

@@ -44,7 +44,7 @@ pub struct Scaffold {
     /// Sets a Solidity version for the test contracts.
     #[arg(short = 's', long, default_value = DEFAULT_SOL_VERSION)]
     pub solidity_version: String,
-    /// Whether to add vm.skip(true) at the begining of each test.
+    /// Whether to add vm.skip(true) at the beginning of each test.
     #[arg(short = 'S', long = "vm-skip", default_value_t = false)]
     pub with_vm_skip: bool,
     /// Whether to emit modifiers.
@@ -65,7 +65,7 @@ impl Scaffold {
     /// writes the output to files or prints to stdout based on the config.
     ///
     /// If any errors occur during processing, they are collected and reported.
-    pub(crate) fn run(&self, cfg: &Cli) -> anyhow::Result<()> {
+    pub(crate) fn run(&self, cfg: &Cli) {
         let errors: Vec<_> = self
             .files
             .iter()
@@ -77,11 +77,9 @@ impl Scaffold {
             .collect();
 
         if !errors.is_empty() {
-            self.report_errors(&errors);
+            Scaffold::report_errors(&errors);
             std::process::exit(1);
         }
-
-        Ok(())
     }
 
     /// Processes a single input file.
@@ -134,7 +132,7 @@ impl Scaffold {
     ///
     /// This method prints error messages for each file that failed to process,
     /// along with a summary of the total number of failed files.
-    fn report_errors(&self, errors: &[(&Path, anyhow::Error)]) {
+    fn report_errors(errors: &[(&Path, anyhow::Error)]) {
         for (file, err) in errors {
             eprintln!("{err}");
             eprintln!("file: {}", file.display());

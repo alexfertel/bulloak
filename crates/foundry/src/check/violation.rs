@@ -106,6 +106,13 @@ impl fmt::Display for Violation {
     }
 }
 
+/// Formats frontend errors into human-readable messages.
+///
+/// # Arguments
+/// * `error` - Reference to an `anyhow::Error`
+///
+/// # Returns
+/// A `String` containing the formatted error message
 fn format_frontend_error(error: &anyhow::Error) -> String {
     if let Some(error) =
         error.downcast_ref::<bulloak_syntax::tokenizer::Error>()
@@ -210,32 +217,21 @@ impl ViolationKind {
     }
 }
 
-/// Determines the appropriate insertion offset for a function within a contract
-/// source code.
-///
-/// This function calculates the character position in the source code at which
-/// a new function should be inserted. If the function to be inserted is the
-/// first one (`index` is 0), the offset is calculated as the position right
-/// after the opening brace of the contract. Otherwise, it finds the location
-/// immediately after the function that precedes the insertion point in the
-/// HIR structure.
+/// Calculates the insertion offset for a new function in a contract's source
+/// code.
 ///
 /// # Arguments
-/// * `contract_sol` - A `ContractDefinition` from the Solidity parse tree.
-/// * `contract_hir` - A `ContractDefinition` in the HIR node corresponding to
-///   the contract.
-/// * `index` - The index at which the function is to be inserted in the
-///   contract children.
-/// * `src` - A reference to the source code.
+/// * `contract_sol` - Solidity parse tree contract definition
+/// * `contract_hir` - HIR contract definition
+/// * `index` - Insertion index for the new function
+/// * `src` - Source code reference
 ///
 /// # Returns
-/// An `usize` representing the calculated offset position where the function
-/// should be inserted.
+/// Offset position for function insertion
 ///
 /// # Panics
-/// Panics if it fails to locate the opening brace of the contract while
-/// processing the first function (`index` is 0), indicating an issue with the
-/// solidity program structure.
+/// If the contract's opening brace cannot be located when processing the first
+/// function
 fn get_insertion_offset(
     contract_sol: &pt::ContractDefinition,
     contract_hir: &hir::ContractDefinition,
@@ -243,61 +239,44 @@ fn get_insertion_offset(
     src: impl AsRef<str>,
 ) -> usize {
     if index == 0 {
-        let contract_start = contract_sol.loc.start();
-        let opening_brace_pos = src
-            .as_ref()
-            .chars()
-            .skip(contract_start)
-            .position(|c| c == '{')
-            // We know this can't happen unless there is a bug in
-            // `solang-parser`, because this is a well-formed
-            // contract definition.
-            .expect("should search over a valid solidity program");
-
-        return contract_start + opening_brace_pos + 1;
+        return find_contract_body_start(contract_sol, src.as_ref());
     }
 
-    if let Hir::FunctionDefinition(ref prev_fn_hir) =
-        contract_hir.children[index - 1]
-    {
-        // It's fine to unwrap here since:
-        // - We check index 0 above, which doesn't have a predecessor.
-        // - This function is called in a context where we know a matching
-        //   function
-        // will exist. In this specific case, we are fixing a
-        // `MatchingFunctionMissing` violation, so we know there's a
-        // predecessor, otherwise we would be analyzing index 0.
-        let (_, prev_fn) = find_matching_fn(contract_sol, prev_fn_hir).unwrap();
-        return prev_fn.loc().end();
+    match &contract_hir.children[index - 1] {
+        Hir::FunctionDefinition(prev_fn_hir) => {
+            find_matching_fn(contract_sol, prev_fn_hir)
+                .expect("matching function should exist")
+                .1
+                .loc()
+                .end()
+        }
+        _ => unreachable!("previous child should be a function definition"),
     }
-
-    // We handle both possible cases above, so we know we can't reach this line.
-    unreachable!()
 }
 
-/// `fix_order` rearranges the functions in a Solidity contract (`contract_sol`)
-/// to match the order specified in a higher-level intermediate representation
-/// (`contract_hir`).
+/// Finds the starting position of a contract's body in the source code.
 ///
 /// # Arguments
-/// * `violations`: A slice of `Violation` instances. Each `Violation`
-///   represents a discrepancy between the order of functions in the Solidity
-///   contract and the higher-level intermediate representation.
-/// * `contract_sol`: A reference to a `Box<ContractDefinition>`, representing
-///   the Solidity contract whose function order needs correction.
-/// * `contract_hir`: A reference to a `hir::ContractDefinition`, representing
-///   the higher-level intermediate representation that dictates the correct
-///   order of functions.
-/// * `ctx`: The current `Context` which holds the source code and other
-///   relevant data for processing the contract.
+/// * `contract_sol` - Solidity parse tree contract definition
+/// * `src` - Full source code string
 ///
 /// # Returns
-/// Returns a `Context` instance, which is an updated version of the input
-/// `ctx`. This updated `Context` contains the Solidity source code with the
-/// functions reordered as per the order specified in `contract_hir`.
+/// `Result` with the position immediately after the opening brace, or an error if not found
+fn find_contract_body_start(
+    contract_sol: &pt::ContractDefinition,
+    src: &str,
+) -> usize {
+    let contract_start = contract_sol.loc.start();
+    let opening_brace_pos = src[contract_start..]
+        .find('{')
+        .expect("contract should have an opening brace");
+
+    contract_start + opening_brace_pos + 1
+}
+
+/// Rearranges functions in a Solidity contract to match the order in the HIR.
 ///
-/// # Process
-/// The function works in several steps:
+/// The algorithm goes like this:
 /// 1. It first creates a set of function names present in `contract_hir` to
 ///    identify the functions that need to be sorted.
 /// 2. It then iterates over the `violations` to correct the order of functions
@@ -311,9 +290,18 @@ fn get_insertion_offset(
 ///    sorted functions and any remaining parts of the contract (preserved in
 ///    `scratch`), ensuring all components are included in the output.
 ///
+/// # Arguments
+/// * `violations` - Order discrepancies between Solidity and HIR
+/// * `contract_sol` - Solidity contract to be corrected
+/// * `contract_hir` - HIR contract with correct function order
+/// * `ctx` - Current context with source code and processing data
+///
+/// # Returns
+/// Updated Context with reordered functions in Solidity source code
+///
 /// # Panics
-/// The function will panic if the reconstructed Solidity string fails to parse.
-/// This is a safeguard to ensure the output is always a valid Solidity code.
+/// If the reconstructed Solidity string fails to parse
+#[must_use]
 pub fn fix_order(
     violations: &[Violation],
     contract_sol: &Box<ContractDefinition>,

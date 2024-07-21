@@ -1,6 +1,6 @@
 //! Constants.
 
-/// Default identation used internally.
+/// Default indentation used internally.
 pub(crate) const INTERNAL_DEFAULT_INDENTATION: usize = 2;
 /// Default solidity version used internally.
 pub const DEFAULT_SOL_VERSION: &str = "0.8.0";

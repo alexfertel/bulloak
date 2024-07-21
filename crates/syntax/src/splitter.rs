@@ -1,10 +1,10 @@
 /// The separator used between trees when parsing `.tree` files with multiple
 /// trees.
-pub const TREES_SEPARATOR: &str = "\n\n";
+pub(crate) const TREES_SEPARATOR: &str = "\n\n";
 
 /// Splits the input text into distinct trees, delimited by two consecutive
 /// newlines.
-pub fn split_trees(text: &str) -> Box<dyn Iterator<Item = &str> + '_> {
+pub(crate) fn split_trees(text: &str) -> Box<dyn Iterator<Item = &str> + '_> {
     if text.trim().is_empty() {
         return Box::new(std::iter::once(""));
     }
