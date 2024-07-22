@@ -27,10 +27,10 @@ pub fn translate(text: &str, cfg: &Config) -> anyhow::Result<Hir> {
     let asts = bulloak_syntax::parse(text)?;
 
     if asts.len() == 1 {
-        return Ok(ast_to_hir(&asts[0], cfg));
+        return Ok(translate_one(&asts[0], cfg));
     }
 
-    let hirs = asts.into_iter().map(|ast| ast_to_hir(&ast, cfg));
+    let hirs = asts.into_iter().map(|ast| translate_one(&ast, cfg));
     Ok(combiner::Combiner::new().combine(text, hirs)?)
 }
 
@@ -45,7 +45,7 @@ pub fn translate(text: &str, cfg: &Config) -> anyhow::Result<Hir> {
 ///
 /// Returns the translated `Hir`.
 #[must_use]
-pub fn ast_to_hir(ast: &Ast, cfg: &Config) -> Hir {
+pub fn translate_one(ast: &Ast, cfg: &Config) -> Hir {
     let mut discoverer = ModifierDiscoverer::new();
     let modifiers = discoverer.discover(ast);
     translator::Translator::new().translate(ast, modifiers, cfg)
