@@ -518,6 +518,7 @@ impl<'t, P: Borrow<Parser>> ParserI<'t, P> {
 
 #[cfg(test)]
 mod tests {
+    use indoc::indoc;
     use pretty_assertions::assert_eq;
 
     use crate::{
@@ -583,23 +584,29 @@ mod tests {
 
     #[test]
     fn tee_last_child_errors() {
+        let input = indoc! {"
+            Foo_Test
+            ├── when something bad happens
+        "};
+
         assert_eq!(
-            parse("Foo_Test\n├── when something bad happens\n   └── it should revert").unwrap_err(),
-            e(ErrorKind::TeeLastChild, Span::splat(p(9, 2, 1)))
+            parse(input).unwrap_err(),
+            e(ErrorKind::TeeLastChild, Span::splat(p(9, 2, 1))),
+            "Using a tee (├──) for the last child should result in a TeeLastChild error"
         );
     }
 
     #[test]
     fn corner_not_last_child_errors() {
+        let input = indoc! {"
+                Foo_Test
+                └── when something bad happens
+                    └── it should revert
+                └── when something happens
+                    └── it should not revert
+        "};
         assert_eq!(
-            parse(
-                r"Foo_Test
-└── when something bad happens
-   └── it should revert
-└── when something happens
-   └── it should not revert"
-            )
-            .unwrap_err(),
+            parse(input).unwrap_err(),
             e(ErrorKind::CornerNotLastChild, Span::splat(p(9, 2, 1)))
         );
     }
@@ -618,8 +625,13 @@ mod tests {
 
     #[test]
     fn one_child() {
+        let input = indoc! {"
+            Foo_Test
+            └── when something bad happens
+               └── it should revert
+        "};
         assert_eq!(
-            parse("Foo_Test\n└── when something bad happens\n   └── it should revert").unwrap(),
+            parse(input).unwrap(),
             Ast::Root(Root {
                 contract_name: String::from("Foo_Test"),
                 span: s(p(0, 1, 1), p(74, 3, 23)),
@@ -638,15 +650,16 @@ mod tests {
 
     #[test]
     fn one_action_description() {
+        let input = indoc! {"
+            Foo_Test
+            └── when something bad happens
+               └── it should revert
+                  └── because _bad_
+        "};
         assert_eq!(
-            parse(
-                r"Foo_Test
-└── when something bad happens
-   └── it should revert
-      └── because _bad_"
-            )
-            .unwrap(),
+            parse(input).unwrap(),
             Ast::Root(Root {
+                contract_name: String::from("Foo_Test"),
                 span: s(p(0, 1, 1), p(104, 4, 23)),
                 children: vec![Ast::Condition(Condition {
                     span: s(p(9, 2, 1), p(104, 4, 23)),
@@ -660,24 +673,24 @@ mod tests {
                         })]
                     })],
                 })],
-                contract_name: String::from("Foo_Test"),
             })
         );
     }
 
     #[test]
     fn nested_action_descriptions() {
+        let input = indoc! {"
+            Foo_Test
+            └── when something bad happens
+               └── it should revert
+                  ├── some stuff happened
+                  │  └── and that stuff
+                  └── was very _bad_
+        "};
         assert_eq!(
-            parse(
-                r"Foo_Test
-└── when something bad happens
-   └── it should revert
-      ├── some stuff happened
-      │  └── and that stuff
-      └── was very _bad_"
-            )
-            .unwrap(),
+            parse(input).unwrap(),
             Ast::Root(Root {
+                contract_name: String::from("Foo_Test"),
                 span: s(p(0, 1, 1), p(177, 6, 24)),
                 children: vec![Ast::Condition(Condition {
                     span: s(p(9, 2, 1), p(177, 6, 24)),
@@ -701,7 +714,6 @@ mod tests {
                         ]
                     })],
                 })],
-                contract_name: String::from("Foo_Test"),
             })
         );
     }
@@ -749,14 +761,15 @@ mod tests {
 
     #[test]
     fn descriptions_are_the_only_action_children() {
+        let input = indoc! {"
+            Foo_Test
+            └── when something bad happens
+               └── it should revert
+                  └── it because _bad_
+        "};
+
         assert_eq!(
-            parse(
-                r"Foo_Test
-└── when something bad happens
-   └── it should revert
-      └── it because _bad_"
-            )
-            .unwrap_err(),
+            parse(input).unwrap_err(),
             e(
                 ErrorKind::DescriptionTokenUnexpected("it".to_owned()),
                 s(p(92, 4, 11), p(93, 4, 12))
@@ -766,15 +779,16 @@ mod tests {
 
     #[test]
     fn two_children() {
+        let input = indoc! {"
+            FooBarTheBest_Test
+            ├── when stuff called
+            │  └── it should revert
+            └── given not stuff called
+               └── it should revert
+        "};
+
         assert_eq!(
-            parse(
-                r"FooBarTheBest_Test
-├── when stuff called
-│  └── it should revert
-└── given not stuff called
-   └── it should revert"
-            )
-            .unwrap(),
+            parse(input).unwrap(),
             Ast::Root(Root {
                 contract_name: String::from("FooBarTheBest_Test"),
                 span: s(p(0, 1, 1), p(140, 5, 23)),
@@ -805,12 +819,13 @@ mod tests {
     // https://github.com/alexfertel/bulloak/issues/54
     #[test]
     fn parses_top_level_actions() {
+        let input = indoc! {r#"
+            Foo
+            └── It reverts when X.
+        "#};
+
         assert_eq!(
-            parse(
-                r#"Foo
-└── It reverts when X."#
-            )
-            .unwrap(),
+            parse(input).unwrap(),
             Ast::Root(Root {
                 contract_name: String::from("Foo"),
                 span: s(p(0, 1, 1), p(31, 2, 22)),
@@ -825,13 +840,14 @@ mod tests {
 
     #[test]
     fn unsanitized_input() {
+        let input = indoc! {r#"
+            FooB-rTheBestOf_Test
+            └── when st-ff "all'd
+               └── it should revert
+        "#};
+
         assert_eq!(
-            parse(
-                r#"FooB-rTheBestOf_Test
-└── when st-ff "all'd
-   └── it should revert"#
-            )
-            .unwrap(),
+            parse(input).unwrap(),
             Ast::Root(Root {
                 contract_name: String::from("FooB-rTheBestOf_Test"),
                 span: s(p(0, 1, 1), p(77, 3, 23)),

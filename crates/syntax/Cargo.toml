@@ -18,6 +18,7 @@ thiserror.workspace = true
 unicode-xid.workspace = true
 
 [dev-dependencies]
+indoc = "2.0.5"
 pretty_assertions.workspace = true
 
 [lints]

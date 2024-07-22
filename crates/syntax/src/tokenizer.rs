@@ -400,6 +400,7 @@ fn is_valid_identifier_char(c: char) -> bool {
 
 #[cfg(test)]
 mod tests {
+    use indoc::indoc;
     use pretty_assertions::assert_eq;
 
     use crate::{
@@ -459,92 +460,81 @@ mod tests {
     }
 
     #[test]
-    fn comments() -> anyhow::Result<()> {
-        let file_contents = String::from(
-            "Foo_Test\n└── when something bad happens // some comments \n   └── it should revert",
-        );
+    fn comments() {
+        let file_contents = String::from(indoc! {"
+            Foo_Test
+            └── when something bad happens // some comments 
+               └── it should revert
+        "});
 
+        #[rustfmt::skip]
         assert_eq!(
-            tokenize(&file_contents)?,
+            tokenize(&file_contents).unwrap(),
             vec![
-                t(TokenKind::Word, "Foo_Test", s(p(0, 1, 1), p(7, 1, 8))),
-                t(TokenKind::Corner, "└", s(p(9, 2, 1), p(9, 2, 1))),
-                t(TokenKind::When, "when", s(p(19, 2, 5), p(22, 2, 8))),
-                t(TokenKind::Word, "something", s(p(24, 2, 10), p(32, 2, 18))),
-                t(TokenKind::Word, "bad", s(p(34, 2, 20), p(36, 2, 22))),
-                t(TokenKind::Word, "happens", s(p(38, 2, 24), p(44, 2, 30))),
-                t(TokenKind::Corner, "└", s(p(67, 3, 4), p(67, 3, 4))),
-                t(TokenKind::It, "it", s(p(77, 3, 8), p(78, 3, 9))),
-                t(TokenKind::Word, "should", s(p(80, 3, 11), p(85, 3, 16))),
-                t(TokenKind::Word, "revert", s(p(87, 3, 18), p(92, 3, 23))),
+                t(TokenKind::Word,   "Foo_Test",  s(p(0, 1, 1),   p(7, 1, 8))),
+                t(TokenKind::Corner, "└",         s(p(9, 2, 1),   p(9, 2, 1))),
+                t(TokenKind::When,   "when",      s(p(19, 2, 5),  p(22, 2, 8))),
+                t(TokenKind::Word,   "something", s(p(24, 2, 10), p(32, 2, 18))),
+                t(TokenKind::Word,   "bad",       s(p(34, 2, 20), p(36, 2, 22))),
+                t(TokenKind::Word,   "happens",   s(p(38, 2, 24), p(44, 2, 30))),
+                t(TokenKind::Corner, "└",         s(p(67, 3, 4),  p(67, 3, 4))),
+                t(TokenKind::It,     "it",        s(p(77, 3, 8),  p(78, 3, 9))),
+                t(TokenKind::Word,   "should",    s(p(80, 3, 11), p(85, 3, 16))),
+                t(TokenKind::Word,   "revert",    s(p(87, 3, 18), p(92, 3, 23))),
             ]
         );
 
-        let file_contents = String::from(
-            "Foo_Test\n└── when something bad happens\n // some comments \n   └── it should revert",
-        );
+        let file_contents = String::from(indoc! {"
+            Foo_Test
+            └── when something bad happens
+               // some comments
+               └── it should revert
+        "});
 
+        #[rustfmt::skip]
         assert_eq!(
-            tokenize(&file_contents)?,
+            tokenize(&file_contents).unwrap(),
             vec![
-                t(TokenKind::Word, "Foo_Test", s(p(0, 1, 1), p(7, 1, 8))),
-                t(TokenKind::Corner, "└", s(p(9, 2, 1), p(9, 2, 1))),
-                t(TokenKind::When, "when", s(p(19, 2, 5), p(22, 2, 8))),
-                t(TokenKind::Word, "something", s(p(24, 2, 10), p(32, 2, 18))),
-                t(TokenKind::Word, "bad", s(p(34, 2, 20), p(36, 2, 22))),
-                t(TokenKind::Word, "happens", s(p(38, 2, 24), p(44, 2, 30))),
-                t(TokenKind::Corner, "└", s(p(68, 4, 4), p(68, 4, 4))),
-                t(TokenKind::It, "it", s(p(78, 4, 8), p(79, 4, 9))),
-                t(TokenKind::Word, "should", s(p(81, 4, 11), p(86, 4, 16))),
-                t(TokenKind::Word, "revert", s(p(88, 4, 18), p(93, 4, 23))),
+                t(TokenKind::Word,   "Foo_Test",  s(p(0, 1, 1),   p(7, 1, 8))),
+                t(TokenKind::Corner, "└",         s(p(9, 2, 1),   p(9, 2, 1))),
+                t(TokenKind::When,   "when",      s(p(19, 2, 5),  p(22, 2, 8))),
+                t(TokenKind::Word,   "something", s(p(24, 2, 10), p(32, 2, 18))),
+                t(TokenKind::Word,   "bad",       s(p(34, 2, 20), p(36, 2, 22))),
+                t(TokenKind::Word,   "happens",   s(p(38, 2, 24), p(44, 2, 30))),
+                t(TokenKind::Corner, "└",         s(p(69, 4, 4),  p(69, 4, 4))),
+                t(TokenKind::It,     "it",        s(p(79, 4, 8),  p(80, 4, 9))),
+                t(TokenKind::Word,   "should",    s(p(82, 4, 11), p(87, 4, 16))),
+                t(TokenKind::Word,   "revert",    s(p(89, 4, 18), p(94, 4, 23))),
             ]
         );
-
-        Ok(())
     }
 
     #[test]
     fn invalid_characters() {
-        assert_eq!(
-            tokenize("foo\n└── when |weird identifier").unwrap_err(),
-            e(IdentifierCharInvalid('|'), s(p(19, 2, 10), p(19, 2, 10)))
-        );
-        assert_eq!(
-            tokenize("foo\n└── when w|eird identifier").unwrap_err(),
-            e(IdentifierCharInvalid('|'), s(p(20, 2, 11), p(20, 2, 11)))
-        );
-        assert_eq!(
-            tokenize("foo\n└── when weird| identifier").unwrap_err(),
-            e(IdentifierCharInvalid('|'), s(p(24, 2, 15), p(24, 2, 15)))
-        );
-        assert_eq!(
-            tokenize("foo\n└── when .weird identifier").unwrap_err(),
-            e(IdentifierCharInvalid('.'), s(p(19, 2, 10), p(19, 2, 10)))
-        );
-        assert_eq!(
-            tokenize("foo\n└── when w,eird identifier").unwrap_err(),
-            e(IdentifierCharInvalid(','), s(p(20, 2, 11), p(20, 2, 11)))
-        );
-        assert_eq!(
-            tokenize("foo\n└── given |weird identifier").unwrap_err(),
-            e(IdentifierCharInvalid('|'), s(p(20, 2, 11), p(20, 2, 11)))
-        );
-        assert_eq!(
-            tokenize("foo\n└── given w|eird identifier").unwrap_err(),
-            e(IdentifierCharInvalid('|'), s(p(21, 2, 12), p(21, 2, 12)))
-        );
-        assert_eq!(
-            tokenize("foo\n└── given weird| identifier").unwrap_err(),
-            e(IdentifierCharInvalid('|'), s(p(25, 2, 16), p(25, 2, 16)))
-        );
-        assert_eq!(
-            tokenize("foo\n└── given .weird identifier").unwrap_err(),
-            e(IdentifierCharInvalid('.'), s(p(20, 2, 11), p(20, 2, 11)))
-        );
-        assert_eq!(
-            tokenize("foo\n└── given w,eird identifier").unwrap_err(),
-            e(IdentifierCharInvalid(','), s(p(21, 2, 12), p(21, 2, 12)))
-        );
+        macro_rules! invalid_chars {
+            ($($char:literal => $input:expr => $pos:expr),* $(,)?) => {
+                $(
+                    let input = format!("foo\n└── {} identifier", $input);
+                    assert_eq!(
+                        tokenize(&input).unwrap_err(),
+                        e(IdentifierCharInvalid($char), s($pos, $pos))
+                    );
+                )*
+            };
+        }
+
+        invalid_chars! {
+            '|' => "when |weird"  => p(19, 2, 10),
+            '|' => "when w|eird"  => p(20, 2, 11),
+            '|' => "when weird|"  => p(24, 2, 15),
+            '.' => "when .weird"  => p(19, 2, 10),
+            ',' => "when w,eird"  => p(20, 2, 11),
+            '|' => "given |weird" => p(20, 2, 11),
+            '|' => "given w|eird" => p(21, 2, 12),
+            '|' => "given weird|" => p(25, 2, 16),
+            '.' => "given .weird" => p(20, 2, 11),
+            ',' => "given w,eird" => p(21, 2, 12),
+        };
     }
 
     #[test]
@@ -568,9 +558,11 @@ mod tests {
     #[test]
     fn one_child() {
         // Test parsing a when.
-        let file_contents = String::from(
-            "Foo_Test\n└── when something bad happens\n   └── it should revert",
-        );
+        let file_contents = String::from(indoc! {"
+            Foo_Test
+            └── when something bad happens
+               └── it should revert
+        "});
 
         assert_eq!(
             tokenize(&file_contents).unwrap(),
@@ -589,8 +581,11 @@ mod tests {
         );
 
         // Test parsing a given.
-        let file_contents =
-            String::from("Foo_Test\n└── given something bad happens\n   └── it should revert");
+        let file_contents = String::from(indoc! {"
+            Foo_Test
+            └── given something bad happens
+               └── it should revert
+        "});
 
         assert_eq!(
             tokenize(&file_contents).unwrap(),
@@ -611,35 +606,32 @@ mod tests {
 
     #[test]
     fn multiple_children() {
-        let file_contents = String::from(
-            r#"multiple_children.t.sol
-├── when stuff called
-│  └── it should revert
-└── when not stuff called
-   ├── when the deposit amount is zero
-   │  └── it should revert
-   └── when the deposit amount is not zero
-      ├── when the number count is zero
-      │  └── it should revert
-      ├── when the asset is not a contract
-      │  └── it should revert
-      └── when the asset is a contract
-          ├── when the asset misses the ERC-20 return value
-          │  ├── it should create the child
-          │  ├── it should perform the ERC-20 transfers
-          │  └── it should emit a {MultipleChildren} event
-          └── when the asset does not miss the ERC-20 return value
-              ├── it should create the child
-              └── it should emit a {MultipleChildren} event"#,
-        );
+        let file_contents = String::from(indoc! {"
+            multiple_children.t.sol
+            ├── when stuff called
+            │  └── it should revert
+            └── when not stuff called
+               ├── when the deposit amount is zero
+               │  └── it should revert
+               └── when the deposit amount is not zero
+                  ├── when the number count is zero
+                  │  └── it should revert
+                  ├── when the asset is not a contract
+                  │  └── it should revert
+                  └── when the asset is a contract
+                      ├── when the asset misses the ERC-20 return value
+                      │  ├── it should create the child
+                      │  ├── it should perform the ERC-20 transfers
+                      │  └── it should emit a {MultipleChildren} event
+                      └── when the asset does not miss the ERC-20 return value
+                          ├── it should create the child
+                          └── it should emit a {MultipleChildren} event
+        "});
 
         let tokens = tokenize(&file_contents).unwrap();
+        #[rustfmt::skip]
         let expected = vec![
-            t(
-                TokenKind::Word,
-                "multiple_children.t.sol",
-                s(p(0, 1, 1), p(22, 1, 23)),
-            ),
+            t(TokenKind::Word, "multiple_children.t.sol", s(p(0, 1, 1), p(22, 1, 23))),
             t(TokenKind::Tee, "├", s(p(24, 2, 1), p(24, 2, 1))),
             t(TokenKind::When, "when", s(p(34, 2, 5), p(37, 2, 8))),
             t(TokenKind::Word, "stuff", s(p(39, 2, 10), p(43, 2, 14))),
@@ -729,11 +721,7 @@ mod tests {
             t(TokenKind::Word, "should", s(p(671, 16, 21), p(676, 16, 26))),
             t(TokenKind::Word, "emit", s(p(678, 16, 28), p(681, 16, 31))),
             t(TokenKind::Word, "a", s(p(683, 16, 33), p(683, 16, 33))),
-            t(
-                TokenKind::Word,
-                "{MultipleChildren}",
-                s(p(685, 16, 35), p(702, 16, 52)),
-            ),
+            t(TokenKind::Word, "{MultipleChildren}", s(p(685, 16, 35), p(702, 16, 52))),
             t(TokenKind::Word, "event", s(p(704, 16, 54), p(708, 16, 58))),
             t(TokenKind::Corner, "└", s(p(720, 17, 11), p(720, 17, 11))),
             t(TokenKind::When, "when", s(p(730, 17, 15), p(733, 17, 18))),
@@ -757,11 +745,7 @@ mod tests {
             t(TokenKind::Word, "should", s(p(861, 19, 22), p(866, 19, 27))),
             t(TokenKind::Word, "emit", s(p(868, 19, 29), p(871, 19, 32))),
             t(TokenKind::Word, "a", s(p(873, 19, 34), p(873, 19, 34))),
-            t(
-                TokenKind::Word,
-                "{MultipleChildren}",
-                s(p(875, 19, 36), p(892, 19, 53)),
-            ),
+            t(TokenKind::Word, "{MultipleChildren}", s(p(875, 19, 36), p(892, 19, 53))),
             t(TokenKind::Word, "event", s(p(894, 19, 55), p(898, 19, 59))),
         ];
 
