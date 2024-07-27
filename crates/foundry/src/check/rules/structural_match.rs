@@ -144,18 +144,20 @@ fn check_fns_structure(
                 // We didn't find a matching function, so this is a
                 // violation.
                 None => {
-                    if !ctx.cfg.skip_modifiers {
-                        violations.push(Violation::new(
-                            ViolationKind::MatchingFunctionMissing(
-                                fn_hir.clone(),
-                                hir_idx,
-                            ),
-                            Location::Code(
-                                ctx.tree.to_string_lossy().into_owned(),
-                                fn_hir.span.start.line,
-                            ),
-                        ))
+                    if ctx.cfg.skip_modifiers && fn_hir.is_modifier() {
+                        continue;
                     }
+
+                    violations.push(Violation::new(
+                        ViolationKind::MatchingFunctionMissing(
+                            fn_hir.clone(),
+                            hir_idx,
+                        ),
+                        Location::Code(
+                            ctx.tree.to_string_lossy().into_owned(),
+                            fn_hir.span.start.line,
+                        ),
+                    ))
                 }
             }
         };
