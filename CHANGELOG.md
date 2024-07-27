@@ -2,11 +2,30 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.8.0] - 2024-07-27
+
+### Bug Fixes
+
+- Only skip modifiers & not regular fns with -m flag (#82)
+
+
+### Features
+
+- Revamp repo into publishable crates (#79)
+
+
+### Refactor
+
+- *(tests)* Use indoc to better format inputs
+- Consolidate default sol version between crates
+- Rename ast_to_hir -> translate_one
+
+
 ## [0.7.4] - 2024-07-10
 
 ### Bug Fixes
 
-- Skip any comment in .tree files
+- Skip any comment in .tree files (#76)
 
 
 ### Refactor
