@@ -64,6 +64,20 @@ fn checks_modifiers_skipped() {
 }
 
 #[test]
+fn checks_modifiers_skipped_issue_81() {
+    let cwd = env::current_dir().unwrap();
+    let binary_path = get_binary_path();
+    let tree_path = cwd.join("tests").join("check").join("issue_81.tree");
+
+    let output = cmd(&binary_path, "check", &tree_path, &["-m"]);
+    let stderr = String::from_utf8(output.stderr).unwrap();
+
+    assert!(stderr.contains(
+        "function \"test_WhenLastUpdatedTimeInPast\" is missing in .sol"
+    ));
+}
+
+#[test]
 fn checks_missing_sol_file() {
     let cwd = env::current_dir().unwrap();
     let binary_path = get_binary_path();
@@ -71,10 +85,10 @@ fn checks_missing_sol_file() {
         cwd.join("tests").join("check").join("no_matching_sol.tree");
 
     let output = cmd(&binary_path, "check", &tree_path, &[]);
-    let actual = String::from_utf8(output.stderr).unwrap();
+    let stderr = String::from_utf8(output.stderr).unwrap();
 
-    assert!(actual.contains("the tree is missing its matching Solidity file"));
-    assert!(actual.contains("no_matching_sol.tree"));
+    assert!(stderr.contains("the tree is missing its matching Solidity file"));
+    assert!(stderr.contains("no_matching_sol.tree"));
 }
 
 #[test]
@@ -84,11 +98,11 @@ fn checks_empty_contract() {
     let tree_path = cwd.join("tests").join("check").join("empty_contract.tree");
 
     let output = cmd(&binary_path, "check", &tree_path, &[]);
-    let actual = String::from_utf8(output.stderr).unwrap();
+    let stderr = String::from_utf8(output.stderr).unwrap();
 
-    assert!(actual
+    assert!(stderr
         .contains(r#"function "test_ShouldNeverRevert" is missing in .sol"#));
-    assert!(actual.contains(
+    assert!(stderr.contains(
         r#"function "test_ShouldNotFindTheSolidityFile" is missing in .sol"#
     ));
 }
@@ -101,9 +115,9 @@ fn checks_missing_contract() {
         cwd.join("tests").join("check").join("missing_contract.tree");
 
     let output = cmd(&binary_path, "check", &tree_path, &[]);
-    let actual = String::from_utf8(output.stderr).unwrap();
+    let stderr = String::from_utf8(output.stderr).unwrap();
 
-    assert!(actual.contains(r#"contract "MissingContract" is missing in .sol"#));
+    assert!(stderr.contains(r#"contract "MissingContract" is missing in .sol"#));
 }
 
 #[test]
@@ -116,7 +130,7 @@ fn checks_missing_contract_identifier() {
         .join("missing_contract_identifier.tree");
 
     let output = cmd(&binary_path, "check", &tree_path, &[]);
-    let actual = String::from_utf8(output.stderr).unwrap();
+    let stderr = String::from_utf8(output.stderr).unwrap();
 
     let formatted_message = format!(
         "{}: an error occurred while parsing the tree: contract name missing at tree root #2\n   {} {}",
@@ -125,7 +139,7 @@ fn checks_missing_contract_identifier() {
         tree_path.display()
     );
 
-    assert!(actual.contains(&formatted_message));
+    assert!(stderr.contains(&formatted_message));
 }
 
 #[test]
@@ -136,9 +150,9 @@ fn checks_contract_name_mismatch() {
         cwd.join("tests").join("check").join("contract_names_mismatch.tree");
 
     let output = cmd(&binary_path, "check", &tree_path, &[]);
-    let actual = String::from_utf8(output.stderr).unwrap();
+    let stderr = String::from_utf8(output.stderr).unwrap();
 
-    assert!(actual.contains(
+    assert!(stderr.contains(
         r#"contract "ContractName" is missing in .sol -- found "ADifferentName" instead"#
     ));
 }
@@ -153,7 +167,7 @@ fn checks_contract_name_mismatch_multiple_roots() {
         .join("contract_names_mismatch_multiple_roots.tree");
 
     let output = cmd(&binary_path, "check", &tree_path, &[]);
-    let actual = String::from_utf8(output.stderr).unwrap();
+    let stderr = String::from_utf8(output.stderr).unwrap();
 
     let formatted_message = format!(
         "{}: an error occurred while parsing the tree: contract name mismatch: expected 'ContractName', found 'MismatchedContractName'\n   {} {}",
@@ -162,7 +176,7 @@ fn checks_contract_name_mismatch_multiple_roots() {
         tree_path.display()
     );
 
-    assert!(actual.contains(&formatted_message));
+    assert!(stderr.contains(&formatted_message));
 }
 
 #[test]
@@ -172,9 +186,9 @@ fn checks_invalid_tree() {
     let tree_path = cwd.join("tests").join("check").join("invalid.tree");
 
     let output = cmd(&binary_path, "check", &tree_path, &[]);
-    let actual = String::from_utf8(output.stderr).unwrap();
+    let stderr = String::from_utf8(output.stderr).unwrap();
 
-    assert!(actual.contains(
+    assert!(stderr.contains(
         r#"an error occurred while parsing the tree: unexpected token '├'"#
     ));
 }

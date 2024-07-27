@@ -1,0 +1,11 @@
+RecentAmountOf_Integration_Concrete_Test
+├── given null
+│  └── it should revert
+└── given not null
+   ├── given paused
+   │  └── it should return zero
+   └── given not paused
+      ├── when last updated time in present
+      │  └── it should return zero
+      └── when last updated time in past
+         └── it should return the correct recent amount
