@@ -48,7 +48,7 @@ const AsciiTreeAnimation: React.FC = () => {
 
     const generateTree = (): Tree => {
       const maxLevels = 15;
-      const height = canvas.height * (0.1 + Math.random() * 0.3);
+      const height = canvas.height * (0.2 + Math.random() * 0.3);
       const x = Math.random() * canvas.width;
       const y = canvas.height;
       return {
@@ -78,7 +78,7 @@ const AsciiTreeAnimation: React.FC = () => {
 
       tree.branches.push({ startX, startY, endX, endY, level });
 
-      const newH = h * 0.5 * (1 + Math.random() * 0.7);
+      const newH = h * 0.6 * (1 + Math.random() * 0.6);
       const newLevel = level + 1;
 
       const rangleSign = Math.random() > 0.5 ? 1 : -1;
@@ -86,7 +86,7 @@ const AsciiTreeAnimation: React.FC = () => {
       const rangleDelta = tree.angle * Math.PI / 180 * (0.5 + Math.random() * 0.7);
       const langleDelta = tree.angle * Math.PI / 180 * (0.5 + Math.random() * 0.7);
       const rangle = angle + rangleSign * rangleDelta;
-      const langle = angle + rangleSign * rangleDelta;
+      const langle = angle + langleSign * langleDelta;
 
       const growRightBranch = Math.random() > 0.2;
       const growLeftBranch = Math.random() > 0.2;
@@ -100,7 +100,7 @@ const AsciiTreeAnimation: React.FC = () => {
 
     const drawTree = (tree: Tree) => {
       ctx.strokeStyle = tree.color;
-    //   ctx.globalAlpha = Math.max(0, 1 - (tree.age - 5000) / 2000);
+      ctx.globalAlpha = 0.05;
       ctx.lineWidth = 1;
 
       tree.branches.forEach(branch => {
@@ -114,10 +114,7 @@ const AsciiTreeAnimation: React.FC = () => {
     };
 
     const updateAndDraw = (deltaTime: number) => {
-    //   ctx.fillStyle = "black";
-    //   ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      if (trees.length < maxTrees && Math.random() < 0.02) {
+      if (trees.length < maxTrees && Math.random() < 0.03) {
         trees.push(generateTree());
       }
 

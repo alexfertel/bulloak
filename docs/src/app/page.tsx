@@ -9,37 +9,27 @@ export default function Home() {
       <BTTExplanationSection />
       <BulloakFeaturesSection />
       <UsageSection />
-      <ResourcesSection />
       <Footer />
     </main>
   );
 }
 
+
 const HeroSection = () => {
   return (
-    <div className="relative h-screen flex flex-col items-center justify-center bg-[#f5f5dc] text-black overflow-hidden">
-      {/* <Image
-        src="/bulloak-logo.png"
-        alt="Bulloak Logo"
-        width={300}
-        height={300}
-        className="mb-8"
-      /> */}
-      <h1 className="text-6xl font-bold text-center z-10 mb-4">
-        bulloak
-      </h1>
-      <p className="text-xl text-center z-10 mb-8">
-        A Solidity test generator based on the Branching Tree Technique
-      </p>
-      <div className="flex space-x-4">
-        <Link href="/docs" className="bg-black text-[#f5f5dc] px-6 py-2 rounded-md hover:bg-opacity-80">
+    <div className="relative h-screen flex items-center justify-center">
+      <div className="absolute inset-0 filter blur-[4px]">
+        <AsciiTreeAnimation />
+      </div>
+      <div className="relative z-10 text-center">
+        <h1 className="text-6xl font-bold mb-4">Bulloak</h1>
+        <p className="text-xl mb-8">
+          A Solidity test generator based on the Branching Tree Technique
+        </p>
+        <Link href="https://github.com/alexfertel/bulloak" target="_blank" className="bg-black text-[#f5f5dc] px-6 py-2 rounded-md hover:bg-opacity-80">
           Get Started
         </Link>
-        <Link href="https://github.com/alexfertel/bulloak" className="border border-black px-6 py-2 rounded-md hover:bg-black hover:text-[#f5f5dc]">
-          GitHub
-        </Link>
       </div>
-      <AsciiTreeAnimation />
     </div>
   );
 };
@@ -58,8 +48,8 @@ const BTTExplanationSection = () => {
               BTT organizes test cases in a tree-like structure, where:
             </p>
             <ul className="text-lg mb-4">
-              <li><span className="mr-2 font-mono">├─</span>Branches represent different conditions or states</li>
-              <li><span className="mr-2 font-mono">└─</span>Leaves represent specific test cases or assertions</li>
+              <li><span className="mr-2 font-mono">├──</span>Branches represent different conditions or states</li>
+              <li><span className="mr-2 font-mono">└──</span>Leaves represent specific test cases or assertions</li>
             </ul>
           </div>
           <div className="border border-black p-6">
@@ -79,10 +69,10 @@ const BTTExplanationSection = () => {
             This technique helps developers:
           </p>
           <ul className="text-lg mb-4">
-            <li><span className="mr-2 font-mono">├─</span>Visualize all possible test scenarios</li>
-            <li><span className="mr-2 font-mono">├─</span>Ensure complete test coverage</li>
-            <li><span className="mr-2 font-mono">├─</span>Easily identify missing test cases</li>
-            <li><span className="mr-2 font-mono">└─</span>Maintain a clear and organized test structure</li>
+            <li><span className="mr-2 font-mono">├──</span>Visualize all possible test scenarios</li>
+            <li><span className="mr-2 font-mono">├──</span>Ensure complete test coverage</li>
+            <li><span className="mr-2 font-mono">├──</span>Easily identify missing test cases</li>
+            <li><span className="mr-2 font-mono">└──</span>Maintain a clear and organized test structure</li>
           </ul>
           <p className="text-lg">
             Bulloak leverages BTT to automatically generate comprehensive Solidity test suites, saving time and improving the quality of smart contract testing.
@@ -171,132 +161,106 @@ const UsageSection = () => {
     <div className="py-16 bg-[#e6e6cc] text-black">
       <div className="container mx-auto px-4">
         <h2 className="text-3xl font-bold mb-8">Usage</h2>
-        <p className="text-lg mb-4">
-          To use Bulloak, follow these steps:
+        <div className="space-y-6">
+          <div>
+            <h3 className="text-xl font-semibold mb-2">1. Install Bulloak</h3>
+            <pre className="border border-black text-gray-900 px-4 overflow-x-auto py-2">
+              <code>$ cargo install bulloak</code>
+            </pre>
+          </div>
+          <div>
+            <h3 className="text-xl font-semibold mb-2">2. Create a .tree file (e.g., foo.tree)</h3>
+            <pre className="border border-black text-gray-900 px-4 overflow-x-auto py-2">
+              <code>{`FooTest
+└── When stuff is called
+    └── When a condition is met
+        └── It should revert.
+            └── Because we shouldn't allow it.`}</code>
+            </pre>
+          </div>
+          <div>
+            <h3 className="text-xl font-semibold mb-2">3. Generate Solidity test files</h3>
+            <pre className="border border-black text-gray-900 px-4 overflow-x-auto py-2">
+              <code>{`$ bulloak scaffold foo.tree
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity 0.8.0;
+
+contract FooTest {
+    modifier whenStuffIsCalled() {
+        _;
+    }
+
+    function test_RevertWhen_AConditionIsMet() external whenStuffIsCalled {
+        // It should revert.
+        //     Because we shouldn't allow it.
+    }
+}
+`}</code>
+            </pre>
+          </div>
+          <div>
+            <h3 className="text-xl font-semibold mb-2">4. Check if code matches the spec</h3>
+            <pre className="border border-black text-gray-900 px-4 overflow-x-auto py-2">
+              <code>{`$ bulloak check foo.tree
+warn: function "test_WhenFirstArgIsBiggerThanSecondArg" is missing in .sol
+     + fix: run \`bulloak check --fix foo.tree\`
+   --> foo.tree:5
+
+warn: 1 check failed (run \`bulloak check --fix foo.tree\` to apply 1 fix)`}</code>
+            </pre>
+          </div>
+          <div>
+            <h3 className="text-xl font-semibold mb-2">5. Automatically fix issues (if any)</h3>
+            <pre className="border border-black text-gray-900 px-4 overflow-x-auto py-2">
+              <code>{`$ bulloak check --fix foo.tree
+...
+success: 1 issue fixed.`}</code>
+            </pre>
+          </div>
+        </div>
+        <p className="mt-8 text-lg">
+          For more detailed usage instructions and options, refer to the{" "}
+          <Link href="https://github.com/alexfertel/bulloak" target="_blank" className="underline hover:text-gray-500">
+            full documentation on GitHub
+          </Link>.
         </p>
-        <ol className="list-decimal list-inside text-lg mb-8">
-          <li>Install Bulloak via Cargo</li>
-          <li>Create a .tree file with your test specification</li>
-          <li>Use 'bulloak scaffold' to generate Solidity test files</li>
-          <li>Use 'bulloak check' to ensure your code matches the spec</li>
-          <li>Run the generated tests with your preferred Solidity testing framework</li>
-        </ol>
-        <Link href="https://github.com/alexfertel/bulloak" target="_blank" className="inline-block text-lg font-bold underline hover:text-gray-500">
-          Read the full README on GitHub.
-        </Link>
       </div>
     </div>
   );
 };
 
-const ResourcesSection = () => {
+const Footer = () => {
   return (
-    <div className="py-16 bg-[#f5f5dc] text-black">
+    <footer className="bg-[#f5f5dc] text-black pt-14 pb-8">
       <div className="container mx-auto px-4">
-        <h2 className="text-3xl font-bold mb-8">Resources</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <ResourceLink
-            href="https://github.com/alexfertel/bulloak"
-            text="GitHub Repository"
-          />
-          <ResourceLink
-            href="/docs/btt-explanation"
-            text="BTT Explanation"
-          />
-          <ResourceLink
-            href="/docs/getting-started"
-            text="Getting Started Guide"
-          />
-          <ResourceLink
-            href="/docs/api-reference"
-            text="API Reference"
-          />
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const ResourceLink = ({ href, text }) => {
-  return (
-    <Link href={href} className="block border border-black p-6 hover:bg-black hover:text-[#f5f5dc] transition-colors">
-      <span className="text-xl font-bold">{text}</span>
-    </Link>
-  );
-};
-
-const Footer: React.FC = () => {
-  return (
-    <footer className="bg-[#f5f5dc] text-black py-8 border-t border-black">
-      <div className="container mx-auto px-4">
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-8">
-          <div className="col-span-2">
-            <h3 className="text-xl font-bold mb-4">Tools & Infrastructure/</h3>
-            <ul className="space-y-2">
-              <li><span className="mr-2">├─</span><Link href="/" className="hover:underline">Hiro Platform</Link></li>
-              <li><span className="mr-2">├─</span><Link href="/" className="hover:underline">Clarinet</Link></li>
-              <li><span className="mr-2">├─</span><Link href="/" className="hover:underline">Clarity VSCode Extension</Link></li>
-              <li><span className="mr-2">├─</span><Link href="/" className="hover:underline">Stacks.js</Link></li>
-              <li><span className="mr-2">├─</span><Link href="/" className="hover:underline">Stacks Blockchain API</Link></li>
-              <li><span className="mr-2">├─</span><Link href="/" className="hover:underline">Token Metadata API</Link></li>
-              <li><span className="mr-2">├─</span><Link href="/" className="hover:underline">Ordinals API</Link></li>
-              <li><span className="mr-2">├─</span><Link href="/" className="hover:underline">Chainhook</Link></li>
-              <li><span className="mr-2">├─</span><Link href="/" className="hover:underline">Ordhook</Link></li>
-              <li><span className="mr-2">├─</span><Link href="/" className="hover:underline">Stacks Explorer</Link></li>
-              <li><span className="mr-2">└─</span><Link href="/" className="hover:underline">Ordinals Explorer</Link></li>
-            </ul>
-          </div>
-          <div>
-            <h3 className="text-xl font-bold mb-4">Build/</h3>
-            <ul className="space-y-2">
-              <li><span className="mr-2">├─</span><Link href="/docs" className="hover:underline">Documentation</Link></li>
-              <li><span className="mr-2">├─</span><Link href="/" className="hover:underline">Example apps</Link></li>
-              <li><span className="mr-2">└─</span><Link href="/" className="hover:underline">Tutorials</Link></li>
-            </ul>
-          </div>
-          <div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="col-span-1">
             <h3 className="text-xl font-bold mb-4">Resources/</h3>
-            <ul className="space-y-2">
-              <li><span className="mr-2">├─</span><Link href="/" className="hover:underline">Blog</Link></li>
-              <li><span className="mr-2">├─</span><Link href="/" className="hover:underline">Clarity Playground</Link></li>
-              <li><span className="mr-2">├─</span><Link href="/" className="hover:underline">Videos</Link></li>
-              <li><span className="mr-2">└─</span><Link href="/" className="hover:underline">Newsletter</Link></li>
+            <ul>
+              <li><span className="mr-2">├─</span><Link href="https://www.youtube.com/watch?v=V6KBy8QQnCo" target="_blank" className="hover:underline hover:text-gray-500">Presentation by Paul R. Berg at EthCC[6]</Link></li>
+              <li><span className="mr-2">├─</span><Link href="https://www.youtube.com/watch?v=V6KBy8QQnCo" target="_blank" className="hover:underline hover:text-gray-500">Presentation by Paul R. Berg at Devconnect</Link></li>
+              <li><span className="mr-2">├─</span><Link href="https://github.com/PaulRBerg/btt-examples" target="_blank" className="hover:underline hover:text-gray-500">BTT examples</Link></li>
+              <li><span className="mr-2">├─</span><Link href="https://marketplace.visualstudio.com/items?itemName=aprilandjan.ascii-tree-generator" target="_blank" className="hover:underline hover:text-gray-500">Ascii Tree Generator for VSCode</Link></li>
+              <li><span className="mr-2">└─</span><Link href="https://marketplace.visualstudio.com/items?itemName=PraneshASP.vscode-solidity-inspector" className="hover:underline hover:text-gray-500">Syntax highlighting for tree files for VSCode</Link></li>
             </ul>
           </div>
-          <div>
-            <h3 className="text-xl font-bold mb-4">Company/</h3>
-            <ul className="space-y-2">
-              <li><span className="mr-2">├─</span><Link href="/" className="hover:underline">Careers <span className="text-red-500">we're hiring</span></Link></li>
-              <li><span className="mr-2">├─</span><Link href="/" className="hover:underline">About us</Link></li>
-              <li><span className="mr-2">├─</span><Link href="/" className="hover:underline">Press</Link></li>
-              <li><span className="mr-2">└─</span><Link href="/" className="hover:underline">Bounty program</Link></li>
+          <div className="col-span-1">
+            <h3 className="text-xl font-bold mb-4">Related Projects/</h3>
+            <ul>
+              <li><span className="mr-2">├─</span><Link href="https://github.com/marketplace/actions/bulloak-toolchain" target="_blank" className="hover:underline hover:text-gray-500">Run bulloak as a GitHub Action</Link></li>
+              <li><span className="mr-2">└─</span><Link href="https://github.com/ericnordelo/poinciana" target="_blank" className="hover:underline hover:text-gray-500">Bulloak for Cairo</Link></li>
             </ul>
-            <h3 className="text-xl font-bold mt-6 mb-4">Social/</h3>
-            <ul className="space-y-2">
-              <li><span className="mr-2">├─</span><Link href="/" className="hover:underline">X</Link></li>
-              <li><span className="mr-2">├─</span><Link href="/" className="hover:underline">Join Discord</Link></li>
-              <li><span className="mr-2">├─</span><Link href="/" className="hover:underline">GitHub</Link></li>
-              <li><span className="mr-2">├─</span><Link href="/" className="hover:underline">YouTube</Link></li>
-              <li><span className="mr-2">└─</span><Link href="/" className="hover:underline">LinkedIn</Link></li>
+          </div>
+          <div className="col-span-1">
+            <h3 className="text-xl font-bold mb-4">Supported By/</h3>
+            <ul>
+              <li><span className="mr-2">├─</span><Link href="https://www.rumpel.xyz/" target="_blank" className="hover:underline hover:text-gray-500">Rumpel Labs</Link></li>
+              <li><span className="mr-2">└─</span><Link href="https://sablier.com/" target="_blank" className="hover:underline hover:text-gray-500">Sablier</Link></li>
             </ul>
           </div>
         </div>
-        <div className="mt-12">
-          <h3 className="text-xl font-bold mb-4">STAY UP TO DATE WITH PRODUCT UPDATES, LEARNING RESOURCES, AND MORE.</h3>
-          <div className="flex">
-            <input type="email" placeholder="YOUR EMAIL" className="flex-grow p-2 border border-black mr-2" />
-            <button className="bg-black text-[#f5f5dc] p-2 hover:bg-opacity-80">[ SUBSCRIBE ]</button>
-          </div>
-        </div>
-        <div className="mt-12 text-sm">
-          <Link href="/" className="hover:underline mr-4">Patent Pledge</Link>
-          <Link href="/" className="hover:underline mr-4">Terms of Use</Link>
-          <Link href="/" className="hover:underline mr-4">Privacy</Link>
-          <span className="float-right">
-            <span className="mr-2">Status</span>
-            <span className="text-green-500">● All Systems Operational</span>
-            <span className="ml-4">© 2024 Hiro Systems PBC</span>
-          </span>
+        <div className="mt-12 text-sm flex items-center justify-end">
+          Created by <Link href="https://alexfertel.me" target="_blank" className="ml-1 text-blue-700 hover:underline font-mono">alexfertel</Link>.
         </div>
       </div>
     </footer>
