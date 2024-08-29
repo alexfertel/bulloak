@@ -14,6 +14,26 @@ export default function Home() {
   );
 }
 
+interface IconProps {
+  className?: string;
+}
+
+function GitHubIcon(props: IconProps): JSX.Element {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 16 16"
+      fill="currentColor"
+      className="w-6 h-6"
+      {...props}
+    >
+      <path
+        fillRule="evenodd"
+        d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"
+      ></path>
+    </svg>
+  );
+}
 
 const HeroSection = () => {
   return (
@@ -22,12 +42,13 @@ const HeroSection = () => {
         <AsciiTreeAnimation />
       </div>
       <div className="relative z-10 text-center">
-        <h1 className="text-6xl font-bold mb-4">Bulloak</h1>
+        <h1 className="text-6xl font-bold font-mono mb-4">bulloak</h1>
         <p className="text-xl mb-8">
-          A Solidity test generator based on the Branching Tree Technique
+          A test generator based on the Branching Tree Technique
         </p>
-        <Link href="https://github.com/alexfertel/bulloak" target="_blank" className="bg-black text-[#f5f5dc] px-6 py-2 rounded-md hover:bg-opacity-80">
-          Get Started
+        <Link href="https://github.com/alexfertel/bulloak" target="_blank" className="inline-flex items-center justify-center bg-black text-[#f5f5dc] px-6 py-2 rounded-md hover:bg-opacity-80">
+          <GitHubIcon className="w-4 h-4 mr-2" />
+          GitHub
         </Link>
       </div>
     </div>
@@ -75,7 +96,7 @@ const BTTExplanationSection = () => {
             <li><span className="mr-2 font-mono">└──</span>Maintain a clear and organized test structure</li>
           </ul>
           <p className="text-lg">
-            Bulloak leverages BTT to automatically generate comprehensive Solidity test suites, saving time and improving the quality of smart contract testing.
+            Bulloak leverages BTT to automatically generate comprehensive test suites, saving time and improving the quality of smart contract testing.
           </p>
         </div>
       </div>
@@ -98,7 +119,7 @@ const BulloakFeaturesSection = () => {
           <code>{`
 Bulloak
 ├── Scaffold Command
-│   ├─── Automatically generates Solidity test files from .tree specifications
+│   ├─── Automatically generates test files from .tree specifications
 │   │   ├── Creates modifiers for conditions
 │   │   └── Generates test functions for actions
 │   ├─── Reports syntax errors in your specification

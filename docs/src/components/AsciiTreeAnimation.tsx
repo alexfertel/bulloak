@@ -34,9 +34,22 @@ const AsciiTreeAnimation: React.FC = () => {
     let trees: Tree[] = [];
     let maxTrees: number;
 
-    const colors = ["#4CAF50", "#8BC34A", "#CDDC39", "#FFC107", "#FF9800"];
+    const colors = [
+        "#F9D5E5", // Soft Pink
+        "#EDE7B1", // Pale Yellow
+        "#A9D7DA", // Light Sky Blue
+        "#B8E0D2", // Mint Green
+        "#D6A2AD", // Dusty Rose
+        "#F1E0C5", // Sand
+        "#C7CEEA", // Periwinkle
+        "#F1C0B9", // Peach
+        "#A2D2FF", // Baby Blue
+        "#FFD8BE", // Apricot
+        "#E8D0B3", // Wheat
+        "#B5D8CC", // Sea Foam
+      ];
 
-    const resizeCanvas = () => {
+      const resizeCanvas = () => {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
       maxTrees = Math.max(3, Math.floor(canvas.width / 100));
