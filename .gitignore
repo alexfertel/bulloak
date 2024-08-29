@@ -21,4 +21,38 @@ target/
 *~
 \#*\#
 
-.DS_Store
+**/.DS_Store
+
+# dependencies
+docs/node_modules
+docs/.pnp
+docs/.pnp.js
+docs/.yarn/install-state.gz
+
+# testing
+docs/coverage
+
+# next.js
+docs/.next/
+docs/out/
+
+# production
+docs/build
+
+# misc
+*.pem
+
+# debug
+docs/npm-debug.log*
+docs/yarn-debug.log*
+docs/yarn-error.log*
+
+# local env files
+docs/.env*.local
+
+# vercel
+docs/.vercel
+
+# typescript
+docs/*.tsbuildinfo
+docs/next-env.d.ts
