@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import AsciiTreeAnimation from "../components/AsciiTreeAnimation";
+import AsciiTreeAnimation from "../components/TreesAnimation";
 
 export default function Home() {
   return (
