@@ -37,16 +37,16 @@ function GitHubIcon(props: IconProps): JSX.Element {
 
 const HeroSection = () => {
   return (
-    <div className="relative h-screen flex items-center justify-center">
+    <div className="relative min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-8">
       <div className="absolute inset-0 filter blur-[4px]">
         <AsciiTreeAnimation />
       </div>
       <div className="relative z-10 text-center">
-        <h1 className="text-6xl font-bold font-mono mb-4">bulloak</h1>
-        <p className="text-xl mb-8">
+        <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold font-mono mb-4">bulloak</h1>
+        <p className="text-lg sm:text-xl mb-8">
           A test generator based on the Branching Tree Technique
         </p>
-        <Link href="https://github.com/alexfertel/bulloak" target="_blank" className="inline-flex items-center justify-center bg-black text-[#f5f5dc] px-6 py-2 rounded-md hover:bg-opacity-80">
+        <Link href="https://github.com/alexfertel/bulloak" target="_blank" className="inline-flex items-center justify-center bg-black text-[#f5f5dc] px-4 sm:px-6 py-2 rounded-md hover:bg-opacity-80 text-sm sm:text-base">
           <GitHubIcon className="w-4 h-4 mr-2" />
           GitHub
         </Link>
@@ -57,25 +57,25 @@ const HeroSection = () => {
 
 const BTTExplanationSection = () => {
   return (
-    <div className="py-16 bg-[#e6e6cc] text-black">
-      <div className="container mx-auto px-4">
-        <h2 className="text-3xl font-bold mb-8">What is the Branching Tree Technique?</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+    <div className="py-12 sm:py-16 bg-[#e6e6cc] text-black">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+        <h2 className="text-2xl sm:text-3xl font-bold mb-6 sm:mb-8">What is the Branching Tree Technique?</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
           <div>
-            <p className="text-lg mb-4">
+            <p className="text-base sm:text-lg mb-4">
               The Branching Tree Technique (BTT) is a structured approach to test case design that ensures comprehensive coverage of all possible scenarios and edge cases in your smart contract tests.
             </p>
-            <p className="text-lg mb-4">
+            <p className="text-base sm:text-lg mb-4">
               BTT organizes test cases in a tree-like structure, where:
             </p>
-            <ul className="text-lg mb-4">
+            <ul className="text-base sm:text-lg mb-4">
               <li><span className="mr-2 font-mono">├──</span>Branches represent different conditions or states</li>
               <li><span className="mr-2 font-mono">└──</span>Leaves represent specific test cases or assertions</li>
             </ul>
           </div>
-          <div className="border border-black p-6">
-            <h3 className="text-xl font-bold mb-4">Example BTT Structure</h3>
-            <pre className="text-sm font-mono">
+          <div className="border border-black p-4 sm:p-6">
+            <h3 className="text-lg sm:text-xl font-bold mb-4">Example BTT Structure</h3>
+            <pre className="text-xs sm:text-sm font-mono overflow-x-auto">
               {`HashPairTest
 ├── It should never revert.
 ├── When first arg is smaller than second arg
@@ -106,16 +106,16 @@ const BTTExplanationSection = () => {
 
 const BulloakFeaturesSection = () => {
   return (
-    <div className="py-16 bg-[#f5f5dc] text-black">
-      <div className="container mx-auto px-4">
-        <h2 className="text-3xl font-bold mb-8">What is bulloak?</h2>
-        <p className="text-lg">
+    <div className="py-12 sm:py-16 bg-[#f5f5dc] text-black">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+        <h2 className="text-2xl sm:text-3xl font-bold mb-6 sm:mb-8">What is bulloak?</h2>
+        <p className="text-base sm:text-lg mb-6">
           bulloak is a powerful tool that brings the Branching Tree Technique to life for developers. It automates the process of creating comprehensive test suites based on BTT specifications.
-          {" "}<Link href="https://github.com/alexfertel/bulloak" target="_blank" className="inline-flex text-lg font-bold underline hover:text-gray-500">
+          {" "}<Link href="https://github.com/alexfertel/bulloak" target="_blank" className="inline-flex text-base sm:text-lg font-bold underline hover:text-gray-500">
             Read the full README on GitHub.
           </Link>
         </p>
-        <pre className="text-lg font-mono">
+        <pre className="text-sm sm:text-base font-mono overflow-x-auto mb-6 px-4 bg-[#e6e6cc] rounded">
           <code>{`
 Bulloak
 ├── Scaffold Command
@@ -138,11 +138,11 @@ Bulloak
     └── Corrects incorrect ordering
           `}</code>
         </pre>
-        <div className="border border-black p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="border border-black p-4 sm:p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
             <div className="font-mono">
-              <h5 className="text-lg font-semibold mb-2">hash_pair.tree</h5>
-              <pre className="border border-black text-gray-900 px-4 overflow-x-auto">
+              <h5 className="text-base sm:text-lg font-semibold mb-2">hash_pair.tree</h5>
+              <pre className="border border-black text-gray-900 px-4 overflow-x-auto text-xs sm:text-sm">
                 <code>{`
 HashPairTest
 ├── It should never revert.
@@ -156,8 +156,8 @@ HashPairTest
               </pre>
             </div>
             <div className="font-mono">
-              <h5 className="text-lg font-semibold mb-2">CLI</h5>
-              <pre className="border border-black text-gray-900 px-4 overflow-x-auto">
+              <h5 className="text-base sm:text-lg font-semibold mb-2">CLI</h5>
+              <pre className="border border-black text-gray-900 px-4 overflow-x-auto text-xs sm:text-sm">
                 <code>{`
 # Generate Solidity tests.
 $ bulloak scaffold hash_pair.tree
@@ -179,9 +179,9 @@ $ bulloak check --fix hash_pair.tree
 
 const UsageSection = () => {
   return (
-    <div className="py-16 bg-[#e6e6cc] text-black">
-      <div className="container mx-auto px-4">
-        <h2 className="text-3xl font-bold mb-8">Usage</h2>
+    <div className="py-12 sm:py-16 bg-[#e6e6cc] text-black">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+        <h2 className="text-2xl sm:text-3xl font-bold mb-6 sm:mb-8">Usage</h2>
         <div className="space-y-6">
           <div>
             <h3 className="text-xl font-semibold mb-2">1. Install Bulloak</h3>
@@ -239,7 +239,7 @@ success: 1 issue fixed.`}</code>
             </pre>
           </div>
         </div>
-        <p className="mt-8 text-lg">
+        <p className="mt-6 sm:mt-8 text-base sm:text-lg">
           For more detailed usage instructions and options, refer to the{" "}
           <Link href="https://github.com/alexfertel/bulloak" target="_blank" className="underline hover:text-gray-500">
             full documentation on GitHub
@@ -252,11 +252,11 @@ success: 1 issue fixed.`}</code>
 
 const Footer = () => {
   return (
-    <footer className="bg-[#f5f5dc] text-black pt-14 pb-8">
-      <div className="container mx-auto px-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+    <footer className="bg-[#f5f5dc] text-black pt-12 sm:pt-14 pb-6 sm:pb-8">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
           <div className="col-span-1">
-            <h3 className="text-xl font-bold mb-4">Resources/</h3>
+            <h3 className="text-lg sm:text-xl font-bold mb-4">Resources/</h3>
             <ul>
               <li><span className="mr-2">├──</span><Link href="https://www.youtube.com/watch?v=V6KBy8QQnCo" target="_blank" className="hover:underline hover:text-gray-500">Presentation by Paul R. Berg at EthCC[6]</Link></li>
               <li><span className="mr-2">├──</span><Link href="https://www.youtube.com/watch?v=V6KBy8QQnCo" target="_blank" className="hover:underline hover:text-gray-500">Presentation by Paul R. Berg at Devconnect</Link></li>
@@ -266,21 +266,21 @@ const Footer = () => {
             </ul>
           </div>
           <div className="col-span-1">
-            <h3 className="text-xl font-bold mb-4">Related Projects/</h3>
+            <h3 className="text-lg sm:text-xl font-bold mb-4">Related Projects/</h3>
             <ul>
               <li><span className="mr-2">├──</span><Link href="https://github.com/marketplace/actions/bulloak-toolchain" target="_blank" className="hover:underline hover:text-gray-500">Run bulloak as a GitHub Action</Link></li>
               <li><span className="mr-2">└──</span><Link href="https://github.com/ericnordelo/poinciana" target="_blank" className="hover:underline hover:text-gray-500">Bulloak for Cairo</Link></li>
             </ul>
           </div>
           <div className="col-span-1">
-            <h3 className="text-xl font-bold mb-4">Supported By/</h3>
+            <h3 className="text-lg sm:text-xl font-bold mb-4">Supported By/</h3>
             <ul>
               <li><span className="mr-2">├──</span><Link href="https://www.rumpel.xyz/" target="_blank" className="hover:underline hover:text-gray-500">Rumpel Labs</Link></li>
               <li><span className="mr-2">└──</span><Link href="https://sablier.com/" target="_blank" className="hover:underline hover:text-gray-500">Sablier</Link></li>
             </ul>
           </div>
         </div>
-        <div className="mt-12 text-sm flex items-center justify-end">
+        <div className="mt-10 sm:mt-12 text-xs sm:text-sm flex items-center justify-end">
           Created by <Link href="https://alexfertel.me" target="_blank" className="ml-1 text-blue-700 hover:underline font-mono">alexfertel</Link>.
         </div>
       </div>
