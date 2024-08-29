@@ -220,7 +220,7 @@ contract FooTest {
             </pre>
           </div>
           <div>
-            <h3 className="text-xl font-semibold mb-2">4. Check if code matches the spec</h3>
+            <h3 className="text-xl font-semibold mb-2">4. Check if the code matches the specification</h3>
             <pre className="border border-black text-gray-900 px-4 overflow-x-auto py-2">
               <code>{`$ bulloak check foo.tree
 warn: function "test_WhenFirstArgIsBiggerThanSecondArg" is missing in .sol
@@ -258,25 +258,25 @@ const Footer = () => {
           <div className="col-span-1">
             <h3 className="text-xl font-bold mb-4">Resources/</h3>
             <ul>
-              <li><span className="mr-2">├─</span><Link href="https://www.youtube.com/watch?v=V6KBy8QQnCo" target="_blank" className="hover:underline hover:text-gray-500">Presentation by Paul R. Berg at EthCC[6]</Link></li>
-              <li><span className="mr-2">├─</span><Link href="https://www.youtube.com/watch?v=V6KBy8QQnCo" target="_blank" className="hover:underline hover:text-gray-500">Presentation by Paul R. Berg at Devconnect</Link></li>
-              <li><span className="mr-2">├─</span><Link href="https://github.com/PaulRBerg/btt-examples" target="_blank" className="hover:underline hover:text-gray-500">BTT examples</Link></li>
-              <li><span className="mr-2">├─</span><Link href="https://marketplace.visualstudio.com/items?itemName=aprilandjan.ascii-tree-generator" target="_blank" className="hover:underline hover:text-gray-500">Ascii Tree Generator for VSCode</Link></li>
-              <li><span className="mr-2">└─</span><Link href="https://marketplace.visualstudio.com/items?itemName=PraneshASP.vscode-solidity-inspector" className="hover:underline hover:text-gray-500">Syntax highlighting for tree files for VSCode</Link></li>
+              <li><span className="mr-2">├──</span><Link href="https://www.youtube.com/watch?v=V6KBy8QQnCo" target="_blank" className="hover:underline hover:text-gray-500">Presentation by Paul R. Berg at EthCC[6]</Link></li>
+              <li><span className="mr-2">├──</span><Link href="https://www.youtube.com/watch?v=V6KBy8QQnCo" target="_blank" className="hover:underline hover:text-gray-500">Presentation by Paul R. Berg at Devconnect</Link></li>
+              <li><span className="mr-2">├──</span><Link href="https://github.com/PaulRBerg/btt-examples" target="_blank" className="hover:underline hover:text-gray-500">BTT examples</Link></li>
+              <li><span className="mr-2">├──</span><Link href="https://marketplace.visualstudio.com/items?itemName=aprilandjan.ascii-tree-generator" target="_blank" className="hover:underline hover:text-gray-500">Ascii Tree Generator for VSCode</Link></li>
+              <li><span className="mr-2">└──</span><Link href="https://marketplace.visualstudio.com/items?itemName=PraneshASP.vscode-solidity-inspector" className="hover:underline hover:text-gray-500">Syntax highlighting for tree files for VSCode</Link></li>
             </ul>
           </div>
           <div className="col-span-1">
             <h3 className="text-xl font-bold mb-4">Related Projects/</h3>
             <ul>
-              <li><span className="mr-2">├─</span><Link href="https://github.com/marketplace/actions/bulloak-toolchain" target="_blank" className="hover:underline hover:text-gray-500">Run bulloak as a GitHub Action</Link></li>
-              <li><span className="mr-2">└─</span><Link href="https://github.com/ericnordelo/poinciana" target="_blank" className="hover:underline hover:text-gray-500">Bulloak for Cairo</Link></li>
+              <li><span className="mr-2">├──</span><Link href="https://github.com/marketplace/actions/bulloak-toolchain" target="_blank" className="hover:underline hover:text-gray-500">Run bulloak as a GitHub Action</Link></li>
+              <li><span className="mr-2">└──</span><Link href="https://github.com/ericnordelo/poinciana" target="_blank" className="hover:underline hover:text-gray-500">Bulloak for Cairo</Link></li>
             </ul>
           </div>
           <div className="col-span-1">
             <h3 className="text-xl font-bold mb-4">Supported By/</h3>
             <ul>
-              <li><span className="mr-2">├─</span><Link href="https://www.rumpel.xyz/" target="_blank" className="hover:underline hover:text-gray-500">Rumpel Labs</Link></li>
-              <li><span className="mr-2">└─</span><Link href="https://sablier.com/" target="_blank" className="hover:underline hover:text-gray-500">Sablier</Link></li>
+              <li><span className="mr-2">├──</span><Link href="https://www.rumpel.xyz/" target="_blank" className="hover:underline hover:text-gray-500">Rumpel Labs</Link></li>
+              <li><span className="mr-2">└──</span><Link href="https://sablier.com/" target="_blank" className="hover:underline hover:text-gray-500">Sablier</Link></li>
             </ul>
           </div>
         </div>
