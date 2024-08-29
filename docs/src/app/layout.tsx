@@ -5,8 +5,9 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "bulloak - Solidity Test Generator",
-  description: "A Solidity test generator based on the Branching Tree Technique",
+  title: "bulloak - Solidity Test Generator using Branching Tree Technique",
+  description: "bulloak is a powerful Solidity test generator that implements the Branching Tree Technique (BTT) for comprehensive smart contract testing.",
+  keywords: "bulloak, Solidity, test generator, Branching Tree Technique, BTT, smart contracts, Ethereum",
 };
 
 export default function RootLayout({
