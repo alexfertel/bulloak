@@ -44,7 +44,7 @@ const HeroSection = () => {
       <div className="relative z-10 text-center">
         <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold font-mono mb-4">bulloak</h1>
         <p className="text-lg sm:text-xl mb-8">
-          A Solidity test generator based on the Branching Tree Technique
+          A smart contract test generator based on the Branching Tree Technique
         </p>
         <Link href="https://github.com/alexfertel/bulloak" target="_blank" className="inline-flex items-center justify-center bg-slate-800 text-slate-100 px-4 sm:px-6 py-2 rounded-md hover:bg-slate-700 text-sm sm:text-base">
           <GitHubIcon className="w-4 h-4 mr-2" />
@@ -118,13 +118,13 @@ const BulloakFeaturesSection = () => {
           <code>{`
 Bulloak
 ├── Scaffold Command
-│   ├─── Generates Solidity test files from .tree specifications
+│   ├─── Generates test files from .tree specifications
 │   │   ├── Creates modifiers for conditions
 │   │   └── Generates test functions for actions
 │   ├─── Reports syntax errors in your specification
 │   └─── Provides a full AST for easy extension
 ├── Check Command
-│   ├── Ensures Solidity implementation matches its specification
+│   ├── Ensures implementation matches its specification
 │   ├── Reports missing tests
 │   └── Identifies structural mismatches
 ├── Multiple Tree Support
@@ -257,8 +257,8 @@ const Footer = () => {
             <h3 className="text-lg sm:text-xl font-bold mb-4">Resources/</h3>
             <ul>
               <li><span className="mr-2">├──</span><Link href="https://github.com/PaulRBerg/btt-examples" target="_blank" className="hover:underline hover:text-slate-600">BTT examples</Link></li>
-              <li><span className="mr-2">├──</span><Link href="https://youtu.be/V6KBy8QQnCo" target="_blank" className="hover:underline hover:text-slate-600">EthCC[6]Paul Berg&apos;s presentation at EthCC[6]</Link></li>
-              <li><span className="mr-2">├──</span><Link href="https://youtu.be/0-EmbNVgFA4" target="_blank" className="hover:underline hover:text-slate-600">Paul Berg&apos;s presentation at at Solidity Summit</Link></li>
+              <li><span className="mr-2">├──</span><Link href="https://youtu.be/V6KBy8QQnCo" target="_blank" className="hover:underline hover:text-slate-600">Paul Berg&apos;s presentation at EthCC[6]</Link></li>
+              <li><span className="mr-2">├──</span><Link href="https://youtu.be/0-EmbNVgFA4" target="_blank" className="hover:underline hover:text-slate-600">Paul Berg&apos;s presentation at Solidity Summit</Link></li>
               <li><span className="mr-2">├──</span><Link href="https://marketplace.visualstudio.com/items?itemName=aprilandjan.ascii-tree-generator" target="_blank" className="hover:underline hover:text-slate-600">Ascii Tree Generator for VSCode</Link></li>
               <li><span className="mr-2">└──</span><Link href="https://marketplace.visualstudio.com/items?itemName=PraneshASP.vscode-solidity-inspector" className="hover:underline hover:text-slate-600">Syntax highlighting for tree files for VSCode</Link></li>
             </ul>
