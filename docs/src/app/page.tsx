@@ -322,6 +322,16 @@ const Footer = () => {
               <li>
                 <span className="mr-2">├──</span>
                 <Link
+                  href="https://github.com/pcaversaccio/createx/tree/ee26a86d9cb9d1fcebef2d0d4be2c1528b1541eb"
+                  target="_blank"
+                  className="hover:underline hover:text-slate-600"
+                >
+                  Practical Example: CreateX
+                </Link>
+              </li>
+              <li>
+                <span className="mr-2">├──</span>
+                <Link
                   href="https://marketplace.visualstudio.com/items?itemName=aprilandjan.ascii-tree-generator"
                   target="_blank"
                   className="hover:underline hover:text-slate-600"

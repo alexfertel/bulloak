@@ -370,6 +370,13 @@ There are a few things to keep in mind about the scaffolded Solidity test:
 - Test names follow
   [Foundry's best practices](https://book.getfoundry.sh/tutorials/best-practices?highlight=best#tests).
 
+## Examples
+
+You can find practical examples of using BTT here:
+
+- [BTT Examples by Paul Berg](https://github.com/PaulRBerg/btt-examples)
+- [CreateX](https://github.com/pcaversaccio/createx/tree/main)
+
 ## Contributing
 
 Please refer to [CONTRIBUTING.md](./CONTRIBUTING.md).
