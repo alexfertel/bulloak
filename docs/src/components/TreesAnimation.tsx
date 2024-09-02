@@ -35,32 +35,32 @@ const AsciiTreeAnimation: React.FC = () => {
     let maxTrees: number;
 
     const colors = [
-        "#F9D5E5", // Soft Pink
-        "#EDE7B1", // Pale Yellow
-        "#A9D7DA", // Light Sky Blue
-        "#B8E0D2", // Mint Green
-        "#D6A2AD", // Dusty Rose
-        "#F1E0C5", // Sand
-        "#C7CEEA", // Periwinkle
-        "#F1C0B9", // Peach
-        "#A2D2FF", // Baby Blue
-        "#FFD8BE", // Apricot
-        "#E8D0B3", // Wheat
-        "#B5D8CC", // Sea Foam
-      ];
+      "#F9D5E5", // Soft Pink
+      "#EDE7B1", // Pale Yellow
+      "#A9D7DA", // Light Sky Blue
+      "#B8E0D2", // Mint Green
+      "#D6A2AD", // Dusty Rose
+      "#F1E0C5", // Sand
+      "#C7CEEA", // Periwinkle
+      "#F1C0B9", // Peach
+      "#A2D2FF", // Baby Blue
+      "#FFD8BE", // Apricot
+      "#E8D0B3", // Wheat
+      "#B5D8CC", // Sea Foam
+    ];
 
-      const resizeCanvas = () => {
+    const resizeCanvas = () => {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
-      maxTrees = Math.max(3, Math.floor(canvas.width / 100));
+      maxTrees = Math.max(3, Math.floor(canvas.width / 150));
       trees = trees.slice(0, maxTrees);
     };
 
     resizeCanvas();
-    window.addEventListener('resize', resizeCanvas);
+    window.addEventListener("resize", resizeCanvas);
 
     const generateTree = (): Tree => {
-      const maxLevels = 15;
+      const maxLevels = 13;
       const height = canvas.height * (0.2 + Math.random() * 0.3);
       const x = Math.random() * canvas.width;
       const y = canvas.height;
@@ -73,17 +73,26 @@ const AsciiTreeAnimation: React.FC = () => {
         currentLevel: 0,
         age: 0,
         height,
-        branches: [{
-          startX: x,
-          startY: y,
-          endX: x + Math.random() * 100 - 50,
-          endY: y - height * 0.3,
-          level: 0
-        }]
+        branches: [
+          {
+            startX: x,
+            startY: y,
+            endX: x + Math.random() * 100 - 50,
+            endY: y - height * 0.3,
+            level: 0,
+          },
+        ],
       };
     };
 
-    const branchGrow = (tree: Tree, startX: number, startY: number, h: number, angle: number, level: number) => {
+    const branchGrow = (
+      tree: Tree,
+      startX: number,
+      startY: number,
+      h: number,
+      angle: number,
+      level: number,
+    ) => {
       if (level >= tree.currentLevel) return;
 
       const endX = startX + Math.sin(angle) * h;
@@ -96,8 +105,10 @@ const AsciiTreeAnimation: React.FC = () => {
 
       const rangleSign = Math.random() > 0.5 ? 1 : -1;
       const langleSign = Math.random() > 0.5 ? 1 : -1;
-      const rangleDelta = tree.angle * Math.PI / 180 * (0.5 + Math.random() * 0.7);
-      const langleDelta = tree.angle * Math.PI / 180 * (0.5 + Math.random() * 0.7);
+      const rangleDelta =
+        ((tree.angle * Math.PI) / 180) * (0.5 + Math.random() * 0.7);
+      const langleDelta =
+        ((tree.angle * Math.PI) / 180) * (0.5 + Math.random() * 0.7);
       const rangle = angle + rangleSign * rangleDelta;
       const langle = angle + langleSign * langleDelta;
 
@@ -116,7 +127,7 @@ const AsciiTreeAnimation: React.FC = () => {
       ctx.globalAlpha = 0.05;
       ctx.lineWidth = 1;
 
-      tree.branches.forEach(branch => {
+      tree.branches.forEach((branch) => {
         if (branch.level <= tree.currentLevel) {
           ctx.beginPath();
           ctx.moveTo(branch.startX, branch.startY);
@@ -131,16 +142,23 @@ const AsciiTreeAnimation: React.FC = () => {
         trees.push(generateTree());
       }
 
-      trees = trees.filter(tree => {
+      trees = trees.filter((tree) => {
         tree.age += deltaTime;
-        if (tree.age > 200 && tree.currentLevel < tree.maxLevels) {
+        if (tree.age > 500 && tree.currentLevel < tree.maxLevels) {
           tree.currentLevel++;
           tree.age = 0;
           const trunk = tree.branches[0];
-          branchGrow(tree, trunk.endX, trunk.endY, tree.height * 0.3 * 0.8, 0, 1);
+          branchGrow(
+            tree,
+            trunk.endX,
+            trunk.endY,
+            tree.height * 0.3 * 0.8,
+            0,
+            1,
+          );
         }
         drawTree(tree);
-        return tree.age < 15000 || tree.currentLevel < tree.maxLevels;
+        return tree.age < 20000 || tree.currentLevel < tree.maxLevels;
       });
     };
 
@@ -156,7 +174,7 @@ const AsciiTreeAnimation: React.FC = () => {
     requestAnimationFrame(animate);
 
     return () => {
-      window.removeEventListener('resize', resizeCanvas);
+      window.removeEventListener("resize", resizeCanvas);
     };
   }, []);
 
@@ -168,3 +186,4 @@ const AsciiTreeAnimation: React.FC = () => {
 };
 
 export default AsciiTreeAnimation;
+
