@@ -9,12 +9,16 @@ const description =
   "bulloak is a powerful test generator that implements the Branching Tree Technique (BTT) for comprehensive smart contract testing.";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://www.bulloak.dev"),
+  alternates: {
+    canonical: "/",
+  },
   title,
   description,
   openGraph: {
     title,
     description,
-    images: `${process.env.NEXT_PUBLIC_SITE_URL || "https://www.bulloak.dev"}/api/og`,
+    images: `/opengraph-image.png`,
   },
 };
 
