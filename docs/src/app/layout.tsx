@@ -11,12 +11,10 @@ const description =
 export const metadata: Metadata = {
   title,
   description,
-  keywords:
-    "bulloak, Solidity, test generator, Branching Tree Technique, BTT, smart contracts, Ethereum",
   openGraph: {
     title,
     description,
-    images: "https://bulloak.dev/api/og",
+    images: `${process.env.NEXT_PUBLIC_SITE_URL || "https://www.bulloak.dev"}/api/og`,
   },
 };
 
