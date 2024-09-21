@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   openGraph: {
     title,
     description,
-    images: `${process.env.NEXT_PUBLIC_SITE_URL || "https://www.bulloak.dev"}/api/og`,
+    images: `${process.env.NEXT_PUBLIC_SITE_URL || "https://www.bulloak.dev"}/opengraph-image`,
   },
 };
 

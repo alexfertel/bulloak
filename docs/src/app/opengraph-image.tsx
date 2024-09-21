@@ -1,25 +1,21 @@
 import { ImageResponse } from "next/og";
-import { NextRequest } from "next/server";
 
 export const runtime = "edge";
 
-export async function GET(req: NextRequest) {
-  const { searchParams } = req.nextUrl;
-  let title = searchParams.get("title");
-  let description = searchParams.get("description");
-  if (title === null) {
-    title = "bulloak - Test Generator using Branching Tree Technique";
-  }
-  if (description === null) {
-    description =
-      "bulloak is a powerful test generator that implements the Branching Tree Technique (BTT) for comprehensive smart contract testing.";
-  }
+export const alt = "bulloak - Test Generator using Branching Tree Technique";
+export const size = {
+  width: 1200,
+  height: 630,
+};
 
+export const contentType = "image/png";
+
+export default async function Image() {
   const satoshi = await fetch(
-    new URL("../../fonts/Satoshi-Medium.woff", import.meta.url),
+    new URL("./fonts/Satoshi-Medium.woff", import.meta.url),
   ).then((res) => res.arrayBuffer());
   const commit = await fetch(
-    new URL("../../fonts/CommitMono-400-Regular.otf", import.meta.url),
+    new URL("./fonts/CommitMono-400-Regular.otf", import.meta.url),
   ).then((res) => res.arrayBuffer());
 
   return new ImageResponse(
@@ -52,8 +48,7 @@ export async function GET(req: NextRequest) {
       </div>
     ),
     {
-      width: 1200,
-      height: 630,
+      ...size,
       fonts: [
         {
           name: "Satoshi Variable",
