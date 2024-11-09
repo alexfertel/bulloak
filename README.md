@@ -25,6 +25,7 @@ A Solidity test generator based on the
   - [Terminology](#terminology)
   - [Spec](#spec)
 - [Output](#output)
+- [Examples](#examples)
 - [Contributing](#contributing)
 - [Publishing](#publishing)
 - [Supported By](#supported-by)
