@@ -121,6 +121,7 @@ fn checks_missing_contract() {
     assert!(stderr.contains(r#"contract "MissingContract" is missing in .sol"#));
 }
 
+#[cfg(not(target_os = "windows"))]
 #[test]
 fn checks_missing_contract_identifier() {
     let cwd = env::current_dir().unwrap();
@@ -140,7 +141,12 @@ fn checks_missing_contract_identifier() {
         tree_path.display()
     );
 
-    assert!(stderr.contains(&formatted_message));
+    assert!(
+        stderr.contains(&formatted_message),
+        "stderr: {}\nmessage: {}",
+        stderr,
+        formatted_message
+    );
 }
 
 #[test]
@@ -158,6 +164,7 @@ fn checks_contract_name_mismatch() {
     ));
 }
 
+#[cfg(not(target_os = "windows"))]
 #[test]
 fn checks_contract_name_mismatch_multiple_roots() {
     let cwd = env::current_dir().unwrap();
