@@ -33,6 +33,7 @@ pub struct Error {
 }
 
 impl Error {
+    /// Instantiates a new `Error`.
     #[cfg(test)]
     pub fn new(kind: ErrorKind, text: String, span: Span) -> Self {
         Error { kind, text, span }
@@ -103,7 +104,7 @@ pub(crate) struct SemanticAnalyzer<'t> {
 impl<'t> SemanticAnalyzer<'t> {
     /// Create a new semantic analyzer.
     #[must_use]
-    pub(crate) fn new(text: &'t str) -> SemanticAnalyzer {
+    pub(crate) fn new(text: &'t str) -> SemanticAnalyzer<'t> {
         SemanticAnalyzer {
             text,
             errors: Vec::new(),
