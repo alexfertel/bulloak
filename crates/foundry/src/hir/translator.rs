@@ -135,14 +135,13 @@ impl<'a> Visitor for TranslatorI<'a> {
                         }));
                     }
 
-                    let hir =
-                        Hir::Function(hir::FunctionDefinition {
-                            identifier: test_name,
-                            ty: hir::FunctionTy::Function,
-                            span: action.span,
-                            modifiers: None,
-                            children: Some(hirs),
-                        });
+                    let hir = Hir::Function(hir::FunctionDefinition {
+                        identifier: test_name,
+                        ty: hir::FunctionTy::Function,
+                        span: action.span,
+                        modifiers: None,
+                        children: Some(hirs),
+                    });
                     contract_children.push(hir);
                 }
                 Ast::Condition(condition) => {

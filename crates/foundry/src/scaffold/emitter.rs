@@ -68,9 +68,7 @@ impl EmitterI {
         match hir {
             Hir::Root(ref inner) => self.visit_root(inner).unwrap(),
             Hir::Contract(ref inner) => self.visit_contract(inner).unwrap(),
-            Hir::Function(ref inner) => {
-                self.visit_function(inner).unwrap()
-            }
+            Hir::Function(ref inner) => self.visit_function(inner).unwrap(),
             Hir::Comment(ref inner) => self.visit_comment(inner).unwrap(),
             Hir::Statement(_) => {
                 unreachable!(
