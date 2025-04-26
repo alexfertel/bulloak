@@ -1,3 +1,4 @@
+#![allow(missing_docs)]
 use bulloak_foundry::scaffold;
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 

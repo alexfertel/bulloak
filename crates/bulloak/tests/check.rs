@@ -1,3 +1,4 @@
+#![allow(missing_docs)]
 use std::env;
 
 use common::{cmd, get_binary_path};
