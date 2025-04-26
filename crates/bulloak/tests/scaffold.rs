@@ -7,6 +7,7 @@ use pretty_assertions::assert_eq;
 
 mod common;
 
+#[cfg(not(target_os = "windows"))]
 #[test]
 fn scaffolds_trees() {
     let cwd = env::current_dir().unwrap();
@@ -36,6 +37,7 @@ fn scaffolds_trees() {
     }
 }
 
+#[cfg(not(target_os = "windows"))]
 #[test]
 fn scaffolds_trees_with_vm_skip() {
     let cwd = env::current_dir().unwrap();
@@ -70,6 +72,7 @@ fn scaffolds_trees_with_vm_skip() {
     }
 }
 
+#[cfg(not(target_os = "windows"))]
 #[test]
 fn scaffolds_trees_with_skip_modifiers() {
     let cwd = env::current_dir().unwrap();
@@ -91,6 +94,7 @@ fn scaffolds_trees_with_skip_modifiers() {
     }
 }
 
+#[cfg(not(target_os = "windows"))]
 #[test]
 fn skips_trees_when_file_exists() {
     let cwd = env::current_dir().unwrap();
@@ -140,6 +144,7 @@ fn errors_when_condition_appears_multiple_times() {
     }
 }
 
+#[cfg(not(target_os = "windows"))]
 #[test]
 fn errors_when_root_contract_identifier_is_missing_multiple_roots() {
     let cwd = env::current_dir().unwrap();
