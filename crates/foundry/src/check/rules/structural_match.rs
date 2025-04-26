@@ -29,9 +29,7 @@ use crate::{
 
 /// An implementation of a structural matching rule.
 ///
-/// Read more at the [module-level documentation].
-///
-/// module-level documentation: self
+/// Read more at the [module-level documentation][self].
 pub struct StructuralMatcher;
 
 impl Checker for StructuralMatcher {
@@ -39,50 +37,40 @@ impl Checker for StructuralMatcher {
         let mut violations = vec![];
 
         // We support multiple trees per .tree file, but they are combined into
-        // a single HIR during the hir::translate step when creating the context
-        // which means that there can only be one contract. This is reflected
-        // in the current tree hierarchy of the HIR.
-        let contract_hir = match ctx.hir {
-            Hir::Root(ref root) => root
-                .children
-                .iter()
-                .find(|&child| matches!(child, Hir::ContractDefinition(_))),
-            _ => None,
+        // a single HIR during the [`hir::translate`]  step when creating the
+        // context which means that there can only be one contract. This is
+        // reflected in the current tree hierarchy of the HIR.
+        let Some(contract_hir) = ctx.hir.find_contract() else {
+            // If there is no contract in the .tree file, then we don't check
+            // anything.
+            return violations;
         };
 
         // Find the first occurrence of a contract.
-        let contract_sol = find_contract(&ctx.pt);
-        // If we find no contract in the Solidity file, then there must
-        // be no contract in the HIR, else we found a violation.
-        if contract_sol.is_none() {
-            if let Some(Hir::ContractDefinition(contract)) = contract_hir {
-                let violation = Violation::new(
-                    ViolationKind::ContractMissing(contract.identifier.clone()),
-                    Location::File(ctx.tree.to_string_lossy().into_owned()),
-                );
-                violations.push(violation);
-            };
+        let Some(contract_sol) = find_contract(&ctx.pt) else {
+            // If we find no contract in the Solidity file, then there must
+            // be no contract in the HIR, else we found a violation.
+            let violation = Violation::new(
+                ViolationKind::ContractMissing(contract_hir.identifier.clone()),
+                Location::File(ctx.tree.to_string_lossy().into_owned()),
+            );
+            violations.push(violation);
 
-            // The matching solidity contract is missing, so we're done in
-            // any case.
+            // The matching solidity contract is missing, so we're done.
             return violations;
-        }
+        };
 
         // We know a contract exists in both trees.
-        let contract_hir = contract_hir.unwrap();
-        let contract_sol = contract_sol.unwrap();
-        if let Hir::ContractDefinition(contract_hir) = contract_hir {
-            violations.append(&mut check_contract_names(
-                contract_hir,
-                &contract_sol,
-                ctx,
-            ));
-            violations.append(&mut check_fns_structure(
-                contract_hir,
-                &contract_sol,
-                ctx,
-            ));
-        };
+        violations.append(&mut check_contract_names(
+            contract_hir,
+            &contract_sol,
+            ctx,
+        ));
+        violations.append(&mut check_fns_structure(
+            contract_hir,
+            &contract_sol,
+            ctx,
+        ));
 
         violations
     }
@@ -132,7 +120,7 @@ fn check_fns_structure(
     let mut present_fn_indices =
         Vec::with_capacity(contract_hir.children.len());
     for (hir_idx, fn_hir) in contract_hir.children.iter().enumerate() {
-        if let Hir::FunctionDefinition(fn_hir) = fn_hir {
+        if let Hir::Function(fn_hir) = fn_hir {
             let fn_sol = find_matching_fn(contract_sol, fn_hir);
 
             match fn_sol {
@@ -187,7 +175,7 @@ fn check_fns_structure(
 
     // Emit a violation per unsorted item.
     for (hir_idx, sol_idx) in unsorted_set {
-        if let Hir::FunctionDefinition(_) = contract_hir.children[hir_idx] {
+        if let Hir::Function(_) = contract_hir.children[hir_idx] {
             if let pt::ContractPart::FunctionDefinition(ref fn_sol) =
                 contract_sol.parts[sol_idx]
             {

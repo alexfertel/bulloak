@@ -67,10 +67,8 @@ impl EmitterI {
     fn emit(&mut self, hir: &hir::Hir) -> String {
         match hir {
             Hir::Root(ref inner) => self.visit_root(inner).unwrap(),
-            Hir::ContractDefinition(ref inner) => {
-                self.visit_contract(inner).unwrap()
-            }
-            Hir::FunctionDefinition(ref inner) => {
+            Hir::Contract(ref inner) => self.visit_contract(inner).unwrap(),
+            Hir::Function(ref inner) => {
                 self.visit_function(inner).unwrap()
             }
             Hir::Comment(ref inner) => self.visit_comment(inner).unwrap(),
@@ -196,9 +194,7 @@ impl Visitor for EmitterI {
 
         for hir in &root.children {
             let result = match hir {
-                Hir::ContractDefinition(contract) => {
-                    self.visit_contract(contract)?
-                }
+                Hir::Contract(contract) => self.visit_contract(contract)?,
                 _ => unreachable!(),
             };
 
@@ -218,7 +214,7 @@ impl Visitor for EmitterI {
         emitted.push_str(&contract_header);
 
         for hir in &contract.children {
-            if let Hir::FunctionDefinition(function) = hir {
+            if let Hir::Function(function) = hir {
                 emitted.push_str(&self.visit_function(function)?);
             }
         }
@@ -634,7 +630,7 @@ contract ActionsTest {
         let file_contents = String::from(
             r"ActionsTest
 └── when stuff called
-   └── IT sHould RevERT. 
+   └── IT sHould RevERT.
 ",
         );
 

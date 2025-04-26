@@ -13,4 +13,4 @@ ignore:
   - "tests"
 comment:
   layout: "files"
-  require_changes: yes
+  require_changes: true

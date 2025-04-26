@@ -125,7 +125,7 @@ impl Context {
         offset: usize,
     ) {
         let cfg = &Config::default();
-        let f = &Hir::FunctionDefinition(function.clone());
+        let f = &Hir::Function(function.clone());
         let function = Emitter::new(cfg).emit(f);
         self.src = format!(
             "{}\n\n{}{}",

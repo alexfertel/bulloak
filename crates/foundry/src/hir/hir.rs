@@ -17,19 +17,13 @@ pub enum Hir {
     /// root node in any HIR.
     Root(Root),
     /// A contract definition.
-    ContractDefinition(ContractDefinition),
+    Contract(ContractDefinition),
     /// A function definition.
-    FunctionDefinition(FunctionDefinition),
+    Function(FunctionDefinition),
     /// A comment.
     Comment(Comment),
     /// A Statement.
     Statement(Statement),
-}
-
-impl Default for Hir {
-    fn default() -> Self {
-        Self::Root(Root::default())
-    }
 }
 
 impl Hir {
@@ -39,9 +33,25 @@ impl Hir {
     pub fn find_contract(&self) -> Option<&ContractDefinition> {
         match self {
             Hir::Root(root) => root.find_contract(),
-            Hir::ContractDefinition(contract) => Some(contract),
+            Hir::Contract(contract) => Some(contract),
             _ => None,
         }
+    }
+
+    /// Whether this hir is a root.
+    pub fn is_root(&self) -> bool {
+        matches!(self, Hir::Root(_))
+    }
+
+    /// Whether this hir is a contract definition.
+    pub fn is_contract(&self) -> bool {
+        matches!(self, Hir::Contract(_))
+    }
+}
+
+impl Default for Hir {
+    fn default() -> Self {
+        Self::Root(Root::default())
     }
 }
 
@@ -59,7 +69,7 @@ pub struct Root {
 impl Root {
     pub(crate) fn find_contract(&self) -> Option<&ContractDefinition> {
         self.children.iter().find_map(|child| match child {
-            Hir::ContractDefinition(contract) => Some(contract),
+            Hir::Contract(contract) => Some(contract),
             _ => None,
         })
     }

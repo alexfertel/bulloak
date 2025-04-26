@@ -243,7 +243,7 @@ fn get_insertion_offset(
     }
 
     match &contract_hir.children[index - 1] {
-        Hir::FunctionDefinition(prev_fn_hir) => {
+        Hir::Function(prev_fn_hir) => {
             find_matching_fn(contract_sol, prev_fn_hir)
                 .expect("matching function should exist")
                 .1
@@ -316,7 +316,7 @@ pub fn fix_order(
         .children
         .iter()
         .filter_map(|child| {
-            if let hir::Hir::FunctionDefinition(f) = &child {
+            if let hir::Hir::Function(f) = &child {
                 Some(f.identifier.clone())
             } else {
                 None

@@ -136,7 +136,7 @@ impl<'a> Visitor for TranslatorI<'a> {
                     }
 
                     let hir =
-                        Hir::FunctionDefinition(hir::FunctionDefinition {
+                        Hir::Function(hir::FunctionDefinition {
                             identifier: test_name,
                             ty: hir::FunctionTy::Function,
                             span: action.span,
@@ -153,7 +153,7 @@ impl<'a> Visitor for TranslatorI<'a> {
         }
 
         // Add the contract definition to the hir.
-        root_children.push(Hir::ContractDefinition(hir::ContractDefinition {
+        root_children.push(Hir::Contract(hir::ContractDefinition {
             identifier: root.contract_name.clone(),
             children: contract_children,
         }));
@@ -179,7 +179,7 @@ impl<'a> Visitor for TranslatorI<'a> {
             if let Some(modifier) = self.modifiers.get(&condition.title) {
                 self.modifier_stack.push(modifier);
                 // Add a modifier node.
-                let hir = Hir::FunctionDefinition(hir::FunctionDefinition {
+                let hir = Hir::Function(hir::FunctionDefinition {
                     identifier: modifier.clone(),
                     ty: hir::FunctionTy::Modifier,
                     span: condition.span,
@@ -269,7 +269,7 @@ impl<'a> Visitor for TranslatorI<'a> {
                 }));
             }
 
-            let hir = Hir::FunctionDefinition(hir::FunctionDefinition {
+            let hir = Hir::Function(hir::FunctionDefinition {
                 identifier: function_name,
                 ty: hir::FunctionTy::Function,
                 span: condition.span,
@@ -348,10 +348,7 @@ mod tests {
     }
 
     fn contract(identifier: String, children: Vec<Hir>) -> Hir {
-        Hir::ContractDefinition(hir::ContractDefinition {
-            identifier,
-            children,
-        })
+        Hir::Contract(hir::ContractDefinition { identifier, children })
     }
 
     fn function(
@@ -361,7 +358,7 @@ mod tests {
         modifiers: Option<Vec<String>>,
         children: Option<Vec<Hir>>,
     ) -> Hir {
-        Hir::FunctionDefinition(hir::FunctionDefinition {
+        Hir::Function(hir::FunctionDefinition {
             identifier,
             ty,
             span,

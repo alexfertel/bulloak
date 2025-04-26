@@ -406,7 +406,7 @@ impl Visitor for TranslatorI {
         }
 
         for child in &root.children {
-            if let Hir::ContractDefinition(contract) = child {
+            if let Hir::Contract(contract) = child {
                 source_unit.push(self.visit_contract(contract)?);
             }
         }
@@ -473,7 +473,7 @@ impl Visitor for TranslatorI {
 
         let mut parts = Vec::with_capacity(contract.children.len());
         for child in &contract.children {
-            if let Hir::FunctionDefinition(function) = child {
+            if let Hir::Function(function) = child {
                 if function.is_modifier() && self.translator.skip_modifiers {
                     continue;
                 }

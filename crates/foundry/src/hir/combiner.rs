@@ -133,7 +133,7 @@ impl<'t> CombinerI<'t> {
             };
 
             for child in r.children {
-                let Hir::ContractDefinition(contract) = child else {
+                let Hir::Contract(contract) = child else {
                     // For now we ignore everything that isn't a contract.
                     continue;
                 };
@@ -197,15 +197,14 @@ impl<'t> CombinerI<'t> {
             }
         }
 
-        let root = Root {
-            children: vec![Hir::ContractDefinition(mem::take(acc_contract))],
-        };
+        let root =
+            Root { children: vec![Hir::Contract(mem::take(acc_contract))] };
         Ok(Hir::Root(root))
     }
 }
 
 fn prefix_test(child: Hir, prefix: &str) -> Hir {
-    let Hir::FunctionDefinition(mut test_or_modifier) = child else {
+    let Hir::Function(mut test_or_modifier) = child else {
         return child;
     };
 
@@ -214,7 +213,7 @@ fn prefix_test(child: Hir, prefix: &str) -> Hir {
             prefix_test_with(&test_or_modifier.identifier, prefix);
     }
 
-    Hir::FunctionDefinition(test_or_modifier)
+    Hir::Function(test_or_modifier)
 }
 
 /// Prefix function names and filter modifiers.
@@ -241,7 +240,7 @@ fn collect_modifier(
     child: Hir,
     unique_modifiers: &mut HashSet<String>,
 ) -> Option<Hir> {
-    let Hir::FunctionDefinition(test_or_modifier) = child else {
+    let Hir::Function(test_or_modifier) = child else {
         return Some(child);
     };
 
@@ -253,7 +252,7 @@ fn collect_modifier(
     }
 
     unique_modifiers.insert(test_or_modifier.identifier.clone());
-    Some(Hir::FunctionDefinition(test_or_modifier.clone()))
+    Some(Hir::Function(test_or_modifier.clone()))
 }
 
 #[cfg(test)]
@@ -290,10 +289,7 @@ mod tests {
     }
 
     fn contract(identifier: String, children: Vec<Hir>) -> Hir {
-        Hir::ContractDefinition(hir::ContractDefinition {
-            identifier,
-            children,
-        })
+        Hir::Contract(hir::ContractDefinition { identifier, children })
     }
 
     fn function(
@@ -303,7 +299,7 @@ mod tests {
         modifiers: Option<Vec<String>>,
         children: Option<Vec<Hir>>,
     ) -> Hir {
-        Hir::FunctionDefinition(hir::FunctionDefinition {
+        Hir::Function(hir::FunctionDefinition {
             identifier,
             ty,
             span,
