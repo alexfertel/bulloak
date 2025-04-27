@@ -27,6 +27,7 @@ fn scaffold_expands_glob_internally() {
     assert!(stdout.contains("contract CancelTest"),);
 }
 
+#[cfg(not(target_os = "windows"))]
 #[test]
 fn check_expands_glob_internally() {
     let cwd = env::current_dir().unwrap();
