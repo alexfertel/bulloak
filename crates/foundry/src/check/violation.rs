@@ -22,7 +22,7 @@ use crate::{
 
 /// An error that occurred while checking specification rules between
 /// a tree and a Solidity contract.
-#[derive(Debug, Error)]
+#[derive(Debug, Error, PartialEq)]
 pub struct Violation {
     /// The kind of violation.
     #[source]
@@ -103,6 +103,46 @@ impl fmt::Display for Violation {
         writeln!(f, "   {} {}", "-->".blue(), self.location)?;
 
         Ok(())
+    }
+}
+
+impl PartialEq for ViolationKind {
+    fn eq(&self, other: &Self) -> bool {
+        use ViolationKind::*;
+
+        match (self, other) {
+            (ContractMissing(a), ContractMissing(b)) => a == b,
+            (
+                ContractNameNotMatches(a1, a2),
+                ContractNameNotMatches(b1, b2),
+            ) => a1 == b1 && a2 == b2,
+            (SolidityFileMissing(a), SolidityFileMissing(b)) => a == b,
+            (FileUnreadable, FileUnreadable) => true,
+            (
+                FunctionOrderMismatch(f1, cur1, ins1),
+                FunctionOrderMismatch(f2, cur2, ins2),
+            ) =>
+            // Compare on function name and the two positions.
+            {
+                f1.name == f2.name && cur1 == cur2 && ins1 == ins2
+            }
+            (
+                MatchingFunctionMissing(f1, pos1),
+                MatchingFunctionMissing(f2, pos2),
+            ) =>
+            // Compare on function identifier and the position.
+            {
+                f1.identifier == f2.identifier && pos1 == pos2
+            }
+            (ParsingFailed(e1), ParsingFailed(e2)) =>
+            // Compare on the formatted error message.
+            {
+                e1.to_string() == e2.to_string()
+            }
+
+            // any mismatched variant
+            _ => false,
+        }
     }
 }
 

@@ -26,6 +26,7 @@ thiserror.workspace = true
 
 [dev-dependencies]
 pretty_assertions.workspace = true
+tempfile = "3.19.1"
 
 [lints]
 workspace = true
