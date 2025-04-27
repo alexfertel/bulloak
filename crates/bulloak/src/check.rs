@@ -18,7 +18,7 @@ use clap::Parser;
 use owo_colors::OwoColorize;
 use serde::{Deserialize, Serialize};
 
-use crate::cli::Cli;
+use crate::{cli::Cli, glob::expand_glob};
 
 /// Check that the tests match the spec.
 #[doc(hidden)]
@@ -51,9 +51,22 @@ impl Check {
     ///
     /// Note that we don't deal with `solang_parser` errors at all.
     pub(crate) fn run(&self, cfg: &Cli) {
+        println!("hmmmmm");
+        let mut specs = Vec::new();
+        for pattern in &self.files {
+            match expand_glob(pattern.clone()) {
+                Ok(iter) => specs.extend(iter),
+                Err(e) => eprintln!(
+                    "{}: could not expand {}: {}",
+                    "warn".yellow(),
+                    pattern.display(),
+                    e
+                ),
+            }
+        }
+
         let mut violations = Vec::new();
-        let ctxs: Vec<Context> = self
-            .files
+        let ctxs: Vec<Context> = specs
             .iter()
             .filter_map(|tree_path| {
                 Context::new(tree_path.clone(), &cfg.into())

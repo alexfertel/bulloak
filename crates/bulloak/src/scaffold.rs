@@ -13,7 +13,7 @@ use forge_fmt::fmt;
 use owo_colors::OwoColorize;
 use serde::{Deserialize, Serialize};
 
-use crate::cli::Cli;
+use crate::{cli::Cli, glob::expand_glob};
 
 /// Generate Solidity tests based on your spec.
 #[doc(hidden)]
@@ -66,15 +66,29 @@ impl Scaffold {
     ///
     /// If any errors occur during processing, they are collected and reported.
     pub(crate) fn run(&self, cfg: &Cli) {
-        let errors: Vec<_> = self
-            .files
+        let mut files = Vec::with_capacity(self.files.len());
+        for pattern in &self.files {
+            match expand_glob(pattern.clone()) {
+                Ok(iter) => files.extend(iter),
+                Err(e) => {
+                    eprintln!(
+                        "{}: could not expand {}: {}",
+                        "warn".yellow(),
+                        pattern.display(),
+                        e
+                    );
+                }
+            }
+        }
+
+        let errors = files
             .iter()
             .filter_map(|file| {
                 self.process_file(file, cfg)
                     .map_err(|e| (file.as_path(), e))
                     .err()
             })
-            .collect();
+            .collect::<Vec<_>>();
 
         if !errors.is_empty() {
             Scaffold::report_errors(&errors);

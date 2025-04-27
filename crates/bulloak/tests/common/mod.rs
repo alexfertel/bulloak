@@ -14,6 +14,7 @@ pub(crate) fn get_binary_path() -> PathBuf {
 }
 
 /// Runs a command with the specified args.
+#[allow(dead_code)] // Not used in all test crates.
 pub(crate) fn cmd(
     binary_path: &PathBuf,
     command: &str,
@@ -25,5 +26,5 @@ pub(crate) fn cmd(
         .arg(tree_path)
         .args(args)
         .output()
-        .expect("should execute the check command")
+        .expect("should execute the command")
 }
