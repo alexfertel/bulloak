@@ -7,9 +7,8 @@ use std::{fs, path::PathBuf};
 
 use bulloak_foundry::{
     check::{
-        context::Context,
+        context::{fix_order, Context},
         rules::{self, Checker},
-        violation::fix_order,
     },
     sol::find_contract,
     violation::{Violation, ViolationKind},
