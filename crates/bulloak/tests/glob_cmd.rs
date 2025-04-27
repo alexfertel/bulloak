@@ -1,5 +1,6 @@
 #![allow(missing_docs)]
-use std::{env, process::Command};
+use common::cmd;
+use std::env;
 
 mod common;
 
@@ -9,18 +10,9 @@ fn scaffold_expands_glob_internally() {
     let bin = common::get_binary_path();
 
     // Build the pattern via PathBuf so it uses "\" on Windows.
-    let glob_pattern = cwd
-        .join("tests")
-        .join("scaffold")
-        .join("*.tree")
-        .to_string_lossy()
-        .to_string();
-
-    let out = Command::new(&bin)
-        .arg("scaffold")
-        .arg(&glob_pattern)
-        .output()
-        .expect("should run scaffold");
+    let glob_pattern = cwd.join("tests").join("scaffold").join("*.tree");
+    let out = cmd(&bin, "scaffold", &glob_pattern, &[]);
+    assert!(!out.status.success());
 
     let stdout = String::from_utf8_lossy(&out.stdout);
     assert!(stdout.contains("contract HashPair"),);
@@ -33,19 +25,8 @@ fn check_expands_glob_internally() {
     let cwd = env::current_dir().unwrap();
     let bin = common::get_binary_path();
 
-    let glob_pattern = cwd
-        .join("tests")
-        .join("check")
-        .join("*.tree")
-        .to_string_lossy()
-        .to_string();
-
-    let out = Command::new(&bin)
-        .arg("check")
-        .arg(&glob_pattern)
-        .arg("-m")
-        .output()
-        .expect("should run check");
+    let glob_pattern = cwd.join("tests").join("check").join("*.tree");
+    let out = cmd(&bin, "check", &glob_pattern, &[]);
     assert!(!out.status.success());
 
     let stderr = String::from_utf8_lossy(&out.stderr);

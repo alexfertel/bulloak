@@ -26,5 +26,5 @@ pub(crate) fn cmd(
         .arg(tree_path)
         .args(args)
         .output()
-        .expect("should execute the check command")
+        .expect("should execute the command")
 }

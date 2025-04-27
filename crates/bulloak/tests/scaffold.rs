@@ -160,3 +160,35 @@ fn errors_when_root_contract_identifier_is_missing_multiple_roots() {
         assert!(actual.contains("contract name missing at tree root #1"));
     }
 }
+
+/// If you pass an invalid glob to `bulloak scaffold`,
+/// it should warn but still exit code = 0 and produce no contract.
+#[test]
+fn scaffold_invalid_glob_warns_but_no_output() {
+    let cwd = env::current_dir().unwrap();
+    let bin = common::get_binary_path();
+
+    // Deliberately invalid glob (unmatched '[').
+    let bad_glob = cwd.join("tests").join("scaffold").join("*[.tree");
+    let out = cmd(&bin, "scaffold", &bad_glob, &[]);
+
+    assert!(
+        out.status.success(),
+        "scaffold should succeed even on invalid glob, got {:?}",
+        out
+    );
+
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(
+        stderr.contains("could not expand"),
+        "did not see the expected warn: {}",
+        stderr
+    );
+
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(
+        !stdout.contains("contract "),
+        "unexpected scaffold output: {}",
+        stdout
+    );
+}

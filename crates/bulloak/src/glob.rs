@@ -71,4 +71,12 @@ mod tests {
             "backslash‐based glob must match forward‐slash one"
         );
     }
+
+    #[test]
+    fn invalid_pattern_returns_error() {
+        // Invalid glob syntax (unmatched '[') must return Err.
+        let bad = PathBuf::from("tests/scaffold/*[.tree");
+        let res = expand_glob(bad);
+        assert!(res.is_err(), "expected invalid glob to Err");
+    }
 }

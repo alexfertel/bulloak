@@ -72,7 +72,8 @@ impl Scaffold {
                 Ok(iter) => files.extend(iter),
                 Err(e) => {
                     eprintln!(
-                        "warn: could not expand {}: {}",
+                        "{}: could not expand {}: {}",
+                        "warn".yellow(),
                         pattern.display(),
                         e
                     );

@@ -468,3 +468,34 @@ contract CancelTest {
     assert!(actual.contains(expected));
     assert!(actual.contains("4 issues fixed."));
 }
+
+/// If you pass an invalid glob to `bulloak check`,
+/// it should warn but still exit code = 0 and report “no issues found.”
+#[test]
+fn check_invalid_glob_warns_but_reports_success() {
+    let cwd = env::current_dir().unwrap();
+    let bin = common::get_binary_path();
+
+    let bad_glob = cwd.join("tests").join("check").join("*[.tree");
+    let out = cmd(&bin, "check", &bad_glob, &[]);
+
+    assert!(
+        out.status.success(),
+        "check should succeed even on invalid glob, got {:?}",
+        out
+    );
+
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(
+        stderr.contains("could not expand"),
+        "did not see warn on stderr: {}",
+        stderr
+    );
+
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(
+        stdout.contains("All checks completed successfully"),
+        "expected success message, got: {}",
+        stdout
+    );
+}
