@@ -2,6 +2,61 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.8.1] - 2025-04-28
+
+### Bug Fixes
+
+- *(docs)* Set favicon.ico properly
+- *(docs)* Make forest animation less CPU-heavy
+- *(docs)* Use opengraph-image.png instead of api endpoint (#93)
+- *(test)* Ignore a couple of tests on windows
+- *(test)* Ignore a couple of scaffold tests on windows
+- *(tests)* Make tests work on Windows
+- Use appropriate README paths for workspace crates
+- Ignore check test on windowns
+
+
+### Features
+
+- *(bulloak)* Treat input files as globs
+- *(docs)* Add landing page (#88)
+- *(docs)* Add analytics (#89)
+- *(docs)* Improve SEO with robots & sitemap
+- *(docs)* Add new logo to the hero section
+- *(docs)* Use new logo in project README
+- *(docs)* Add links to practical examples to README & docs
+- *(docs)* Create open-graph image (#92)
+- *(docs)* Add Examples section to README (#96)
+- *(test)* Add structural match tests
+- Stop panicking from solang_parser errors
+
+
+### Miscellaneous Tasks
+
+- *(deps)* Bump next from 14.2.6 to 14.2.26 in /docs (#99)
+- *(docs)* Polish landing page wording & examples (#90)
+- Add tea.yaml constitution
+- Add opRetro to FUNDING.json
+- Update casing of funding.json
+
+
+### Refactor
+
+- *(check)* Simplify fix logic & add tests
+- Improve readability of the structural match rule
+- Remove extra logging
+
+
+### Build
+
+- *(release)* Init cargo dist
+
+
+### Ci
+
+- Add a test workflow
+
+
 ## [0.8.0] - 2024-07-27
 
 ### Bug Fixes
@@ -468,5 +523,3 @@ All notable changes to this project will be documented in this file.
 
 - *(ci)* Improve ci workflow
 - Add basic github workflow
-
-

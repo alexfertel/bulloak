@@ -4,7 +4,7 @@ members = ["crates/bulloak", "crates/foundry", "crates/syntax"]
 
 [workspace.package]
 authors = ["Alexander Gonzalez <alexfertel97@gmail.com>"]
-version = "0.8.0"
+version = "0.8.1"
 license = "MIT OR Apache-2.0"
 edition = "2021"
 readme = "README.md"
@@ -16,10 +16,10 @@ A Solidity test generator based on the Branching Tree Technique.
 """
 keywords = ["solidity", "testing", "compiler", "cli", "tree"]
 categories = [
-  "development-tools::testing",
-  "command-line-utilities",
-  "compilers",
-  "parsing",
+    "development-tools::testing",
+    "command-line-utilities",
+    "compilers",
+    "parsing",
 ]
 exclude = ["/.github/*"]
 
@@ -60,7 +60,12 @@ ci = "github"
 # The installers to generate for each app
 installers = ["shell"]
 # Target platforms to build apps for (Rust target-triple syntax)
-targets = ["aarch64-apple-darwin", "x86_64-apple-darwin", "x86_64-unknown-linux-gnu", "x86_64-pc-windows-msvc"]
+targets = [
+    "aarch64-apple-darwin",
+    "x86_64-apple-darwin",
+    "x86_64-unknown-linux-gnu",
+    "x86_64-pc-windows-msvc",
+]
 # Path that installers should place binaries in
 install-path = "CARGO_HOME"
 # Whether to install an updater program
