@@ -1,16 +1,16 @@
 //! Pretty‑print utilities for Solang diagnostics.
 //!
 //! This module provides the [`Pretty`] wrapper which formats
-//! [`solang_parser::diagnostics::Diagnostic`] values in a compact, human‑readable
-//! style that resembles `rustc` output:
+//! [`solang_parser::diagnostics::Diagnostic`] values in a compact,
+//! human‑readable style that resembles `rustc` output:
 //!
 //! ```text
 //! path/to/file.sol:12:34 error [syntax] unexpected token
 //!   note: a more detailed explanation of the problem
 //! ```
 //!
-//! The main entry point is [`Pretty::new`]; create a value and use the [`Display`]
-//! implementation to render the diagnostic.
+//! The main entry point is [`Pretty::new`]; create a value and use the
+//! [`Display`] implementation to render the diagnostic.
 //!
 //! Helper functionality includes [`ErrorTypeExt::as_str`], converting Solang's
 //! [`ErrorType`] enumeration to short lowercase strings, and
@@ -24,11 +24,12 @@
 //! println!("{}", pretty); // prints a single‑line diagnostic
 //! ```
 
+use std::fmt::{self, Display, Formatter};
+
 use solang_parser::{
     diagnostics::{Diagnostic, ErrorType},
     pt::Loc,
 };
-use std::fmt::{self, Display, Formatter};
 
 /// Convenience extension trait for converting [`ErrorType`] values to strings.
 pub trait ErrorTypeExt {
@@ -145,8 +146,9 @@ fn byte_to_line_col(src: &str, byte: usize) -> (usize, usize) {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use solang_parser::diagnostics::{Diagnostic, Level, Note};
+
+    use super::*;
 
     /// A helper that builds a minimal `Diagnostic` we can wrap in `Pretty`.
     fn make_diag(

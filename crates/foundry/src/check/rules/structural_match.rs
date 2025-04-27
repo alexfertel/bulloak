@@ -202,14 +202,15 @@ fn check_fns_structure(
 
 #[cfg(test)]
 mod tests {
+    use std::{fs, io::Write, path::PathBuf};
+
+    use tempfile::tempdir;
+
     use super::StructuralMatcher;
-    use crate::check::rules::Checker;
     use crate::{
-        check::context::Context, check::violation::ViolationKind,
+        check::{context::Context, rules::Checker, violation::ViolationKind},
         config::Config,
     };
-    use std::{fs, io::Write, path::PathBuf};
-    use tempfile::tempdir;
 
     /// Helper: write a file under `dir` and return its PathBuf.
     fn write_file(
