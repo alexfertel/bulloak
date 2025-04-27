@@ -1,6 +1,7 @@
 #![allow(missing_docs)]
-use common::cmd;
 use std::env;
+
+use common::cmd;
 
 mod common;
 
