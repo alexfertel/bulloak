@@ -15,6 +15,7 @@ use thiserror::Error;
 
 use super::{context::Context, location::Location};
 use crate::{
+    check::pretty::Pretty,
     config::Config,
     hir::{self, Hir},
     sol::{self, find_contract, find_matching_fn},
@@ -89,91 +90,6 @@ pub enum ViolationKind {
     ParsingFailed(#[from] anyhow::Error),
 }
 
-impl fmt::Display for Violation {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        writeln!(f, "{}: {}", "warn".yellow(), self.kind)?;
-        if let Some(help_text) = self.kind.help() {
-            writeln!(f, "     {} help: {}", "=".blue(), help_text)?;
-        }
-        if self.kind.is_fixable() {
-            let file = self.location.file().replace(".t.sol", ".tree");
-            write!(f, "     {} fix: run ", "+".blue())?;
-            writeln!(f, "`bulloak check --fix {file}`")?;
-        }
-        writeln!(f, "   {} {}", "-->".blue(), self.location)?;
-
-        Ok(())
-    }
-}
-
-impl PartialEq for ViolationKind {
-    fn eq(&self, other: &Self) -> bool {
-        use ViolationKind::*;
-
-        match (self, other) {
-            (ContractMissing(a), ContractMissing(b)) => a == b,
-            (
-                ContractNameNotMatches(a1, a2),
-                ContractNameNotMatches(b1, b2),
-            ) => a1 == b1 && a2 == b2,
-            (SolidityFileMissing(a), SolidityFileMissing(b)) => a == b,
-            (FileUnreadable, FileUnreadable) => true,
-            (
-                FunctionOrderMismatch(f1, cur1, ins1),
-                FunctionOrderMismatch(f2, cur2, ins2),
-            ) =>
-            // Compare on function name and the two positions.
-            {
-                f1.name == f2.name && cur1 == cur2 && ins1 == ins2
-            }
-            (
-                MatchingFunctionMissing(f1, pos1),
-                MatchingFunctionMissing(f2, pos2),
-            ) =>
-            // Compare on function identifier and the position.
-            {
-                f1.identifier == f2.identifier && pos1 == pos2
-            }
-            (ParsingFailed(e1), ParsingFailed(e2)) =>
-            // Compare on the formatted error message.
-            {
-                e1.to_string() == e2.to_string()
-            }
-
-            // any mismatched variant
-            _ => false,
-        }
-    }
-}
-
-/// Formats frontend errors into human-readable messages.
-///
-/// # Arguments
-/// * `error` - Reference to an `anyhow::Error`
-///
-/// # Returns
-/// A `String` containing the formatted error message
-fn format_frontend_error(error: &anyhow::Error) -> String {
-    if let Some(error) =
-        error.downcast_ref::<bulloak_syntax::tokenizer::Error>()
-    {
-        format!("an error occurred while parsing the tree: {}", error.kind())
-    } else if let Some(error) =
-        error.downcast_ref::<bulloak_syntax::parser::Error>()
-    {
-        format!("an error occurred while parsing the tree: {}", error.kind())
-    } else if let Some(error) =
-        error.downcast_ref::<crate::hir::combiner::Error>()
-    {
-        format!("an error occurred while parsing the tree: {}", error.kind())
-    } else if error.downcast_ref::<bulloak_syntax::semantics::Error>().is_some()
-    {
-        "at least one semantic error occurred while parsing the tree".to_owned()
-    } else {
-        "an error occurred while parsing the solidity file".to_owned()
-    }
-}
-
 impl ViolationKind {
     /// Whether this violation kind is fixable.
     pub fn is_fixable(&self) -> bool {
@@ -211,14 +127,23 @@ impl ViolationKind {
     }
 
     /// Returns a new context with this violation fixed.
-    pub fn fix(&self, mut ctx: Context) -> Context {
-        match self {
+    pub fn fix(&self, mut ctx: Context) -> anyhow::Result<Context> {
+        Ok(match self {
             ViolationKind::ContractMissing(_) => {
                 let pt = sol::Translator::new(&Config::default())
                     .translate(&ctx.hir);
                 let source = sol::Formatter::new().emit(pt.clone());
-                let parsed =
-                    parse(&source).expect("should parse Solidity string");
+                let filename = ctx.sol.to_string_lossy();
+                let parsed = parse(&source).map_err(|diagnostics| {
+                    let full_error = diagnostics
+                        .into_iter()
+                        .map(|d| {
+                            Pretty::new(&d, &filename, &source).to_string()
+                        })
+                        .collect::<Vec<_>>()
+                        .join("\n");
+                    anyhow::anyhow!("{}", full_error)
+                })?;
                 ctx.from_parsed(parsed)
             }
             ViolationKind::ContractNameNotMatches(new_name, old_name) => {
@@ -226,17 +151,26 @@ impl ViolationKind {
                     &format!("contract {old_name}"),
                     &format!("contract {new_name}"),
                 );
-                let parsed =
-                    parse(&source).expect("should parse Solidity string");
+                let filename = ctx.sol.to_string_lossy();
+                let parsed = parse(&source).map_err(|diagnostics| {
+                    let full_error = diagnostics
+                        .into_iter()
+                        .map(|d| {
+                            Pretty::new(&d, &filename, &source).to_string()
+                        })
+                        .collect::<Vec<_>>()
+                        .join("\n");
+                    anyhow::anyhow!("{}", full_error)
+                })?;
                 ctx.from_parsed(parsed)
             }
             // Assume order violations have been taken care of first.
             ViolationKind::MatchingFunctionMissing(fn_hir, index) => {
                 let Some(contract_hir) = ctx.hir.find_contract() else {
-                    return ctx;
+                    return Ok(ctx);
                 };
                 let Some(contract_sol) = find_contract(&ctx.pt) else {
-                    return ctx;
+                    return Ok(ctx);
                 };
 
                 let offset = get_insertion_offset(
@@ -248,12 +182,21 @@ impl ViolationKind {
                 ctx.insert_function_at(fn_hir, offset);
 
                 let source = ctx.src.clone();
-                let parsed =
-                    parse(&source).expect("should parse solidity string");
+                let filename = ctx.sol.to_string_lossy();
+                let parsed = parse(&source).map_err(|diagnostics| {
+                    let full_error = diagnostics
+                        .into_iter()
+                        .map(|d| {
+                            Pretty::new(&d, &filename, &source).to_string()
+                        })
+                        .collect::<Vec<_>>()
+                        .join("\n");
+                    anyhow::anyhow!("{}", full_error)
+                })?;
                 ctx.from_parsed(parsed)
             }
             _ => ctx,
-        }
+        })
     }
 }
 
@@ -443,4 +386,89 @@ pub fn fix_order(
 
     let parsed = parse(&source).expect("should parse solidity string");
     ctx.from_parsed(parsed)
+}
+
+impl fmt::Display for Violation {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "{}: {}", "warn".yellow(), self.kind)?;
+        if let Some(help_text) = self.kind.help() {
+            writeln!(f, "     {} help: {}", "=".blue(), help_text)?;
+        }
+        if self.kind.is_fixable() {
+            let file = self.location.file().replace(".t.sol", ".tree");
+            write!(f, "     {} fix: run ", "+".blue())?;
+            writeln!(f, "`bulloak check --fix {file}`")?;
+        }
+        writeln!(f, "   {} {}", "-->".blue(), self.location)?;
+
+        Ok(())
+    }
+}
+
+impl PartialEq for ViolationKind {
+    fn eq(&self, other: &Self) -> bool {
+        use ViolationKind::*;
+
+        match (self, other) {
+            (ContractMissing(a), ContractMissing(b)) => a == b,
+            (
+                ContractNameNotMatches(a1, a2),
+                ContractNameNotMatches(b1, b2),
+            ) => a1 == b1 && a2 == b2,
+            (SolidityFileMissing(a), SolidityFileMissing(b)) => a == b,
+            (FileUnreadable, FileUnreadable) => true,
+            (
+                FunctionOrderMismatch(f1, cur1, ins1),
+                FunctionOrderMismatch(f2, cur2, ins2),
+            ) =>
+            // Compare on function name and the two positions.
+            {
+                f1.name == f2.name && cur1 == cur2 && ins1 == ins2
+            }
+            (
+                MatchingFunctionMissing(f1, pos1),
+                MatchingFunctionMissing(f2, pos2),
+            ) =>
+            // Compare on function identifier and the position.
+            {
+                f1.identifier == f2.identifier && pos1 == pos2
+            }
+            (ParsingFailed(e1), ParsingFailed(e2)) =>
+            // Compare on the formatted error message.
+            {
+                e1.to_string() == e2.to_string()
+            }
+
+            // any mismatched variant
+            _ => false,
+        }
+    }
+}
+
+/// Formats frontend errors into human-readable messages.
+///
+/// # Arguments
+/// * `error` - Reference to an `anyhow::Error`
+///
+/// # Returns
+/// A `String` containing the formatted error message
+fn format_frontend_error(error: &anyhow::Error) -> String {
+    if let Some(error) =
+        error.downcast_ref::<bulloak_syntax::tokenizer::Error>()
+    {
+        format!("an error occurred while parsing the tree: {}", error.kind())
+    } else if let Some(error) =
+        error.downcast_ref::<bulloak_syntax::parser::Error>()
+    {
+        format!("an error occurred while parsing the tree: {}", error.kind())
+    } else if let Some(error) =
+        error.downcast_ref::<crate::hir::combiner::Error>()
+    {
+        format!("an error occurred while parsing the tree: {}", error.kind())
+    } else if error.downcast_ref::<bulloak_syntax::semantics::Error>().is_some()
+    {
+        "at least one semantic error occurred while parsing the tree".to_owned()
+    } else {
+        "an error occurred while parsing the solidity file".to_owned()
+    }
 }

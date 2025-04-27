@@ -618,7 +618,7 @@ contract Bar {
         let ctx0 = make_ctx(tree, sol);
         let vs = StructuralMatcher::check(&ctx0);
         assert!(!vs.is_empty());
-        let ctx1 = vs.into_iter().fold(ctx0, |ctx, v| v.kind.fix(ctx));
+        let ctx1 = vs.into_iter().fold(ctx0, |ctx, v| v.kind.fix(ctx).unwrap());
         assert!(StructuralMatcher::check(&ctx1).is_empty());
     }
 }

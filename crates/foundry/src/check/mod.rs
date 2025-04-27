@@ -5,6 +5,7 @@
 
 pub mod context;
 pub mod location;
+pub mod pretty;
 pub mod rules;
 pub mod utils;
 pub mod violation;

@@ -63,72 +63,77 @@ impl Check {
             })
             .collect();
 
-        if self.fix {
-            let mut fixed_count = 0;
-            for mut ctx in ctxs {
-                let violations = rules::StructuralMatcher::check(&ctx);
-                let fixable_count =
-                    violations.iter().filter(|v| v.is_fixable()).count();
-
-                // Process violations that affect function order first.
-                let violations = violations.into_iter().filter(|v| {
-                    !matches!(
-                        v.kind,
-                        ViolationKind::FunctionOrderMismatch(_, _, _)
-                    )
-                });
-                for violation in violations {
-                    ctx = violation.kind.fix(ctx);
-                }
-
-                // Second pass fixing order violations.
-                let violations = rules::StructuralMatcher::check(&ctx);
-                let violations: Vec<Violation> = violations
-                    .into_iter()
-                    .filter(|v| {
-                        matches!(
-                            v.kind,
-                            ViolationKind::FunctionOrderMismatch(_, _, _)
-                        )
-                    })
-                    .collect();
-                if !violations.is_empty() {
-                    if let Some(contract_sol) = find_contract(&ctx.pt) {
-                        if let Some(contract_hir) =
-                            ctx.hir.clone().find_contract()
-                        {
-                            ctx = fix_order(
-                                &violations,
-                                &contract_sol,
-                                contract_hir,
-                                ctx,
-                            );
-                        }
-                    }
-                }
-
-                let sol = ctx.sol.clone();
-                let formatted =
-                    ctx.fmt().expect("should format the emitted solidity code");
-                self.write(&formatted, sol);
-
-                fixed_count += fixable_count;
-            }
-
-            let issue_literal = pluralize(fixed_count, "issue", "issues");
-            println!(
-                "\n{}: {} {} fixed.",
-                "success".bold().green(),
-                fixed_count,
-                issue_literal
-            );
-        } else {
+        if !self.fix {
             for ctx in ctxs {
                 violations.append(&mut rules::StructuralMatcher::check(&ctx));
             }
 
-            exit(&violations);
+            return exit(&violations);
         }
+
+        let mut fixed_count = 0;
+        for mut ctx in ctxs {
+            let violations = rules::StructuralMatcher::check(&ctx);
+            let fixable_count =
+                violations.iter().filter(|v| v.is_fixable()).count();
+
+            // Process violations that don't affect function order first.
+            let violations = violations.iter().filter(|v| {
+                !matches!(v.kind, ViolationKind::FunctionOrderMismatch(_, _, _))
+            });
+            for violation in violations {
+                ctx = match violation.kind.fix(ctx.clone()) {
+                    Ok(ctx) => ctx,
+                    Err(e) => {
+                        eprintln!(
+                            "unable to fix \"{}\" due to:\n{}",
+                            violation.kind, e
+                        );
+                        continue;
+                    }
+                };
+            }
+
+            // Second pass fixing order violations.
+            let violations = rules::StructuralMatcher::check(&ctx);
+            let violations: Vec<Violation> = violations
+                .into_iter()
+                .filter(|v| {
+                    matches!(
+                        v.kind,
+                        ViolationKind::FunctionOrderMismatch(_, _, _)
+                    )
+                })
+                .collect();
+            if !violations.is_empty() {
+                if let Some(contract_sol) = find_contract(&ctx.pt) {
+                    if let Some(contract_hir) = ctx.hir.clone().find_contract()
+                    {
+                        ctx = fix_order(
+                            &violations,
+                            &contract_sol,
+                            contract_hir,
+                            ctx,
+                        );
+                    }
+                }
+            }
+
+            let sol = ctx.sol.clone();
+            let formatted =
+                ctx.fmt().expect("should format the emitted solidity code");
+            self.write(&formatted, sol);
+
+            fixed_count += fixable_count;
+        }
+
+        let issue_literal = pluralize(fixed_count, "issue", "issues");
+        println!(
+            "\n{}: {} {} fixed.",
+            "success".bold().green(),
+            fixed_count,
+            issue_literal
+        );
     }
 
     /// Handles writing the output of the `check` command.
