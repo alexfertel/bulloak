@@ -5,6 +5,7 @@ use std::{borrow::Borrow, cell::Cell, fmt, result};
 use thiserror::Error;
 
 use crate::{
+    char::CharExt,
     error::FrontendError,
     span::{Position, Span},
 };
@@ -110,6 +111,17 @@ pub enum TokenKind {
     Given,
     /// A token representing an `it` keyword.
     It,
+}
+
+impl From<&str> for TokenKind {
+    fn from(value: &str) -> Self {
+        match value.to_lowercase().as_str() {
+            "when" => TokenKind::When,
+            "it" => TokenKind::It,
+            "given" => TokenKind::Given,
+            _ => TokenKind::Word,
+        }
+    }
 }
 
 /// A tokenizer for .tree files.
@@ -266,17 +278,19 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
     /// Advance the tokenizer by one character.
     ///
     /// If the input has been exhausted, then this returns `None`.
-    fn scan(&self) -> Option<char> {
+    ///
+    /// This panics when the number of lines or columns does not fit `usize`.
+    fn bump(&self) -> Option<char> {
         if self.is_eof() {
             return None;
         }
         let Position { mut offset, mut line, mut column } = self.pos();
 
         if self.char() == '\n' {
-            line = line.checked_add(1).unwrap();
+            line = line + 1;
             column = 1;
         } else {
-            column = column.checked_add(1).unwrap();
+            column = column + 1;
         }
 
         offset += self.char().len_utf8();
@@ -316,19 +330,20 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
                 }
                 _ => {
                     let token = self.scan_word()?;
+
                     let last_is_branch =
                         tokens.last().is_some_and(Token::is_branch);
-                    if last_is_branch
-                        && (token.kind == TokenKind::When
-                            || token.kind == TokenKind::Given)
-                    {
+                    let is_condition = token.kind == TokenKind::When
+                        || token.kind == TokenKind::Given;
+                    if last_is_branch && is_condition {
                         self.enter_identifier_mode();
                     };
+
                     tokens.push(token);
                 }
             }
 
-            if self.scan().is_none() {
+            if self.bump().is_none() {
                 break;
             }
         }
@@ -341,7 +356,7 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
         loop {
             match self.peek() {
                 Some('\n') | None => break,
-                Some(_) => self.scan(),
+                Some(_) => self.bump(),
             };
         }
     }
@@ -356,46 +371,25 @@ impl<'s, T: Borrow<Tokenizer>> TokenizerI<'s, T> {
         let span_start = self.pos();
 
         loop {
-            if self.is_identifier_mode()
-                && !is_valid_identifier_char(self.char())
-            {
-                let invalid_identifier_error = self.error(
-                    self.span(),
-                    ErrorKind::IdentifierCharInvalid(self.char()),
-                );
-                return Err(invalid_identifier_error);
+            if self.is_identifier_mode() && !self.char().is_valid_identifier() {
+                let kind = ErrorKind::IdentifierCharInvalid(self.char());
+                let error = self.error(self.span(), kind);
+                return Err(error);
             };
 
             if self.peek().is_none()
                 || self.peek().is_some_and(char::is_whitespace)
             {
                 lexeme.push(self.char());
-                let kind = match lexeme.to_lowercase().as_str() {
-                    "when" => TokenKind::When,
-                    "it" => TokenKind::It,
-                    "given" => TokenKind::Given,
-                    _ => TokenKind::Word,
-                };
-
-                return Ok(Token {
-                    kind,
-                    span: self.span().with_start(span_start),
-                    lexeme,
-                });
+                let kind = TokenKind::from(lexeme.as_str());
+                let span = self.span().with_start(span_start);
+                return Ok(Token { kind, span, lexeme });
             }
 
             lexeme.push(self.char());
-            self.scan();
+            self.bump();
         }
     }
-}
-
-/// Checks whether a character can appear in an identifier.
-///
-/// Valid identifiers are those which can be used as a variable name
-/// plus `-`, which will be converted to `_` in the generated code.
-fn is_valid_identifier_char(c: char) -> bool {
-    c.is_alphanumeric() || c == '_' || c == '-' || c == '\'' || c == '"'
 }
 
 #[cfg(test)]
@@ -463,7 +457,7 @@ mod tests {
     fn comments() {
         let file_contents = String::from(indoc! {"
             Foo_Test
-            └── when something bad happens // some comments 
+            └── when something bad happens // some comments
                └── it should revert
         "});
 
@@ -477,10 +471,10 @@ mod tests {
                 t(TokenKind::Word,   "something", s(p(24, 2, 10), p(32, 2, 18))),
                 t(TokenKind::Word,   "bad",       s(p(34, 2, 20), p(36, 2, 22))),
                 t(TokenKind::Word,   "happens",   s(p(38, 2, 24), p(44, 2, 30))),
-                t(TokenKind::Corner, "└",         s(p(67, 3, 4),  p(67, 3, 4))),
-                t(TokenKind::It,     "it",        s(p(77, 3, 8),  p(78, 3, 9))),
-                t(TokenKind::Word,   "should",    s(p(80, 3, 11), p(85, 3, 16))),
-                t(TokenKind::Word,   "revert",    s(p(87, 3, 18), p(92, 3, 23))),
+                t(TokenKind::Corner, "└",         s(p(66, 3, 4),  p(66, 3, 4))),
+                t(TokenKind::It,     "it",        s(p(76, 3, 8),  p(77, 3, 9))),
+                t(TokenKind::Word,   "should",    s(p(79, 3, 11), p(84, 3, 16))),
+                t(TokenKind::Word,   "revert",    s(p(86, 3, 18), p(91, 3, 23))),
             ]
         );
 

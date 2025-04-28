@@ -4,6 +4,7 @@
 //! in string form to an AST. It also includes a semantic analyzer.
 
 mod ast;
+mod char;
 mod error;
 pub mod parser;
 pub mod semantics;
