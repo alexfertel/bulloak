@@ -1,10 +1,11 @@
 #![allow(missing_docs)]
+use std::fs;
+
 use bulloak_syntax::{parse, parser::Parser, semantics, tokenizer};
 use criterion::{
     black_box, criterion_group, criterion_main, BenchmarkId, Criterion,
     Throughput,
 };
-use std::fs;
 
 fn load(name: &str) -> String {
     let path = format!("benches/bench_data/{}", name);
