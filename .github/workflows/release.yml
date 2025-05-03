@@ -25,3 +25,4 @@ jobs:
           changelog: CHANGELOG.md
           draft: true
           token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && format('refs/tags/{0}', github.event.inputs.tag) || github.ref }}
