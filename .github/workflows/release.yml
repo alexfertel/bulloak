@@ -26,3 +26,29 @@ jobs:
           draft: true
           token: ${{ secrets.GITHUB_TOKEN }}
           ref: ${{ github.event_name == 'workflow_dispatch' && format('refs/tags/{0}', github.event.inputs.tag) || github.ref }}
+  upload-assets:
+    needs: create-release
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+          - target: x86_64-apple-darwin
+            os: macos-latest
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build & upload ${{ matrix.target }}
+        uses: taiki-e/upload-rust-binary-action@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          bin: bulloak
+          target: ${{ matrix.target }}
+          # archives as .tar.gz on UNIX and .zip on Windows by default
+          ref: ${{ github.event_name == 'workflow_dispatch'
+            && format('refs/tags/{0}', github.event.inputs.tag)
+            || github.ref }}
