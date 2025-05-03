@@ -20,6 +20,11 @@ unicode-xid.workspace = true
 [dev-dependencies]
 indoc = "2.0.5"
 pretty_assertions.workspace = true
+criterion.workspace = true
+
+[[bench]]
+name = "syntax"
+harness = false
 
 [lints]
 workspace = true

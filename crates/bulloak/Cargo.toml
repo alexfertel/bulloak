@@ -29,7 +29,7 @@ pretty_assertions.workspace = true
 criterion.workspace = true
 
 [[bench]]
-name = "bench"
+name = "emit"
 harness = false
 
 [lints]

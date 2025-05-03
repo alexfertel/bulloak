@@ -367,6 +367,7 @@ name = "bulloak-syntax"
 version = "0.8.1"
 dependencies = [
  "anyhow",
+ "criterion",
  "indoc",
  "pretty_assertions",
  "thiserror",
