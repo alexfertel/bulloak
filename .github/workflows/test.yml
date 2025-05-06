@@ -1,8 +1,6 @@
 # This is the main CI workflow that runs the test suite on all pushes to main
 # and all pull requests. It runs the following jobs:
 # - required: runs the test suite on ubuntu with stable and beta rust toolchains
-# - minimal: runs the test suite with the minimal versions of the dependencies
-# that satisfy the requirements of this crate, and its dependencies
 # - os-check: runs the test suite on mac and windows.
 permissions:
   contents: read
