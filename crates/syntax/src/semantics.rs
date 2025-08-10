@@ -171,6 +171,9 @@ impl Visitor for SemanticAnalyzer<'_> {
         for ast in &root.children {
             match ast {
                 Ast::Condition(condition) => {
+                    // NOTE: We no longer record condition titles for duplicate
+                    // detection. Duplicates in condition titles are allowed,
+                    // and a single modifier definition will be reused.
                     self.visit_condition(condition)?;
                 }
                 Ast::Action(action) => {
@@ -205,14 +208,9 @@ impl Visitor for SemanticAnalyzer<'_> {
             self.error(condition.span, ErrorKind::ConditionEmpty);
         }
 
-        let modifier =
-            lower_first_letter(&to_pascal_case(&sanitize(&condition.title)));
-        match self.identifiers.get_mut(&modifier) {
-            Some(spans) => spans.push(condition.span),
-            None => {
-                self.identifiers.insert(modifier, vec![condition.span]);
-            }
-        }
+        // IMPORTANT: Allow duplicate condition titles.
+        // We do not record modifiers in `identifiers` anymore, so duplicates
+        // of the same condition title won't trigger an error.
 
         for ast in &condition.children {
             match ast {
@@ -288,33 +286,6 @@ mod tests {
                 kind: NodeUnexpected,
                 text: "Foo_Test".to_owned(),
                 span: Span::new(Position::new(0, 1, 1), Position::new(7, 1, 8)),
-            }]
-        );
-    }
-
-    #[test]
-    fn duplicated_condition() {
-        assert_eq!(
-            analyze(
-            "Foo_Test
-├── when dup
-│   └── It 1
-├── when dup
-│   └── It 2
-└── when dup
-    └── It 3",
-        )
-        .unwrap_err().0,
-            vec![semantics::Error {
-                kind: IdentifierDuplicated(
-                    vec![
-                        Span::new(Position::new(9, 2, 1), Position::new(47, 3, 12)),
-                        Span::new(Position::new(49, 4, 1), Position::new(87, 5, 12)),
-                        Span::new(Position::new(89, 6, 1), Position::new(125, 7, 12)),
-                    ],
-                ),
-                text: "Foo_Test\n├── when dup\n│   └── It 1\n├── when dup\n│   └── It 2\n└── when dup\n    └── It 3".to_owned(),
-                span: Span::new(Position::new(9, 2, 1), Position::new(9, 2, 1)),
             }]
         );
     }
