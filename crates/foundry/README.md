@@ -8,6 +8,11 @@
 - Check existing Solidity test files against `.tree` specifications.
 - Implement and enforce custom rules for test structure and content.
 - Automatic fixing of certain rule violations.
+- Allow duplicate condition titles; a single modifier per unique title is
+  emitted and reused where needed.
+- Automatic function name disambiguation: when two tests would clash, `bulloak`
+  prepends nearest ancestor conditions (and if needed multiple ancestors) to
+  produce a unique name.
 
 ## Usage
 
@@ -32,6 +37,12 @@ fn main() -> anyhow::Result<()> {
     Ok(())
 }
 ```
+
+## Semantics
+
+- Duplicate condition titles are allowed; modifiers are reused.
+- Top‑level actions must be unique (duplicates are an error).
+- Non‑top‑level test name clashes are resolved automatically by prepending ancestor conditions.
 
 ## Violation Checking
 

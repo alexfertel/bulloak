@@ -1,5 +1,7 @@
 //! The implementation of a translator between a bulloak tree AST and a
 //! high-level intermediate representation (HIR) -- AST -> HIR.
+use std::collections::HashSet;
+
 use bulloak_syntax::{
     utils::{sanitize, upper_first_letter},
     Action, Ast, Condition, Description, Visitor,
@@ -60,13 +62,22 @@ struct TranslatorI<'a> {
     modifiers: &'a IndexMap<String, String>,
     /// Whether to add `vm.skip(true)` at the beginning of each test.
     with_vm_skip: bool,
+    /// Keep track of the generated functions so far.
+    ///
+    /// This is used to make sure only unique function are generated.
+    used_fns: HashSet<String>,
 }
 
 impl<'a> TranslatorI<'a> {
     /// Creates a new internal translator.
     fn new(modifiers: &'a IndexMap<String, String>, cfg: &Config) -> Self {
         let with_vm_skip = cfg.emit_vm_skip;
-        Self { modifier_stack: Vec::new(), modifiers, with_vm_skip }
+        Self {
+            modifier_stack: Vec::new(),
+            modifiers,
+            with_vm_skip,
+            used_fns: HashSet::new(),
+        }
     }
 
     /// Concrete implementation of the translation from AST to HIR.
@@ -79,6 +90,39 @@ impl<'a> TranslatorI<'a> {
         // The result of translating is a Vec<Hir> where the only member
         // is a Root HIR node.
         std::mem::take(&mut hirs[0])
+    }
+
+    /// Builds a unique function identifier by optionally prepending nearest
+    /// ancestor modifiers (PascalCase) to the suffix until unique.
+    fn make_unique_name(&mut self, prefix: &str, base_suffix: &str) -> String {
+        // Try the base name.
+        let mut suffix = base_suffix.to_string();
+        let mut full = format!("{prefix}{suffix}");
+        if self.used_fns.insert(full.clone()) {
+            return full;
+        }
+
+        // If collision, prepend nearest ancestors (reverse modifier stack)
+        for anc in self.modifier_stack.iter().rev() {
+            // `anc` is lowerCamel (e.g. whenTheCallerIsUnauthorized)
+            // Convert to PascalCase by uppercasing first letter.
+            let anc_pascal = bulloak_syntax::utils::upper_first_letter(anc);
+            suffix = format!("{anc_pascal}_{}", suffix);
+            full = format!("{prefix}{suffix}");
+            if self.used_fns.insert(full.clone()) {
+                return full;
+            }
+        }
+
+        // Still collision? Fallback to counter suffix.
+        let mut i = 2;
+        loop {
+            let attempt = format!("{prefix}{}_{}", suffix, i);
+            if self.used_fns.insert(attempt.clone()) {
+                return attempt;
+            }
+            i += 1;
+        }
     }
 }
 
@@ -120,10 +164,10 @@ impl<'a> Visitor for TranslatorI<'a> {
                     );
 
                     // We need to sanitize here and not in a previous compiler
-                    // phase because we want to emit the action as is in a
+                    // phase because we want to emit the action as-is in a
                     // comment.
                     let test_name = sanitize(&test_name);
-                    let test_name = format!("test_{test_name}");
+                    let test_name = self.make_unique_name("test_", &test_name);
 
                     let mut hirs = self.visit_action(action)?;
 
@@ -238,7 +282,8 @@ impl<'a> Visitor for TranslatorI<'a> {
                 // test_Revert[KEYWORD]_Description
                 //
                 // where `KEYWORD` is the starting word of the condition.
-                format!("test_Revert{keyword}_{test_name}")
+                let prefix = format!("test_Revert{keyword}_");
+                self.make_unique_name(&prefix, &test_name)
             } else {
                 // Map an iterator over the words of a condition to the test
                 // name.
@@ -250,7 +295,7 @@ impl<'a> Visitor for TranslatorI<'a> {
                     acc
                 });
 
-                format!("test_{test_name}")
+                self.make_unique_name("test_", &test_name)
             };
 
             let modifiers = if self.modifier_stack.is_empty() {
@@ -372,6 +417,24 @@ mod tests {
 
     fn comment(lexeme: String) -> Hir {
         Hir::Comment(hir::Comment { lexeme })
+    }
+
+    fn collect_fn_names(hir: &hir::Hir) -> Vec<String> {
+        let mut out = Vec::new();
+        if let hir::Hir::Root(root) = hir {
+            for child in &root.children {
+                if let hir::Hir::Contract(c) = child {
+                    for k in &c.children {
+                        if let hir::Hir::Function(f) = k {
+                            if f.is_function() {
+                                out.push(f.identifier.clone());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        out
     }
 
     #[test]
@@ -512,6 +575,85 @@ Foo_Test
             )])
         );
 
+        Ok(())
+    }
+
+    #[test]
+    fn disambiguates_duplicate_function_names_with_parents() -> Result<()> {
+        let file_contents = r#"Foo
+├── when parent one
+│  └── when child same
+│     └── it does
+└── when parent two
+   └── when child same
+      └── it does
+"#;
+        let hir = translate(file_contents)?;
+        let names = collect_fn_names(&hir);
+        assert_eq!(
+            names,
+            vec![
+                "test_WhenChildSame".to_string(),
+                "test_WhenParentTwo_WhenChildSame".to_string()
+            ]
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn disambiguates_deep_duplicates_using_multiple_ancestors() -> Result<()> {
+        let file_contents = r#"Foo
+├── when grand a
+│  └── when parent x
+│     └── when child same
+│        └── it does
+├── when grand b
+│  └── when parent x
+│     └── when child same
+│        └── it does
+└── when grand c
+   └── when parent x
+      └── when child same
+         └── it does
+"#;
+        let hir = translate(file_contents)?;
+        let names = collect_fn_names(&hir);
+        assert_eq!(
+            names,
+            vec![
+                "test_WhenChildSame",
+                "test_WhenParentX_WhenChildSame",
+                "test_WhenGrandC_WhenParentX_WhenChildSame",
+            ]
+            .into_iter()
+            .map(|s| s.to_string())
+            .collect::<Vec<_>>()
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn disambiguates_revert_when_variants() -> Result<()> {
+        let file_contents = r#"Foo
+├── when parent one
+│  └── when child same
+│     └── it should revert
+└── when parent two
+   └── when child same
+      └── it should revert
+"#;
+        let hir = translate(file_contents)?;
+        let names = collect_fn_names(&hir);
+        assert_eq!(
+            names,
+            vec![
+                "test_RevertWhen_ChildSame",
+                "test_RevertWhen_WhenParentTwo_ChildSame",
+            ]
+            .into_iter()
+            .map(|s| s.to_string())
+            .collect::<Vec<_>>()
+        );
         Ok(())
     }
 }
