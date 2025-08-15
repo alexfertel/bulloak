@@ -1,0 +1,30 @@
+{
+  "name": "@alexfertel/bulloak",
+  "description": "Generate tests based on the Branching Tree Technique",
+  "version": "0.8.1",
+  "author": {
+    "name": "Alex Fertel",
+    "url": "https://www.bulloak.dev/"
+  },
+  "bugs": {
+    "url": "https://github.com/alexfertel/bulloak/issues/new"
+  },
+  "devDependencies": {
+    "forge-std": "github:foundry-rs/forge-std#v1.9.7",
+    "husky": "^9.1",
+    "lint-staged": "^16.1",
+    "prettier": "^3.5",
+    "solhint": "^6.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alexfertel/bulloak.git"
+  },
+  "scripts": {
+    "prepare": "bun husky",
+    "prettier:check": "bun run prettier --check \"**/*.{json,md,tsx,yml}\"",
+    "prettier:write": "bun run prettier --write \"**/*.{json,md,tsx,yml}\"",
+    "solhint:check": "bun run solhint \"crates/bulloak/tests/{scaffold,check}/**/*.sol\"",
+    "solhint:write": "bun run solhint --fix --noPrompt \"crates/bulloak/tests/{scaffold,check}/**/*.sol\""
+  }
+}

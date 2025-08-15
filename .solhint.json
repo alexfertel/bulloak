@@ -1,0 +1,14 @@
+{
+  "extends": "solhint:recommended",
+  "rules": {
+    "compiler-version": "off",
+    "contract-name-capwords": "off",
+    "const-name-snakecase": "off",
+    "func-name-mixedcase": "off",
+    "imports-order": "warn",
+    "no-empty-blocks": "off",
+    "one-contract-per-file": "off",
+    "use-natspec": "off",
+    "var-name-mixedcase": "off"
+  }
+}

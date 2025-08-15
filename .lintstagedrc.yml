@@ -1,0 +1,5 @@
+"*.{json,md,tsx,yml}": "prettier --write --ignore-path .prettierignore"
+"*.rs": "sh -c 'cargo +nightly fmt'"
+"*.sol":
+  - "solhint --fix --noPrompt"
+  - "forge fmt"
