@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.0;
 
-import {Test} from "forge-std/Test.sol";
+import { Test } from "forge-std/src/Test.sol";
 
 contract MultipleRootsTreeTest is Test {
     function test_Function1ShouldNeverRevert() external {
