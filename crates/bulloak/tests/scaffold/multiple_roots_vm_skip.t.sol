@@ -10,12 +10,12 @@ contract MultipleRootsTreeTest is Test {
     }
 
     function test_Function1WhenFirstArgIsBiggerThanSecondArg() external {
-        // It is all good
+        // It is all good.
         vm.skip(true);
     }
 
     function test_Function2WhenStuffHappens() external {
-        // It should do something simple
+        // It should do something simple.
         vm.skip(true);
     }
 }
