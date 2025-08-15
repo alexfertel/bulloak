@@ -1,0 +1,10 @@
+# directories
+.vscode
+node_modules
+target
+
+# files
+bun.lock
+LICENSE-*
+Cargo.lock
+pnpm-lock.yaml

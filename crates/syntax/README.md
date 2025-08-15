@@ -2,15 +2,15 @@
 
 ## Overview
 
-`bulloak-syntax` is a Rust crate that provides a syntax parser for converting tree-like structures in string form into Abstract Syntax Trees (ASTs). It also includes a semantic analyzer for further processing of the parsed structures.
+`bulloak-syntax` is a Rust crate that provides a syntax parser for converting tree-like structures in string form into
+Abstract Syntax Trees (ASTs). It also includes a semantic analyzer for further processing of the parsed structures.
 
 ## Features
 
 - Parse strings containing tree-like structures into ASTs.
 - Tokenize input strings.
-- Perform semantic analysis on parsed ASTs (e.g., ensure the tree has content,
-  top‑level actions are unique). Duplicate condition titles are allowed; only
-  duplicate top‑level actions are rejected.
+- Perform semantic analysis on parsed ASTs (e.g., ensure the tree has content, top‑level actions are unique). Duplicate
+  condition titles are allowed; only duplicate top‑level actions are rejected.
 - Support for parsing both single and multiple trees.
 - Error handling with custom `FrontendError` type.
 
@@ -45,7 +45,5 @@ fn main() -> anyhow::Result<()> {
 
 This project is licensed under either of:
 
-- Apache License, Version 2.0, ([LICENSE-APACHE](LICENSE-APACHE) or
-  https://www.apache.org/licenses/LICENSE-2.0).
-- MIT license ([LICENSE-MIT](LICENSE-MIT) or
-  https://opensource.org/licenses/MIT).
+- Apache License, Version 2.0, ([LICENSE-APACHE](LICENSE-APACHE) or https://www.apache.org/licenses/LICENSE-2.0).
+- MIT license ([LICENSE-MIT](LICENSE-MIT) or https://opensource.org/licenses/MIT).

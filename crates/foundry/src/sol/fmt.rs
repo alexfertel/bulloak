@@ -317,7 +317,13 @@ fn cleanup_comments(source: &str) -> String {
     static RE_BULLOAK_COMMENT: Lazy<Regex> = Lazy::new(|| {
         Regex::new(r#"string __bulloak_comment__ = "(.*)";"#).unwrap()
     });
-    RE_BULLOAK_COMMENT.replace_all(source, "// $1").to_string()
+
+    RE_BULLOAK_COMMENT
+        .replace_all(source, |caps: &regex::Captures| {
+            let formatted_comment = crate::utils::format_comment(&caps[1]);
+            format!("// {formatted_comment}")
+        })
+        .to_string()
 }
 
 #[cfg(test)]
