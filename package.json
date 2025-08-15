@@ -1,6 +1,7 @@
 {
   "name": "@alexfertel/bulloak",
   "description": "Generate tests based on the Branching Tree Technique",
+  "license": "(MIT OR APACHE-2.0)",
   "version": "0.8.1",
   "author": {
     "name": "Alex Fertel",

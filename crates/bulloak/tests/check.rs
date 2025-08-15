@@ -312,7 +312,7 @@ pragma solidity 0.8.0;
 
 contract CancelTest {
     function test_RevertWhen_DelegateCalled() external {
-        // it should revert
+        // It should revert.
     }
 
     modifier whenNotDelegateCalled() {
@@ -320,7 +320,7 @@ contract CancelTest {
     }
 
     function test_RevertGiven_TheIdReferencesANullStream() external whenNotDelegateCalled {
-        // it should revert
+        // It should revert.
     }
 
     modifier givenTheIdDoesNotReferenceANullStream() {
@@ -337,7 +337,7 @@ contract CancelTest {
         givenTheIdDoesNotReferenceANullStream
         givenTheStreamIsCold
     {
-        // it should revert
+        // It should revert.
     }
 
     function test_RevertGiven_TheStreamsStatusIsCANCELED()
@@ -346,7 +346,7 @@ contract CancelTest {
         givenTheIdDoesNotReferenceANullStream
         givenTheStreamIsCold
     {
-        // it should revert
+        // It should revert.
     }
 
     function test_RevertGiven_TheStreamsStatusIsSETTLED()
@@ -355,7 +355,7 @@ contract CancelTest {
         givenTheIdDoesNotReferenceANullStream
         givenTheStreamIsCold
     {
-        // it should revert
+        // It should revert.
     }
 
     modifier givenTheStreamIsWarm() {
@@ -373,7 +373,7 @@ contract CancelTest {
         givenTheStreamIsWarm
         whenTheCallerIsAuthorized
     {
-        // it should revert
+        // It should revert.
     }
 
     function test_GivenTheSenderIsNotAContract()
@@ -383,8 +383,8 @@ contract CancelTest {
         givenTheStreamIsWarm
         whenTheCallerIsAuthorized
     {
-        // it should cancel the stream
-        // it should mark the stream as canceled
+        // It should cancel the stream.
+        // It should mark the stream as canceled.
     }
 
     modifier givenTheSenderIsAContract() {
@@ -399,10 +399,10 @@ contract CancelTest {
         whenTheCallerIsAuthorized
         givenTheSenderIsAContract
     {
-        // it should cancel the stream
-        // it should mark the stream as canceled
-        // it should call the sender hook
-        // it should ignore the revert
+        // It should cancel the stream.
+        // It should mark the stream as canceled.
+        // It should call the sender hook.
+        // It should ignore the revert.
     }
 
     modifier givenTheSenderImplementsTheHook() {
@@ -418,10 +418,10 @@ contract CancelTest {
         givenTheSenderIsAContract
         givenTheSenderImplementsTheHook
     {
-        // it should cancel the stream
-        // it should mark the stream as canceled
-        // it should call the sender hook
-        // it should ignore the revert
+        // It should cancel the stream.
+        // It should mark the stream as canceled.
+        // It should call the sender hook.
+        // It should ignore the revert.
     }
 
     modifier whenTheSenderDoesNotRevert() {
@@ -438,10 +438,10 @@ contract CancelTest {
         givenTheSenderImplementsTheHook
         whenTheSenderDoesNotRevert
     {
-        // it should cancel the stream
-        // it should mark the stream as canceled
-        // it should call the sender hook
-        // it should ignore the revert
+        // It should cancel the stream.
+        // It should mark the stream as canceled.
+        // It should call the sender hook.
+        // It should ignore the revert.
     }
 
     function test_WhenThereIsNoReentrancy()
@@ -454,14 +454,14 @@ contract CancelTest {
         givenTheSenderImplementsTheHook
         whenTheSenderDoesNotRevert
     {
-        // it should cancel the stream
-        // it should mark the stream as canceled
-        // it should make the stream not cancelable
-        // it should update the refunded amount
-        // it should refund the sender
-        // it should call the sender hook
-        // it should emit a {MetadataUpdate} event
-        // it should emit a {CancelLockupStream} event
+        // It should cancel the stream.
+        // It should mark the stream as canceled.
+        // It should make the stream not cancelable.
+        // It should update the refunded amount.
+        // It should refund the sender.
+        // It should call the sender hook.
+        // It should emit a {MetadataUpdate} event.
+        // It should emit a {CancelLockupStream} event.
     }
 }";
 

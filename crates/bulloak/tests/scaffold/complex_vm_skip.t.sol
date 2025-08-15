@@ -5,7 +5,7 @@ import { Test } from "forge-std/src/Test.sol";
 
 contract CancelTest is Test {
     function test_RevertWhen_DelegateCalled() external {
-        // it should revert
+        // It should revert.
         vm.skip(true);
     }
 
@@ -14,7 +14,7 @@ contract CancelTest is Test {
     }
 
     function test_RevertGiven_TheIdReferencesANullStream() external whenNotDelegateCalled {
-        // it should revert
+        // It should revert.
         vm.skip(true);
     }
 
@@ -32,7 +32,7 @@ contract CancelTest is Test {
         givenTheIdDoesNotReferenceANullStream
         givenTheStreamIsCold
     {
-        // it should revert
+        // It should revert.
         vm.skip(true);
     }
 
@@ -42,7 +42,7 @@ contract CancelTest is Test {
         givenTheIdDoesNotReferenceANullStream
         givenTheStreamIsCold
     {
-        // it should revert
+        // It should revert.
         vm.skip(true);
     }
 
@@ -52,7 +52,7 @@ contract CancelTest is Test {
         givenTheIdDoesNotReferenceANullStream
         givenTheStreamIsCold
     {
-        // it should revert
+        // It should revert.
         vm.skip(true);
     }
 
@@ -71,7 +71,7 @@ contract CancelTest is Test {
         givenTheStreamIsWarm
         whenTheCallerIsUnauthorized
     {
-        // it should revert
+        // It should revert.
         vm.skip(true);
     }
 
@@ -82,7 +82,7 @@ contract CancelTest is Test {
         givenTheStreamIsWarm
         whenTheCallerIsUnauthorized
     {
-        // it should revert
+        // It should revert.
         vm.skip(true);
     }
 
@@ -93,7 +93,7 @@ contract CancelTest is Test {
         givenTheStreamIsWarm
         whenTheCallerIsUnauthorized
     {
-        // it should revert
+        // It should revert.
         vm.skip(true);
     }
 
@@ -108,7 +108,7 @@ contract CancelTest is Test {
         givenTheStreamIsWarm
         whenTheCallerIsAuthorized
     {
-        // it should revert
+        // It should revert.
         vm.skip(true);
     }
 
@@ -124,9 +124,9 @@ contract CancelTest is Test {
         whenTheCallerIsAuthorized
         givenTheStreamIsCancelable
     {
-        // it should cancel the stream
-        // it should mark the stream as depleted
-        // it should make the stream not cancelable
+        // It should cancel the stream.
+        // It should mark the stream as depleted.
+        // It should make the stream not cancelable.
         vm.skip(true);
     }
 
@@ -148,8 +148,8 @@ contract CancelTest is Test {
         givenTheStreamsStatusIsSTREAMING
         whenTheCallerIsTheSender
     {
-        // it should cancel the stream
-        // it should mark the stream as canceled
+        // It should cancel the stream.
+        // It should mark the stream as canceled.
         vm.skip(true);
     }
 
@@ -168,10 +168,10 @@ contract CancelTest is Test {
         whenTheCallerIsTheSender
         givenTheRecipientIsAContract
     {
-        // it should cancel the stream
-        // it should mark the stream as canceled
-        // it should call the recipient hook
-        // it should ignore the revert
+        // It should cancel the stream.
+        // It should mark the stream as canceled.
+        // It should call the recipient hook.
+        // It should ignore the revert.
         vm.skip(true);
     }
 
@@ -191,10 +191,10 @@ contract CancelTest is Test {
         givenTheRecipientIsAContract
         givenTheRecipientImplementsTheHook
     {
-        // it should cancel the stream
-        // it should mark the stream as canceled
-        // it should call the recipient hook
-        // it should ignore the revert
+        // It should cancel the stream.
+        // It should mark the stream as canceled.
+        // It should call the recipient hook.
+        // It should ignore the revert.
         vm.skip(true);
     }
 
@@ -215,10 +215,10 @@ contract CancelTest is Test {
         givenTheRecipientImplementsTheHook
         whenTheRecipientDoesNotRevert
     {
-        // it should cancel the stream
-        // it should mark the stream as canceled
-        // it should call the recipient hook
-        // it should ignore the revert
+        // It should cancel the stream.
+        // It should mark the stream as canceled.
+        // It should call the recipient hook.
+        // It should ignore the revert.
         vm.skip(true);
     }
 
@@ -235,14 +235,14 @@ contract CancelTest is Test {
         givenTheRecipientImplementsTheHook
         whenTheRecipientDoesNotRevert
     {
-        // it should cancel the stream
-        // it should mark the stream as canceled
-        // it should make the stream not cancelable
-        // it should update the refunded amount
-        // it should refund the sender
-        // it should call the recipient hook
-        // it should emit a {CancelLockupStream} event
-        // it should emit a {MetadataUpdate} event
+        // It should cancel the stream.
+        // It should mark the stream as canceled.
+        // It should make the stream not cancelable.
+        // It should update the refunded amount.
+        // It should refund the sender.
+        // It should call the recipient hook.
+        // It should emit a {CancelLockupStream} event.
+        // It should emit a {MetadataUpdate} event.
         vm.skip(true);
     }
 
@@ -260,8 +260,8 @@ contract CancelTest is Test {
         givenTheStreamsStatusIsSTREAMING
         whenTheCallerIsTheRecipient
     {
-        // it should cancel the stream
-        // it should mark the stream as canceled
+        // It should cancel the stream.
+        // It should mark the stream as canceled.
         vm.skip(true);
     }
 
@@ -280,10 +280,10 @@ contract CancelTest is Test {
         whenTheCallerIsTheRecipient
         givenTheSenderIsAContract
     {
-        // it should cancel the stream
-        // it should mark the stream as canceled
-        // it should call the sender hook
-        // it should ignore the revert
+        // It should cancel the stream.
+        // It should mark the stream as canceled.
+        // It should call the sender hook.
+        // It should ignore the revert.
         vm.skip(true);
     }
 
@@ -303,10 +303,10 @@ contract CancelTest is Test {
         givenTheSenderIsAContract
         givenTheSenderImplementsTheHook
     {
-        // it should cancel the stream
-        // it should mark the stream as canceled
-        // it should call the sender hook
-        // it should ignore the revert
+        // It should cancel the stream.
+        // It should mark the stream as canceled.
+        // It should call the sender hook.
+        // It should ignore the revert.
         vm.skip(true);
     }
 
@@ -327,10 +327,10 @@ contract CancelTest is Test {
         givenTheSenderImplementsTheHook
         whenTheSenderDoesNotRevert
     {
-        // it should cancel the stream
-        // it should mark the stream as canceled
-        // it should call the sender hook
-        // it should ignore the revert
+        // It should cancel the stream.
+        // It should mark the stream as canceled.
+        // It should call the sender hook.
+        // It should ignore the revert.
         vm.skip(true);
     }
 
@@ -347,14 +347,14 @@ contract CancelTest is Test {
         givenTheSenderImplementsTheHook
         whenTheSenderDoesNotRevert
     {
-        // it should cancel the stream
-        // it should mark the stream as canceled
-        // it should make the stream not cancelable
-        // it should update the refunded amount
-        // it should refund the sender
-        // it should call the sender hook
-        // it should emit a {MetadataUpdate} event
-        // it should emit a {CancelLockupStream} event
+        // It should cancel the stream.
+        // It should mark the stream as canceled.
+        // It should make the stream not cancelable.
+        // It should update the refunded amount.
+        // It should refund the sender.
+        // It should call the sender hook.
+        // It should emit a {MetadataUpdate} event.
+        // It should emit a {CancelLockupStream} event.
         vm.skip(true);
     }
 }

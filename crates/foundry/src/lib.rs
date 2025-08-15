@@ -14,5 +14,6 @@ pub mod constants;
 pub mod hir;
 pub mod scaffold;
 pub mod sol;
+pub mod utils;
 
 pub use check::violation::{self, Violation, ViolationKind};
