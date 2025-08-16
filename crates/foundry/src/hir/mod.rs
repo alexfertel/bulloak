@@ -26,11 +26,15 @@ use crate::{config::Config, scaffold::modifiers::ModifierDiscoverer};
 pub fn translate(text: &str, cfg: &Config) -> anyhow::Result<Hir> {
     let asts = bulloak_syntax::parse(text)?;
 
+    // Return if there is only one tree.
     if asts.len() == 1 {
         return Ok(translate_one(&asts[0], cfg));
     }
 
-    let hirs = asts.into_iter().map(|ast| translate_one(&ast, cfg));
+    let mut multi_cfg = cfg.clone();
+    multi_cfg.multiple_roots = true;
+
+    let hirs = asts.into_iter().map(|ast| translate_one(&ast, &multi_cfg));
     Ok(combiner::Combiner::new().combine(text, hirs)?)
 }
 

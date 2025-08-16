@@ -233,7 +233,20 @@ fn update_children(
 fn prefix_test_with(test_name: &str, prefix: &str) -> String {
     let capitalized_fn_name = upper_first_letter(prefix);
     let test_suffix = test_name.trim_start_matches("test_");
-    format!("test_{capitalized_fn_name}{test_suffix}")
+
+    // In case of When*, Given*, RevertWhen*, RevertGiven* conditions, don't add
+    // underscore between function name and condition.
+    if test_suffix.starts_with("When")
+        || test_suffix.starts_with("Given")
+        || test_suffix.starts_with("RevertWhen")
+        || test_suffix.starts_with("RevertGiven")
+    {
+        format!("test_{capitalized_fn_name}{test_suffix}")
+    }
+    // Otherwise, add underscore between function name and condition.
+    else {
+        format!("test_{capitalized_fn_name}_{test_suffix}")
+    }
 }
 
 fn collect_modifier(
