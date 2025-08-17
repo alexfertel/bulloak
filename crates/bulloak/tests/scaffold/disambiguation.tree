@@ -1,0 +1,12 @@
+Disambiguation
+├── when a is even
+│  ├── given zero
+│  │  └── it should revert
+│  └── given not zero
+│     └── it should work
+└── when b is even
+    ├── given zero
+    │   └── it should revert
+    └── given not zero
+        └── it should work
+
