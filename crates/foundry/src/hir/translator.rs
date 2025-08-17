@@ -13,6 +13,24 @@ use crate::{
     hir::{self, Hir},
 };
 
+/// Used in `make_unique_name` to signify joining ancestors with an underscore
+/// or something else.
+#[derive(Debug, Clone, Copy)]
+enum Joiner {
+    Underscore,
+    None,
+}
+
+impl std::fmt::Display for Joiner {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let joiner = match self {
+            Joiner::Underscore => "_",
+            Joiner::None => "",
+        };
+        write!(f, "{}", joiner)
+    }
+}
+
 /// A translator between a bulloak tree abstract syntax tree (AST)
 /// and a high-level intermediate representation (HIR) -- AST -> HIR.
 ///
@@ -94,34 +112,38 @@ impl<'a> TranslatorI<'a> {
 
     /// Builds a unique function identifier by optionally prepending nearest
     /// ancestor modifiers (PascalCase) to the suffix until unique.
-    fn make_unique_name(&mut self, prefix: &str, base_suffix: &str) -> String {
-        // Try the base name.
+    fn make_unique_name(
+        &mut self,
+        prefix: &str,
+        base_suffix: &str,
+        joiner: Joiner,
+    ) -> String {
+        // Try the base name first.
         let mut suffix = base_suffix.to_string();
         let mut full = format!("{prefix}{suffix}");
         if self.used_fns.insert(full.clone()) {
             return full;
         }
 
-        // If collision, prepend nearest ancestors (reverse modifier stack)
+        // If collision, append nearest ancestors (nearest first).
         for anc in self.modifier_stack.iter().rev() {
-            // `anc` is lowerCamel (e.g. whenTheCallerIsUnauthorized)
-            // Convert to PascalCase by uppercasing first letter.
             let anc_pascal = bulloak_syntax::utils::upper_first_letter(anc);
-            suffix = format!("{anc_pascal}_{}", suffix);
+            suffix.push_str(&joiner.to_string());
+            suffix.push_str(&anc_pascal);
             full = format!("{prefix}{suffix}");
             if self.used_fns.insert(full.clone()) {
                 return full;
             }
         }
 
-        // Still collision? Fallback to counter suffix.
-        let mut i = 2;
+        // Still a collision? Add a numeric suffix.
+        let mut n = 2;
         loop {
-            let attempt = format!("{prefix}{}_{}", suffix, i);
+            let attempt = format!("{prefix}{suffix}{joiner}{n}");
             if self.used_fns.insert(attempt.clone()) {
                 return attempt;
             }
-            i += 1;
+            n += 1;
         }
     }
 }
@@ -167,7 +189,11 @@ impl<'a> Visitor for TranslatorI<'a> {
                     // phase because we want to emit the action as-is in a
                     // comment.
                     let test_name = sanitize(&test_name);
-                    let test_name = self.make_unique_name("test_", &test_name);
+                    let test_name = self.make_unique_name(
+                        "test_",
+                        &test_name,
+                        Joiner::Underscore,
+                    );
 
                     let mut hirs = self.visit_action(action)?;
 
@@ -283,7 +309,7 @@ impl<'a> Visitor for TranslatorI<'a> {
                 //
                 // where `KEYWORD` is the starting word of the condition.
                 let prefix = format!("test_Revert{keyword}_");
-                self.make_unique_name(&prefix, &test_name)
+                self.make_unique_name(&prefix, &test_name, Joiner::None)
             } else {
                 // Map an iterator over the words of a condition to the test
                 // name.
@@ -295,7 +321,7 @@ impl<'a> Visitor for TranslatorI<'a> {
                     acc
                 });
 
-                self.make_unique_name("test_", &test_name)
+                self.make_unique_name("test_", &test_name, Joiner::Underscore)
             };
 
             let modifiers = if self.modifier_stack.is_empty() {
@@ -594,7 +620,7 @@ Foo_Test
             names,
             vec![
                 "test_WhenChildSame".to_string(),
-                "test_WhenParentTwo_WhenChildSame".to_string()
+                "test_WhenChildSame_WhenParentTwo".to_string(),
             ]
         );
         Ok(())
@@ -622,8 +648,8 @@ Foo_Test
             names,
             vec![
                 "test_WhenChildSame",
-                "test_WhenParentX_WhenChildSame",
-                "test_WhenGrandC_WhenParentX_WhenChildSame",
+                "test_WhenChildSame_WhenParentX",
+                "test_WhenChildSame_WhenParentX_WhenGrandC",
             ]
             .into_iter()
             .map(|s| s.to_string())
@@ -648,7 +674,7 @@ Foo_Test
             names,
             vec![
                 "test_RevertWhen_ChildSame",
-                "test_RevertWhen_WhenParentTwo_ChildSame",
+                "test_RevertWhen_ChildSameWhenParentTwo",
             ]
             .into_iter()
             .map(|s| s.to_string())
