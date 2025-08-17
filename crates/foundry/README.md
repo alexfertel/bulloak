@@ -1,6 +1,8 @@
 # bulloak-foundry
 
-`bulloak-foundry` is a Rust crate that serves as a backend for generating Foundry tests from `bulloak-syntax` Abstract Syntax Trees (ASTs). It provides functionality to scaffold Solidity test files and check existing tests against specifications.
+`bulloak-foundry` is a Rust crate that serves as a backend for generating Foundry tests from `bulloak-syntax` Abstract
+Syntax Trees (ASTs). It provides functionality to scaffold Solidity test files and check existing tests against
+specifications.
 
 ## Features
 
@@ -8,11 +10,9 @@
 - Check existing Solidity test files against `.tree` specifications.
 - Implement and enforce custom rules for test structure and content.
 - Automatic fixing of certain rule violations.
-- Allow duplicate condition titles; a single modifier per unique title is
-  emitted and reused where needed.
-- Automatic function name disambiguation: when two tests would clash, `bulloak`
-  prepends nearest ancestor conditions (and if needed multiple ancestors) to
-  produce a unique name.
+- Allow duplicate condition titles; a single modifier per unique title is emitted and reused where needed.
+- Automatic function name disambiguation: when two tests would clash, `bulloak` prepends nearest ancestor conditions
+  (and if needed multiple ancestors) to produce a unique name.
 
 ## Usage
 
@@ -46,13 +46,12 @@ fn main() -> anyhow::Result<()> {
 
 ## Violation Checking
 
-`bulloak-foundry` includes a system for defining and checking rules against Solidity test files. Violations can be of different kinds, as defined in the `ViolationKind` enum.
+`bulloak-foundry` includes a system for defining and checking rules against Solidity test files. Violations can be of
+different kinds, as defined in the `ViolationKind` enum.
 
 ## License
 
 This project is licensed under either of:
 
-- Apache License, Version 2.0, ([LICENSE-APACHE](LICENSE-APACHE) or
-  https://www.apache.org/licenses/LICENSE-2.0).
-- MIT license ([LICENSE-MIT](LICENSE-MIT) or
-  https://opensource.org/licenses/MIT).
+- Apache License, Version 2.0, ([LICENSE-APACHE](LICENSE-APACHE) or https://www.apache.org/licenses/LICENSE-2.0).
+- MIT license ([LICENSE-MIT](LICENSE-MIT) or https://opensource.org/licenses/MIT).
