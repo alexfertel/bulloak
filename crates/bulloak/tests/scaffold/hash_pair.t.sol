@@ -2,39 +2,39 @@
 pragma solidity 0.8.0;
 
 contract Utils {
-    function test_HashPairShouldNeverRevert() external {
+    function test_HashPair_ShouldNeverRevert() external {
         // It should never revert.
     }
 
-    function test_HashPairWhenFirstArgIsSmallerThanSecondArg() external {
+    function test_HashPairWhen_FirstArgIsSmallerThanSecondArg() external {
         // It should match the result of `keccak256(abi.encodePacked(a,b))`.
     }
 
-    function test_HashPairWhenFirstArgIsBiggerThanSecondArg() external {
+    function test_HashPairWhen_FirstArgIsBiggerThanSecondArg() external {
         // It should match the result of `keccak256(abi.encodePacked(b,a))`.
     }
 
-    function test_MinShouldNeverRevert() external {
+    function test_Min_ShouldNeverRevert() external {
         // It should never revert.
     }
 
-    function test_MinWhenFirstArgIsSmallerThanSecondArg() external {
+    function test_MinWhen_FirstArgIsSmallerThanSecondArg() external {
         // It should match the value of `a`.
     }
 
-    function test_MinWhenFirstArgIsBiggerThanSecondArg() external {
+    function test_MinWhen_FirstArgIsBiggerThanSecondArg() external {
         // It should match the value of `b`.
     }
 
-    function test_MaxShouldNeverRevert() external {
+    function test_Max_ShouldNeverRevert() external {
         // It should never revert.
     }
 
-    function test_MaxWhenFirstArgIsSmallerThanSecondArg() external {
+    function test_MaxWhen_FirstArgIsSmallerThanSecondArg() external {
         // It should match the value of `b`.
     }
 
-    function test_MaxWhenFirstArgIsBiggerThanSecondArg() external {
+    function test_MaxWhen_FirstArgIsBiggerThanSecondArg() external {
         // It should match the value of `a`.
     }
 }

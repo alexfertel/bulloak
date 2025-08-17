@@ -78,6 +78,8 @@ struct TranslatorI<'a> {
     /// to improve performance. Otherwise each title would be converted
     /// to a modifier every time it is used.
     modifiers: &'a IndexMap<String, String>,
+    /// Whether to process multiple roots.
+    multiple_roots: bool,
     /// Whether to add `vm.skip(true)` at the beginning of each test.
     with_vm_skip: bool,
     /// Keep track of the generated functions so far.
@@ -90,10 +92,12 @@ impl<'a> TranslatorI<'a> {
     /// Creates a new internal translator.
     fn new(modifiers: &'a IndexMap<String, String>, cfg: &Config) -> Self {
         let with_vm_skip = cfg.emit_vm_skip;
+        let multiple_roots = cfg.multiple_roots;
         Self {
             modifier_stack: Vec::new(),
             modifiers,
             with_vm_skip,
+            multiple_roots,
             used_fns: HashSet::new(),
         }
     }
@@ -313,13 +317,23 @@ impl<'a> Visitor for TranslatorI<'a> {
             } else {
                 // Map an iterator over the words of a condition to the test
                 // name.
-                //
-                // Example: [when, something, happens] -> WhenSomethingHappens
-                let test_name = words.fold(keyword, |mut acc, w| {
-                    acc.reserve(w.len() + 1);
-                    acc.push_str(&upper_first_letter(w));
-                    acc
-                });
+                let test_name = if self.multiple_roots {
+                    // For multiple roots: [when, something, happens] ->
+                    // When_SomethingHappens
+                    words.fold(format!("{keyword}_"), |mut acc, w| {
+                        acc.reserve(w.len() + 1);
+                        acc.push_str(&upper_first_letter(w));
+                        acc
+                    })
+                } else {
+                    // Otherwise, for single root, [when, something, happens] ->
+                    // WhenSomethingHappens
+                    words.fold(keyword, |mut acc, w| {
+                        acc.reserve(w.len() + 1);
+                        acc.push_str(&upper_first_letter(w));
+                        acc
+                    })
+                };
 
                 self.make_unique_name("test_", &test_name, Joiner::Underscore)
             };
