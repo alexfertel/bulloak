@@ -103,12 +103,10 @@ impl Scaffold {
     fn process_file(&self, file: &Path, cfg: &Cli) -> anyhow::Result<()> {
         let text = fs::read_to_string(file)?;
         let emitted = scaffold(&text, &cfg.into())?;
-        let formatted = fmt(&emitted)
-            .unwrap_or_else(|err| {
-                eprintln!("{}: {}", "WARN".yellow(), err);
-                emitted
-            })
-            .replace("import {Test}", "import { Test }");
+        let formatted = fmt(&emitted).unwrap_or_else(|err| {
+            eprintln!("{}: {}", "WARN".yellow(), err);
+            emitted
+        });
 
         if self.write_files {
             let file = file.with_extension("t.sol");

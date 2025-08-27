@@ -260,10 +260,8 @@ impl Visitor for EmitterI {
     ) -> result::Result<Self::CommentOutput, Self::Error> {
         let mut emitted = String::new();
         let indentation = self.emitter.indent().repeat(2);
-        let formatted_comment = crate::utils::format_comment(&comment.lexeme);
-
-        use std::fmt::Write;
-        write!(emitted, "{indentation}// {formatted_comment}\n").unwrap();
+        emitted
+            .push_str(format!("{indentation}// {}\n", comment.lexeme).as_str());
 
         Ok(emitted)
     }
@@ -316,7 +314,7 @@ pragma solidity 0.8.0;
 
 contract FileTest {
   function test_WhenSomethingBadHappens() external {
-    // It should not revert.
+    // it should not revert
   }
 }"
         );
@@ -333,7 +331,7 @@ pragma solidity 0.8.0;
 
 contract FileTest {
   function test_RevertWhen_SomethingBadHappens() external {
-    // It should revert.
+    // it should revert
   }
 }"
         );
@@ -354,7 +352,7 @@ pragma solidity 0.8.0;
 
 contract FileTest {
   function test_ShouldDoSt_ff() external {
-    // It should do st-ff.
+    // it should do st-ff
   }
 
   function test_NeverReverts() external {
@@ -377,11 +375,11 @@ pragma solidity 0.8.0;
 
 contract FileTest {
   function test_ShouldDoStuff() external {
-    // It should do stuff.
+    // it should do stuff
   }
 
   function test_RevertWhen_SomethingHappens() external {
-    // It should revert.
+    // it should revert
   }
 }"
         );
@@ -401,15 +399,15 @@ pragma solidity 0.8.0;
 
 contract FileTest {
   function test_ShouldDoStuff() external {
-    // It should do stuff.
+    // it should do stuff
   }
 
   function test_RevertWhen_SomethingHappens() external {
-    // It should revert.
+    // it should revert
   }
 
   function test_DoesEverything() external {
-    // It does everything.
+    // it does everything
   }
 }"
         );
@@ -429,7 +427,7 @@ pragma solidity 0.8.0;
 
 contract Fi_eTest {
   function test_WhenSomethingBadHappens() external {
-    // It should not revert.
+    // it should not revert
   }
 }"
         );
@@ -449,7 +447,7 @@ pragma solidity 0.8.0;
 
 contract FileTest {
   function test_WhenSomethingBadHappens() external {
-    // It should not revert.
+    // it should not revert
   }
 }"
         );
@@ -472,7 +470,7 @@ pragma solidity 0.8.0;
 
 contract FileTest {
   function test_WhenSomethingBadHappens() external {
-    // It should not revert.
+    // it should not revert
     vm.skip(true);
   }
 }"
@@ -506,11 +504,11 @@ pragma solidity 0.8.0;
 
 contract TwoChildren_Test {
   function test_RevertWhen_StuffCalled() external {
-    // It should revert.
+    // it should revert
   }
 
   function test_RevertWhen_NotStuffCalled() external {
-    // It should revert.
+    // it should revert
   }
 }"
         );
@@ -554,14 +552,14 @@ contract Foo_Test {
     external
     whenStuffCalled
   {
-    // It should revert.
+    // it should revert
   }
 
   function test_WhenBCalled()
     external
     whenStuffCalled
   {
-    // It should not revert.
+    // it should not revert
   }
 }"
         );
@@ -587,9 +585,9 @@ pragma solidity 0.8.0;
 
 contract ActionsTest {
   function test_WhenStuffCalled() external {
-    // It should do stuff.
-    // It should be cool.
-    // It might break.
+    // it should do stuff
+    // it should be cool
+    // it might break
   }
 }"
         );
@@ -615,9 +613,9 @@ pragma solidity 0.8.0;
 
 contract ActionsTest {
   function test_RevertWhen_StuffCalled() external {
-    // It should revert.
-    // It should be cool.
-    // It might break.
+    // it should revert
+    // it should be cool
+    // it might break
   }
 }"
         );
@@ -668,9 +666,9 @@ pragma solidity 0.8.0;
 
 contract ActionsTest {
   function test_WhenStuffCalled() external {
-    // It should be cool.
-    // It should revert.
-    // It might break.
+    // it should be cool
+    // it should revert
+    // it might break
   }
 }"
         );
@@ -696,10 +694,10 @@ pragma solidity 0.8.0;
 
 contract DescriptionsTest {
   function test_WhenSomethingBadHappens() external {
-    // It should try to revert.
-    //    some stuff happened.
-    //       and that stuff.
-    //    was very _bad_.
+    // it should try to revert
+    //    some stuff happened
+    //       and that stuff
+    //    was very _bad_
   }
 }"
         );
@@ -741,7 +739,7 @@ pragma solidity 0.8.0;
 
 contract DeepTest {
   function test_RevertWhen_StuffCalled() external {
-    // It should revert.
+    // it should revert
   }
 
   modifier whenNotStuffCalled() {
@@ -752,7 +750,7 @@ contract DeepTest {
     external
     whenNotStuffCalled
   {
-    // It should revert.
+    // it should revert
   }
 
   modifier whenTheDepositAmountIsNotZero() {
@@ -764,7 +762,7 @@ contract DeepTest {
     whenNotStuffCalled
     whenTheDepositAmountIsNotZero
   {
-    // It should revert.
+    // it should revert
   }
 
   function test_RevertWhen_TheAssetIsNotAContract()
@@ -772,7 +770,7 @@ contract DeepTest {
     whenNotStuffCalled
     whenTheDepositAmountIsNotZero
   {
-    // It should revert.
+    // it should revert
   }
 
   modifier givenTheAssetIsAContract() {
@@ -785,9 +783,9 @@ contract DeepTest {
     whenTheDepositAmountIsNotZero
     givenTheAssetIsAContract
   {
-    // It should create the child.
-    // It should perform the ERC-20 transfers.
-    // It should emit a {MultipleChildren} event.
+    // it should create the child
+    // it should perform the ERC-20 transfers
+    // it should emit a {MultipleChildren} event
   }
 
   function test_WhenTheAssetDoesNotMissTheERC_20ReturnValue()
@@ -796,8 +794,8 @@ contract DeepTest {
     whenTheDepositAmountIsNotZero
     givenTheAssetIsAContract
   {
-    // It should create the child.
-    // It should emit a {MultipleChildren} event.
+    // it should create the child
+    // it should emit a {MultipleChildren} event
     //    - Because the deposit should not be 0.
     //    - The number count is > 0.
     //    - Events should be emitted.

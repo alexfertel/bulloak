@@ -7,10 +7,10 @@ contract MultipleRootsTreeTest {
     }
 
     function test_Function1WhenFirstArgIsBiggerThanSecondArg() external {
-        // It is all good.
+        // It is all good
     }
 
     function test_Function2WhenStuffHappens() external {
-        // It should do something simple.
+        // It should do something simple
     }
 }

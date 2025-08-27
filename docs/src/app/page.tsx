@@ -45,25 +45,34 @@ const BTTExplanationSection = () => {
   return (
     <div className="py-12 sm:py-16 bg-slate-50 text-slate-900">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <h2 className="text-2xl sm:text-3xl font-bold mb-6 sm:mb-8">What is the Branching Tree Technique?</h2>
+        <h2 className="text-2xl sm:text-3xl font-bold mb-6 sm:mb-8">
+          What is the Branching Tree Technique?
+        </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
           <div>
             <p className="text-base sm:text-lg mb-4">
-              The Branching Tree Technique (BTT) is a structured approach to test case design that ensures comprehensive
-              coverage of all possible scenarios and edge cases in your smart contract tests.
+              The Branching Tree Technique (BTT) is a structured approach to
+              test case design that ensures comprehensive coverage of all
+              possible scenarios and edge cases in your smart contract tests.
             </p>
-            <p className="text-base sm:text-lg mb-4">BTT organizes test cases in a tree-like structure, where:</p>
+            <p className="text-base sm:text-lg mb-4">
+              BTT organizes test cases in a tree-like structure, where:
+            </p>
             <ul className="text-base sm:text-lg mb-4">
               <li>
-                <span className="mr-2 font-mono">├──</span>Branches represent different conditions or states
+                <span className="mr-2 font-mono">├──</span>Branches represent
+                different conditions or states
               </li>
               <li>
-                <span className="mr-2 font-mono">└──</span>Leaves represent specific test cases or assertions
+                <span className="mr-2 font-mono">└──</span>Leaves represent
+                specific test cases or assertions
               </li>
             </ul>
           </div>
           <div className="border border-slate-300 p-4 sm:p-6">
-            <h3 className="text-lg sm:text-xl font-bold mb-4">Example BTT Structure</h3>
+            <h3 className="text-lg sm:text-xl font-bold mb-4">
+              Example BTT Structure
+            </h3>
             <pre className="text-xs sm:text-sm font-mono overflow-x-auto">
               {`HashPairTest
 ├── When first arg is smaller than second arg
@@ -77,21 +86,26 @@ const BTTExplanationSection = () => {
           <p className="text-lg mb-4">This technique helps developers:</p>
           <ul className="text-lg mb-4">
             <li>
-              <span className="mr-2 font-mono">├──</span>Visualize all possible test scenarios
+              <span className="mr-2 font-mono">├──</span>Visualize all possible
+              test scenarios
             </li>
             <li>
-              <span className="mr-2 font-mono">├──</span>Ensure complete test coverage
+              <span className="mr-2 font-mono">├──</span>Ensure complete test
+              coverage
             </li>
             <li>
-              <span className="mr-2 font-mono">├──</span>Easily identify missing test cases
+              <span className="mr-2 font-mono">├──</span>Easily identify missing
+              test cases
             </li>
             <li>
-              <span className="mr-2 font-mono">└──</span>Maintain a clear and organized test structure
+              <span className="mr-2 font-mono">└──</span>Maintain a clear and
+              organized test structure
             </li>
           </ul>
           <p className="text-lg">
-            Bulloak leverages BTT to automatically generate comprehensive test suites, saving time and improving the
-            quality of smart contract testing.
+            Bulloak leverages BTT to automatically generate comprehensive test
+            suites, saving time and improving the quality of smart contract
+            testing.
           </p>
         </div>
       </div>
@@ -103,10 +117,13 @@ const BulloakFeaturesSection = () => {
   return (
     <div className="py-12 sm:py-16 bg-slate-100 text-slate-900">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <h2 className="text-2xl sm:text-3xl font-bold mb-6 sm:mb-8">What is bulloak?</h2>
+        <h2 className="text-2xl sm:text-3xl font-bold mb-6 sm:mb-8">
+          What is bulloak?
+        </h2>
         <p className="text-base sm:text-lg mb-6">
-          bulloak is a powerful tool that brings the Branching Tree Technique to life for developers. It automates the
-          process of creating comprehensive test suites based on BTT specifications.{" "}
+          bulloak is a powerful tool that brings the Branching Tree Technique to
+          life for developers. It automates the process of creating
+          comprehensive test suites based on BTT specifications.{" "}
           <Link
             href="https://github.com/alexfertel/bulloak"
             target="_blank"
@@ -141,7 +158,9 @@ Bulloak
         <div className="border border-slate-300 p-4 sm:p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
             <div className="font-mono">
-              <h5 className="text-base sm:text-lg font-semibold mb-2">hash_pair.tree</h5>
+              <h5 className="text-base sm:text-lg font-semibold mb-2">
+                hash_pair.tree
+              </h5>
               <pre className="border border-slate-300 text-slate-900 px-4 overflow-x-auto text-xs sm:text-sm">
                 <code>{`
 HashPairTest
@@ -189,7 +208,9 @@ const UsageSection = () => {
             </pre>
           </div>
           <div>
-            <h3 className="text-xl font-semibold mb-2">2. Create a .tree file (e.g., foo.tree)</h3>
+            <h3 className="text-xl font-semibold mb-2">
+              2. Create a .tree file (e.g., foo.tree)
+            </h3>
             <pre className="border border-slate-300 text-slate-900 px-4 overflow-x-auto py-2">
               <code>{`FooTest
 └── When stuff is called
@@ -199,7 +220,9 @@ const UsageSection = () => {
             </pre>
           </div>
           <div>
-            <h3 className="text-xl font-semibold mb-2">3. Generate Solidity test files</h3>
+            <h3 className="text-xl font-semibold mb-2">
+              3. Generate Solidity test files
+            </h3>
             <pre className="border border-slate-300 text-slate-900 px-4 overflow-x-auto py-2">
               <code>{`$ bulloak scaffold foo.tree
 // SPDX-License-Identifier: UNLICENSED
@@ -219,7 +242,9 @@ contract FooTest {
             </pre>
           </div>
           <div>
-            <h3 className="text-xl font-semibold mb-2">4. Check if the code matches the specification</h3>
+            <h3 className="text-xl font-semibold mb-2">
+              4. Check if the code matches the specification
+            </h3>
             <pre className="border border-slate-300 text-slate-900 px-4 overflow-x-auto py-2">
               <code>{`$ bulloak check foo.tree
 warn: function "test_WhenFirstArgIsBiggerThanSecondArg" is missing in .sol
@@ -230,7 +255,9 @@ warn: 1 check failed (run \`bulloak check --fix foo.tree\` to apply 1 fix)`}</co
             </pre>
           </div>
           <div>
-            <h3 className="text-xl font-semibold mb-2">5. Automatically fix issues (if any)</h3>
+            <h3 className="text-xl font-semibold mb-2">
+              5. Automatically fix issues (if any)
+            </h3>
             <pre className="border border-slate-300 text-slate-900 px-4 overflow-x-auto py-2">
               <code>{`$ bulloak check --fix foo.tree
 ...
@@ -240,7 +267,11 @@ success: 1 issue fixed.`}</code>
         </div>
         <p className="mt-6 sm:mt-8 text-base sm:text-lg">
           For more detailed usage instructions and options, refer to the{" "}
-          <Link href="https://github.com/alexfertel/bulloak" target="_blank" className="underline hover:text-slate-600">
+          <Link
+            href="https://github.com/alexfertel/bulloak"
+            target="_blank"
+            className="underline hover:text-slate-600"
+          >
             full documentation on GitHub
           </Link>
           .
@@ -320,7 +351,9 @@ const Footer = () => {
             </ul>
           </div>
           <div className="col-span-1">
-            <h3 className="text-lg sm:text-xl font-bold mb-4">Related Projects/</h3>
+            <h3 className="text-lg sm:text-xl font-bold mb-4">
+              Related Projects/
+            </h3>
             <ul>
               <li>
                 <span className="mr-2">├──</span>
@@ -349,13 +382,21 @@ const Footer = () => {
             <ul>
               <li>
                 <span className="mr-2">├──</span>
-                <Link href="https://www.rumpel.xyz/" target="_blank" className="hover:underline hover:text-slate-600">
+                <Link
+                  href="https://www.rumpel.xyz/"
+                  target="_blank"
+                  className="hover:underline hover:text-slate-600"
+                >
                   Rumpel Labs
                 </Link>
               </li>
               <li>
                 <span className="mr-2">└──</span>
-                <Link href="https://sablier.com/" target="_blank" className="hover:underline hover:text-slate-600">
+                <Link
+                  href="https://sablier.com/"
+                  target="_blank"
+                  className="hover:underline hover:text-slate-600"
+                >
                   Sablier
                 </Link>
               </li>
@@ -364,7 +405,11 @@ const Footer = () => {
         </div>
         <div className="mt-10 sm:mt-12 text-xs sm:text-sm flex items-center justify-end">
           Created by{" "}
-          <Link href="https://alexfertel.me" target="_blank" className="ml-1 text-blue-600 hover:underline font-mono">
+          <Link
+            href="https://alexfertel.me"
+            target="_blank"
+            className="ml-1 text-blue-600 hover:underline font-mono"
+          >
             alexfertel
           </Link>
         </div>

@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity >=0.8.22;
 
-import { Integration_Test } from "./Integration.t.sol";
+import {Integration_Test} from "../../Integration.t.sol";
 
 contract RecentAmountOf_Integration_Concrete_Test is Integration_Test {
     function test_RevertGiven_Null() external {
-        bytes memory callData = abi.encodeCall(flow.recentAmountOf, nullStreamId);
+        bytes memory callData = abi.encodeCall(
+            flow.recentAmountOf,
+            nullStreamId
+        );
         expectRevert_Null(callData);
     }
 
@@ -17,7 +20,11 @@ contract RecentAmountOf_Integration_Concrete_Test is Integration_Test {
         assertEq(recentAmount, 0, "recent amount");
     }
 
-    function test_WhenLastUpdatedTimeInPresent() external givenNotNull givenNotPaused {
+    function test_WhenLastUpdatedTimeInPresent()
+        external
+        givenNotNull
+        givenNotPaused
+    {
         // Update the last time to the current block timestamp.
         updateLastTimeToBlockTimestamp(defaultStreamId);
 

@@ -85,7 +85,14 @@ const AsciiTreeAnimation: React.FC = () => {
       };
     };
 
-    const branchGrow = (tree: Tree, startX: number, startY: number, h: number, angle: number, level: number) => {
+    const branchGrow = (
+      tree: Tree,
+      startX: number,
+      startY: number,
+      h: number,
+      angle: number,
+      level: number,
+    ) => {
       if (level >= tree.currentLevel) return;
 
       const endX = startX + Math.sin(angle) * h;
@@ -98,8 +105,10 @@ const AsciiTreeAnimation: React.FC = () => {
 
       const rangleSign = Math.random() > 0.5 ? 1 : -1;
       const langleSign = Math.random() > 0.5 ? 1 : -1;
-      const rangleDelta = ((tree.angle * Math.PI) / 180) * (0.5 + Math.random() * 0.7);
-      const langleDelta = ((tree.angle * Math.PI) / 180) * (0.5 + Math.random() * 0.7);
+      const rangleDelta =
+        ((tree.angle * Math.PI) / 180) * (0.5 + Math.random() * 0.7);
+      const langleDelta =
+        ((tree.angle * Math.PI) / 180) * (0.5 + Math.random() * 0.7);
       const rangle = angle + rangleSign * rangleDelta;
       const langle = angle + langleSign * langleDelta;
 
@@ -139,7 +148,14 @@ const AsciiTreeAnimation: React.FC = () => {
           tree.currentLevel++;
           tree.age = 0;
           const trunk = tree.branches[0];
-          branchGrow(tree, trunk.endX, trunk.endY, tree.height * 0.3 * 0.8, 0, 1);
+          branchGrow(
+            tree,
+            trunk.endX,
+            trunk.endY,
+            tree.height * 0.3 * 0.8,
+            0,
+            1,
+          );
         }
         drawTree(tree);
         return tree.age < 20000 || tree.currentLevel < tree.maxLevels;

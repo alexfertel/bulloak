@@ -26,8 +26,8 @@ jobs:
           draft: true
           token: ${{ secrets.GITHUB_TOKEN }}
           ref:
-            ${{ github.event_name == 'workflow_dispatch' && format('refs/tags/{0}', github.event.inputs.tag) ||
-            github.ref }}
+            ${{ github.event_name == 'workflow_dispatch' &&
+            format('refs/tags/{0}', github.event.inputs.tag) || github.ref }}
   upload-assets:
     needs: create-release
     runs-on: ${{ matrix.os }}
@@ -56,5 +56,5 @@ jobs:
           target: ${{ matrix.target }}
           # archives as .tar.gz on UNIX and .zip on Windows by default
           ref:
-            ${{ github.event_name == 'workflow_dispatch' && format('refs/tags/{0}', github.event.inputs.tag) ||
-            github.ref }}
+            ${{ github.event_name == 'workflow_dispatch' &&
+            format('refs/tags/{0}', github.event.inputs.tag) || github.ref }}

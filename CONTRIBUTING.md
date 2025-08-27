@@ -1,13 +1,12 @@
 # Bulloak Contribution Guidelines
 
-Thank you for contributing to this project! We expect all contributors to have read this file before submitting PRs.
+Thank you for contributing to this project! We expect all contributors to have
+read this file before submitting PRs.
 
 ## Pre-Requisites
 
 Ensure you have the following software installed and configured on your machine:
 
-- [Bun](https://bun.sh/docs/installation) (package manager)
-- [Forge](https://getfoundry.sh/introduction/installation) (Solidity formatting)
 - [Node.js](https://nodejs.org) (v20+)
 - [Rust (Nightly)](https://rust-lang.org/tools/install)
 
@@ -15,8 +14,9 @@ In addition, familiarity with [Solidity](https://soliditylang.org) is requisite.
 
 ## Pull Requests
 
-To make changes to `bulloak`, please submit a PR to the `main` branch. We'll review them and either merge or request
-changes. We have a basic CI setup that runs:
+To make changes to `bulloak`, please submit a PR to the `main` branch. We'll
+review them and either merge or request changes. We have a basic CI setup that
+runs:
 
 ```rust
 cargo check
@@ -38,7 +38,8 @@ cargo test
 
 ### Rust Code
 
-We adhere to the standard rules of formatting in rust. Please, make sure that your changes follow them too by running:
+We adhere to the standard rules of formatting in rust. Please, make sure that
+your changes follow them too by running:
 
 ```bash
 rustup run nightly cargo fmt
@@ -50,23 +51,8 @@ We use Prettier to enforce consistent formatting across Markdown files.
 
 ```bash
 # Check formatting
-bun run prettier:check
+npm run prettier:check
 
 # Fix formatting issues
-bun run prettier:write
-```
-
-### Solidity Code
-
-We use Solhint and forge for formatting solidity files.
-
-```bash
-# Check formatting
-bun run solhint:check
-
-# Fix formatting issues using solhint
-bun run solhint:write
-
-# fix formatting issue using forge
-forge fmt crates/bulloak/tests/{scaffold,check}/**/*.sol
+npm run prettier:write
 ```
