@@ -71,7 +71,7 @@ fn bench_semantics(c: &mut Criterion) {
         b.iter(|| {
             let mut analyzer =
                 semantics::SemanticAnalyzer::new(black_box(&large));
-            analyzer.analyze(black_box(&ast)).unwrap_err();
+            analyzer.analyze(black_box(&ast)).unwrap();
         })
     });
     group.finish();
@@ -83,7 +83,7 @@ fn bench_e2e(c: &mut Criterion) {
     group.throughput(Throughput::Bytes(example.len() as u64));
     group.bench_function("e2e_parse", |b| {
         b.iter(|| {
-            let _ = parse(black_box(&example)).unwrap_err();
+            let _ = parse(black_box(&example)).unwrap();
         })
     });
     group.finish();

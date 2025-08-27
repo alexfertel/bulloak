@@ -6,11 +6,13 @@
 
 ## Features
 
-- Parse strings containing tree-like structures into ASTs
-- Tokenize input strings
-- Perform semantic analysis on parsed ASTs
-- Support for parsing both single and multiple trees
-- Error handling with custom `FrontendError` type
+- Parse strings containing tree-like structures into ASTs.
+- Tokenize input strings.
+- Perform semantic analysis on parsed ASTs (e.g., ensure the tree has content,
+  top‑level actions are unique). Duplicate condition titles are allowed; only
+  duplicate top‑level actions are rejected.
+- Support for parsing both single and multiple trees.
+- Error handling with custom `FrontendError` type.
 
 ## Usage
 

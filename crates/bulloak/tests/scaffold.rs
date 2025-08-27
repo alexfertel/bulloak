@@ -133,7 +133,7 @@ fn errors_when_condition_appears_multiple_times() {
     let cwd = env::current_dir().unwrap();
     let binary_path = get_binary_path();
     let tests_path = cwd.join("tests").join("scaffold");
-    let trees = ["duplicated_condition.tree", "duplicated_top_action.tree"];
+    let trees = ["duplicated_top_action.tree"];
 
     for tree_name in trees {
         let tree_path = tests_path.join(tree_name);
@@ -191,4 +191,26 @@ fn scaffold_invalid_glob_warns_but_no_output() {
         "unexpected scaffold output: {}",
         stdout
     );
+}
+
+#[cfg(not(target_os = "windows"))]
+#[test]
+fn scaffold_dissambiguates_function_name_collisions() {
+    let cwd = env::current_dir().unwrap();
+    let binary_path = get_binary_path();
+    let tests_path = cwd.join("tests").join("scaffold");
+    let trees = ["disambiguation.tree"];
+
+    for tree_name in trees {
+        let tree_path = tests_path.join(tree_name);
+        let output = cmd(&binary_path, "scaffold", &tree_path, &[]);
+        let actual = String::from_utf8(output.stdout).unwrap();
+
+        let mut output_file = tree_path.clone();
+        output_file.set_extension("t.sol");
+        let expected = fs::read_to_string(output_file).unwrap();
+
+        // We trim here because we don't care about ending newlines.
+        assert_eq!(expected.trim(), actual.trim());
+    }
 }
