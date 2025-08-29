@@ -1,0 +1,2 @@
+"*.{json,md,tsx,yml}": "prettier --write --ignore-path .prettierignore"
+"*.rs": "sh -c 'cargo +nightly fmt'"

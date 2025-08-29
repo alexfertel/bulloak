@@ -16,6 +16,7 @@ A Solidity test generator based on the
 - [Output](#output)
 - [License](#license)
 
+<!-- prettier-ignore -->
 > [!WARNING]
 > Note that `bulloak` is still `0.*.*`, so breaking changes
 > [may occur at any time](https://semver.org/#spec-item-4). If you must depend
@@ -32,7 +33,8 @@ cargo install bulloak
 The following VSCode extensions are not essential but they are recommended for a
 better user experience:
 
-- [Solidity Inspector](https://marketplace.visualstudio.com/items?itemName=PraneshASP.vscode-solidity-inspector) - syntax highlighting for `.tree` files
+- [Solidity Inspector](https://marketplace.visualstudio.com/items?itemName=PraneshASP.vscode-solidity-inspector) -
+  syntax highlighting for `.tree` files
 - [Ascii Tree Generator](https://marketplace.visualstudio.com/items?itemName=aprilandjan.ascii-tree-generator):
   convenient way to generate ASCII trees
 
@@ -89,8 +91,8 @@ contents to it.
 
 If a `.t.sol` file's title matches a `.tree` in the same directory, then
 `bulloak` will skip writing to that file. However, you may override this
-behaviour with the `-f` flag. This will force `bulloak` to overwrite the
-contents of the file.
+behavior with the `-f` flag. This will force `bulloak` to overwrite the contents
+of the file.
 
 ```text
 $ bulloak scaffold -wf ./**/*.tree
@@ -181,9 +183,9 @@ automatically fixed, and bulloak's output will reflect that.
 warn: 13 checks failed (run `bulloak check --fix <.tree files>` to apply 11 fixes)
 ```
 
-You can skip checking that the modifiers are present by passing the `-m`
-(or `--skip--modifiers`) option. This way, `bulloak` will not warn when a
-modifier is missing from the generated file.
+You can skip checking that the modifiers are present by passing the `-m` (or
+`--skip--modifiers`) option. This way, `bulloak` will not warn when a modifier
+is missing from the generated file.
 
 #### Rules
 

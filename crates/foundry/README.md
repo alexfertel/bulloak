@@ -1,10 +1,14 @@
 # bulloak-foundry
 
-`bulloak-foundry` is a Rust crate that serves as a backend for generating Foundry tests from `bulloak-syntax` Abstract Syntax Trees (ASTs). It provides functionality to scaffold Solidity test files and check existing tests against specifications.
+`bulloak-foundry` is a Rust crate that serves as a backend for generating
+Foundry tests from `bulloak-syntax` Abstract Syntax Trees (ASTs). It provides
+functionality to scaffold Solidity test files and check existing tests against
+specifications.
 
 ## Features
 
-- Generate `.t.sol` files with scaffolded Foundry tests from `bulloak-syntax` ASTs.
+- Generate `.t.sol` files with scaffolded Foundry tests from `bulloak-syntax`
+  ASTs.
 - Check existing Solidity test files against `.tree` specifications.
 - Implement and enforce custom rules for test structure and content.
 - Automatic fixing of certain rule violations.
@@ -42,11 +46,14 @@ fn main() -> anyhow::Result<()> {
 
 - Duplicate condition titles are allowed; modifiers are reused.
 - Top‑level actions must be unique (duplicates are an error).
-- Non‑top‑level test name clashes are resolved automatically by prepending ancestor conditions.
+- Non‑top‑level test name clashes are resolved automatically by prepending
+  ancestor conditions.
 
 ## Violation Checking
 
-`bulloak-foundry` includes a system for defining and checking rules against Solidity test files. Violations can be of different kinds, as defined in the `ViolationKind` enum.
+`bulloak-foundry` includes a system for defining and checking rules against
+Solidity test files. Violations can be of different kinds, as defined in the
+`ViolationKind` enum.
 
 ## License
 

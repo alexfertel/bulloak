@@ -2,7 +2,9 @@
 
 ## Overview
 
-`bulloak-syntax` is a Rust crate that provides a syntax parser for converting tree-like structures in string form into Abstract Syntax Trees (ASTs). It also includes a semantic analyzer for further processing of the parsed structures.
+`bulloak-syntax` is a Rust crate that provides a syntax parser for converting
+tree-like structures in string form into Abstract Syntax Trees (ASTs). It also
+includes a semantic analyzer for further processing of the parsed structures.
 
 ## Features
 

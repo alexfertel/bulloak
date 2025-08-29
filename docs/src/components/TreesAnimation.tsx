@@ -186,4 +186,3 @@ const AsciiTreeAnimation: React.FC = () => {
 };
 
 export default AsciiTreeAnimation;
-

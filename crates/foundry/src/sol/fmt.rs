@@ -317,6 +317,7 @@ fn cleanup_comments(source: &str) -> String {
     static RE_BULLOAK_COMMENT: Lazy<Regex> = Lazy::new(|| {
         Regex::new(r#"string __bulloak_comment__ = "(.*)";"#).unwrap()
     });
+
     RE_BULLOAK_COMMENT.replace_all(source, "// $1").to_string()
 }
 

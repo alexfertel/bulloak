@@ -1,0 +1,27 @@
+{
+  "name": "@alexfertel/bulloak",
+  "description": "Generate tests based on the Branching Tree Technique",
+  "license": "(MIT OR APACHE-2.0)",
+  "version": "0.8.1",
+  "author": {
+    "name": "Alex Fertel",
+    "url": "https://www.bulloak.dev/"
+  },
+  "bugs": {
+    "url": "https://github.com/alexfertel/bulloak/issues/new"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^16.1.5",
+    "prettier": "^3.6.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alexfertel/bulloak.git"
+  },
+  "scripts": {
+    "prepare": "husky install",
+    "prettier:check": "prettier --check \"**/*.{json,md,tsx,yml}\"",
+    "prettier:write": "prettier --write \"**/*.{json,md,tsx,yml}\""
+  }
+}
