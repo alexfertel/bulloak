@@ -591,10 +591,10 @@ Foo::b
         let sol = r#"// SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.0;
 contract Foo {
-  function test_AA() external {
+  function test_A_A() external {
     // It A.
   }
-  function test_BB() external {
+  function test_B_B() external {
     // It B.
   }
 }

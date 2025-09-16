@@ -233,7 +233,7 @@ fn update_children(
 fn prefix_test_with(test_name: &str, prefix: &str) -> String {
     let capitalized_fn_name = upper_first_letter(prefix);
     let test_suffix = test_name.trim_start_matches("test_");
-    format!("test_{capitalized_fn_name}{test_suffix}")
+    format!("test_{capitalized_fn_name}_{test_suffix}")
 }
 
 fn collect_modifier(
@@ -371,7 +371,7 @@ bulloak error: contract name missing at tree root #2";
                 "Contract".to_owned(),
                 vec![
                     function(
-                        "test_Function1RevertWhen_SomethingBadHappens"
+                        "test_Function1_RevertWhen_SomethingBadHappens"
                             .to_owned(),
                         hir::FunctionTy::Function,
                         Span::new(
@@ -385,7 +385,7 @@ bulloak error: contract name missing at tree root #2";
                         ])
                     ),
                     function(
-                        "test_Function2RevertWhen_SomethingShitHappens"
+                        "test_Function2_RevertWhen_SomethingShitHappens"
                             .to_owned(),
                         hir::FunctionTy::Function,
                         Span::new(
@@ -437,7 +437,7 @@ bulloak error: contract name missing at tree root #2";
                         None
                     ),
                     function(
-                        "test_Function1RevertGiven_SomethingElseHappens"
+                        "test_Function1_RevertGiven_SomethingElseHappens"
                             .to_owned(),
                         hir::FunctionTy::Function,
                         Span::new(
@@ -451,7 +451,7 @@ bulloak error: contract name missing at tree root #2";
                         ])
                     ),
                     function(
-                        "test_Function2RevertGiven_TheCallerIs0x1337"
+                        "test_Function2_RevertGiven_TheCallerIs0x1337"
                             .to_owned(),
                         hir::FunctionTy::Function,
                         Span::new(

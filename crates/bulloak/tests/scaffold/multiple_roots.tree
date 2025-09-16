@@ -4,5 +4,7 @@ MultipleRootsTreeTest::function1
     └── It is all good
 
 MultipleRootsTreeTest::function2
-└── When stuff happens
-    └── It should do something simple
+├── when stuff does not happen
+│   └── it should revert
+└── when stuff happens
+    └── it should do something simple
