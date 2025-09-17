@@ -30,14 +30,13 @@ bulloak-foundry = "0.1.0"  # Replace with the actual version
 ### Scaffolding Tests
 
 ```rust
-use bulloak_foundry::scaffold;
+use bulloak_foundry::{config::Config, scaffold};
 
 fn main() -> anyhow::Result<()> {
     let tree_spec = "Your .tree specification here";
-    let foundry_test = scaffold::scaffold(tree_spec)?;
-
+    let cfg = Config::default(); // customize as needed
+    let foundry_test = scaffold::scaffold(tree_spec, &cfg)?;
     // Write foundry_test to a .t.sol file
-
     Ok(())
 }
 ```
