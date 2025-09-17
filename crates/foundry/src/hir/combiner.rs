@@ -240,19 +240,17 @@ fn collect_modifier(
     child: Hir,
     unique_modifiers: &mut HashSet<String>,
 ) -> Option<Hir> {
-    let Hir::Function(test_or_modifier) = child else {
+    let Hir::Function(ref f) = child else {
         return Some(child);
     };
 
-    // If child is of type `FunctionDefinition` with the same identifier
-    // as a child of another `ContractDefinition` of ty `Modifier`, then
-    // they are duplicates.
-    if unique_modifiers.contains(&test_or_modifier.identifier) {
-        return None;
+    if f.is_modifier() {
+        if !unique_modifiers.insert(f.identifier.clone()) {
+            return None;
+        }
     }
 
-    unique_modifiers.insert(test_or_modifier.identifier.clone());
-    Some(Hir::Function(test_or_modifier.clone()))
+    Some(child)
 }
 
 #[cfg(test)]
@@ -467,5 +465,49 @@ bulloak error: contract name missing at tree root #2";
                 ]
             )]
         );
+    }
+
+    #[test]
+    fn does_not_deduplicate_tests_across_roots() -> Result<()> {
+        // Two separate roots with the same function identifier and same
+        // top‑level action. After combining, both test functions should
+        // remain, even though their identifiers are identical, i.e.,
+        // "test_Function_Same". Only modifiers should be deduplicated.
+        let trees = vec![
+            "Contract::function\n└── It same.",
+            "Contract::function\n└── It same.",
+        ];
+
+        let hirs = trees.iter().map(|tree| translate(tree).unwrap());
+        let text = trees.join("\n\n");
+        let combined = combine(&text, hirs)?;
+
+        // Collect test function names from the combined HIR.
+        let mut test_names = Vec::new();
+        if let Hir::Root(root) = combined {
+            for child in root.children {
+                if let Hir::Contract(c) = child {
+                    for k in c.children {
+                        if let Hir::Function(f) = k {
+                            if f.is_function() {
+                                test_names.push(f.identifier);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // With same function part ("function") and same action ("It same."),
+        // both roots produce "test_Function_Same". We should see it twice.
+        let expected = "test_Function_Same".to_string();
+        let count = test_names.iter().filter(|n| *n == &expected).count();
+        assert_eq!(
+            count, 2,
+            "expected to preserve both test functions; got: {:?}",
+            test_names
+        );
+
+        Ok(())
     }
 }
