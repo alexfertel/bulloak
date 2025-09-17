@@ -421,7 +421,8 @@ Please refer to [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 These are the current steps taken to publish `bulloak`:
 
-- Bump the version field in [Cargo.toml](./Cargo.toml).
+- Bump the root version field and the version fields in the workspace
+  dependencies section in [Cargo.toml](./Cargo.toml).
 - Update the [CHANGELOG.md](./CHANGELOG.md) file with
   `git cliff -o CHANGELOG.md`. This step includes setting the proper header for
   the latest tag.
