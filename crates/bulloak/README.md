@@ -103,8 +103,12 @@ you can use the `-S` (or `--vm-skip`) option to add a `vm.skip(true);` at the
 beginning of each test function. This option will also add an import for
 forge-std's `Test.sol` and all test contracts will inherit from it.
 
-You can skip emitting the modifiers by passing the `-m` (or `--skip-modifiers`)
-option. This way, the generated files will only include the test functions.
+You can skip emitting the modifier definitions by passing the `-m` (or
+`--skip-modifiers`) flag. Functions will still reference these modifiers in
+their signatures; only the modifier definitions themselves are omitted. This is
+useful together with bulloak check `-m` (which suppresses missing‑modifier
+violations). If you use `-m` alone, the scaffolded file will not compile until
+you provide the modifier definitions (or re-run without `-m`).
 
 ### Check That Your Code And Spec Match
 
@@ -247,7 +251,7 @@ these rules:
 - Single tree per file: the root can be just the contract name (e.g., FooTest).
 - Multiple trees in the same file: each root must be `Contract::function`, using
   `::` as a separator, and all roots must share the same contract name (e.g.,
-  `Foo::hashPair`, `Foo::min`).”
+  `Foo::hashPair`, `Foo::min`).
 - `bulloak` expects you to use `├` and `└` characters to denote branches.
 - If a branch starts with either `when` or `given`, it is a condition.
   - `when` and `given` are interchangeable.

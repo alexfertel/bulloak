@@ -84,6 +84,8 @@ struct TranslatorI<'a> {
     ///
     /// This is used to make sure only unique function are generated.
     used_fns: HashSet<String>,
+    /// Track modifier identifiers emitted in this tree to avoid duplicates.
+    seen_modifiers: HashSet<String>,
 }
 
 impl<'a> TranslatorI<'a> {
@@ -95,6 +97,7 @@ impl<'a> TranslatorI<'a> {
             modifiers,
             with_vm_skip,
             used_fns: HashSet::new(),
+            seen_modifiers: HashSet::new(),
         }
     }
 
@@ -246,16 +249,20 @@ impl<'a> Visitor for TranslatorI<'a> {
         // the emitted function.
         if condition.children.len() != action_count {
             if let Some(modifier) = self.modifiers.get(&condition.title) {
+                // Always push the modifier to the stack so it's applied to functions.
                 self.modifier_stack.push(modifier);
-                // Add a modifier node.
-                let hir = Hir::Function(hir::FunctionDefinition {
-                    identifier: modifier.clone(),
-                    ty: hir::FunctionTy::Modifier,
-                    span: condition.span,
-                    modifiers: None,
-                    children: None,
-                });
-                children.push(hir);
+
+                // Emit the modifier definition only once per tree.
+                if self.seen_modifiers.insert(modifier.clone()) {
+                    let hir = Hir::Function(hir::FunctionDefinition {
+                        identifier: modifier.clone(),
+                        ty: hir::FunctionTy::Modifier,
+                        span: condition.span,
+                        modifiers: None,
+                        children: None,
+                    });
+                    children.push(hir);
+                }
             };
         }
 
@@ -680,6 +687,77 @@ Foo_Test
             .map(|s| s.to_string())
             .collect::<Vec<_>>()
         );
+        Ok(())
+    }
+
+    #[test]
+    fn emits_modifier_once_with_duplicate_condition_titles_in_tree(
+    ) -> Result<()> {
+        // Two separate branches with the same non‑leaf condition title "when common".
+        // Each has a nested condition so a modifier would normally be emitted.
+        let file_contents = r#"Foo
+├── when common
+│  └── when A
+│     └── It does A.
+└── when common
+   └── when B
+      └── It does B.
+"#;
+
+        let hir = translate(file_contents)?;
+
+        // Collect modifier names and test functions.
+        fn collect_mods_and_tests(
+            hir: &hir::Hir,
+        ) -> (Vec<String>, Vec<(String, Vec<String>)>) {
+            let mut mods = Vec::new();
+            let mut tests = Vec::new();
+            if let hir::Hir::Root(root) = hir {
+                for child in &root.children {
+                    if let hir::Hir::Contract(c) = child {
+                        for k in &c.children {
+                            if let hir::Hir::Function(f) = k {
+                                if f.is_modifier() {
+                                    mods.push(f.identifier.clone());
+                                } else if f.is_function() {
+                                    let applied =
+                                        f.modifiers.clone().unwrap_or_default();
+                                    tests.push((f.identifier.clone(), applied));
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            (mods, tests)
+        }
+
+        let (mods, tests) = collect_mods_and_tests(&hir);
+
+        // Only one "whenCommon" modifier definition should be emitted.
+        let when_common_count =
+            mods.iter().filter(|m| m.as_str() == "whenCommon").count();
+        assert_eq!(
+            when_common_count, 1,
+            "expected exactly one whenCommon modifier definition"
+        );
+
+        // Both tests should exist and be annotated with whenCommon.
+        // Names depend on existing naming logic: test_WhenA and test_WhenB.
+        let mut has_a = false;
+        let mut has_b = false;
+        for (name, applied) in tests {
+            if name.contains("test_WhenA") {
+                has_a = true;
+                assert!(applied.iter().any(|m| m == "whenCommon"));
+            }
+            if name.contains("test_WhenB") {
+                has_b = true;
+                assert!(applied.iter().any(|m| m == "whenCommon"));
+            }
+        }
+        assert!(has_a && has_b, "expected test_WhenA and test_WhenB");
+
         Ok(())
     }
 }
