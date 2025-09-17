@@ -249,7 +249,8 @@ impl<'a> Visitor for TranslatorI<'a> {
         // the emitted function.
         if condition.children.len() != action_count {
             if let Some(modifier) = self.modifiers.get(&condition.title) {
-                // Always push the modifier to the stack so it's applied to functions.
+                // Always push the modifier to the stack so it's applied to
+                // functions.
                 self.modifier_stack.push(modifier);
 
                 // Emit the modifier definition only once per tree.
@@ -693,8 +694,9 @@ Foo_Test
     #[test]
     fn emits_modifier_once_with_duplicate_condition_titles_in_tree(
     ) -> Result<()> {
-        // Two separate branches with the same non‑leaf condition title "when common".
-        // Each has a nested condition so a modifier would normally be emitted.
+        // Two separate branches with the same non‑leaf condition title "when
+        // common". Each has a nested condition so a modifier would
+        // normally be emitted.
         let file_contents = r#"Foo
 ├── when common
 │  └── when A
