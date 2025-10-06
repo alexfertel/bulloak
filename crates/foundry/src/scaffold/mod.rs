@@ -6,6 +6,7 @@ use forge_fmt::fmt;
 
 use crate::{config::Config, hir::translate, sol};
 
+pub mod comment;
 pub mod emitter;
 pub mod modifiers;
 

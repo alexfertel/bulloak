@@ -1,0 +1,5 @@
+FormatDescriptions
+└── when formatting toggled
+    ├── it should reformat comment
+    │   └── ensures trailing punctuation is added
+    └── it should handle question?

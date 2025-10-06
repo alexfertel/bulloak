@@ -8,6 +8,7 @@ use crate::{
     config::Config,
     constants::INTERNAL_DEFAULT_INDENTATION,
     hir::{self, visitor::Visitor, Hir},
+    scaffold::comment,
 };
 
 /// Solidity code emitter.
@@ -19,6 +20,8 @@ pub struct Emitter {
     indent: usize,
     /// The Solidity version to be used in the pragma directive.
     solidity_version: String,
+    /// Whether to canonicalize branch descriptions.
+    format_descriptions: bool,
 }
 
 impl Emitter {
@@ -28,6 +31,7 @@ impl Emitter {
         Self {
             indent: INTERNAL_DEFAULT_INDENTATION,
             solidity_version: cfg.solidity_version.clone(),
+            format_descriptions: cfg.format_descriptions,
         }
     }
 
@@ -260,8 +264,13 @@ impl Visitor for EmitterI {
     ) -> result::Result<Self::CommentOutput, Self::Error> {
         let mut emitted = String::new();
         let indentation = self.emitter.indent().repeat(2);
+        let comment_text = if self.emitter.format_descriptions {
+            comment::normalize(&comment.lexeme)
+        } else {
+            comment.lexeme.clone()
+        };
         emitted
-            .push_str(format!("{indentation}// {}\n", comment.lexeme).as_str());
+            .push_str(format!("{indentation}// {}\n", comment_text).as_str());
 
         Ok(emitted)
     }
@@ -698,6 +707,39 @@ contract DescriptionsTest {
     //    some stuff happened
     //       and that stuff
     //    was very _bad_
+  }
+}"
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn format_descriptions_normalizes_comments() -> anyhow::Result<()> {
+        let file_contents = String::from(
+            r"FormatDescriptions
+└── when formatting toggled
+    ├── it should reformat comment
+    │   └── ensures trailing punctuation is added
+    └── it should handle question?
+",
+        );
+
+        let mut cfg = Config::default();
+        cfg.format_descriptions = true;
+        let hir = translate(&file_contents, &cfg)?;
+        let emitted = emitter::Emitter::new(&cfg).emit(&hir);
+
+        assert_eq!(
+            emitted,
+            r"// SPDX-License-Identifier: UNLICENSED
+pragma solidity 0.8.0;
+
+contract FormatDescriptions {
+  function test_WhenFormattingToggled() external {
+    // It should reformat comment.
+    //     Ensures trailing punctuation is added.
+    // It should handle question.
   }
 }"
         );

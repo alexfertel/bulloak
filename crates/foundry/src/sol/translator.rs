@@ -28,6 +28,7 @@ use solang_parser::pt::{
 use crate::{
     config::Config,
     hir::{self, visitor::Visitor, Hir},
+    scaffold::comment,
 };
 
 /// The implementation of a translator between a bulloak tree HIR and a
@@ -43,6 +44,8 @@ pub(crate) struct Translator {
     with_forge_std: bool,
     /// Whether to emit modifiers.
     skip_modifiers: bool,
+    /// Whether to normalize comments.
+    format_descriptions: bool,
 }
 
 impl Translator {
@@ -55,6 +58,7 @@ impl Translator {
             sol_version: cfg.solidity_version.clone(),
             with_forge_std,
             skip_modifiers: cfg.skip_modifiers,
+            format_descriptions: cfg.format_descriptions,
         }
     }
 
@@ -613,12 +617,19 @@ impl Visitor for TranslatorI {
             name: Some(name),
         };
         self.bump(" = ");
-        let comment_loc = self.bump(&format!(r#""{}""#, &comment.lexeme));
+        let normalized = if self.translator.format_descriptions {
+            comment::normalize(&comment.lexeme)
+        } else {
+            comment.lexeme.clone()
+        };
+
+        let literal = format!(r#""{}""#, normalized.clone());
+        let comment_loc = self.bump(&literal);
         let string_literal =
             Some(Expression::StringLiteral(vec![StringLiteral {
                 loc: comment_loc,
                 unicode: false,
-                string: comment.lexeme.clone(),
+                string: normalized,
             }]));
         self.bump(";"); // `;` after string literal.
         let definition = Statement::VariableDefinition(

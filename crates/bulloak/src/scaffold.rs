@@ -50,6 +50,9 @@ pub struct Scaffold {
     /// Whether to emit modifiers.
     #[arg(short = 'm', long, default_value_t = false)]
     pub skip_modifiers: bool,
+    /// Whether to capitalize and punctuate branch descriptions.
+    #[arg(short = 'F', long = "format-descriptions", default_value_t = false)]
+    pub format_descriptions: bool,
 }
 
 impl Default for Scaffold {

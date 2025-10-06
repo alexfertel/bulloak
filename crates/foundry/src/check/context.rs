@@ -57,13 +57,12 @@ impl Context {
     pub fn new(tree: PathBuf, cfg: &Config) -> Result<Self, Violation> {
         let tree_path_cow = tree.to_string_lossy();
         let tree_contents = try_read_to_string(&tree)?;
-        let hir = crate::hir::translate(&tree_contents, &Config::default())
-            .map_err(|e| {
-                Violation::new(
-                    ViolationKind::ParsingFailed(e),
-                    Location::File(tree_path_cow.into_owned()),
-                )
-            })?;
+        let hir = crate::hir::translate(&tree_contents, cfg).map_err(|e| {
+            Violation::new(
+                ViolationKind::ParsingFailed(e),
+                Location::File(tree_path_cow.into_owned()),
+            )
+        })?;
 
         let sol = get_path_with_ext(&tree, "t.sol")?;
         let src = try_read_to_string(&sol)?;
@@ -128,9 +127,8 @@ impl Context {
         function: &hir::FunctionDefinition,
         offset: usize,
     ) {
-        let cfg = &Config::default();
         let f = &Hir::Function(function.clone());
-        let function = Emitter::new(cfg).emit(f);
+        let function = Emitter::new(&self.cfg).emit(f);
         self.src = format!(
             "{}\n\n{}{}",
             &self.src[..offset],
@@ -171,7 +169,7 @@ fn try_read_to_string(path: impl AsRef<Path>) -> Result<String, Violation> {
 
 impl Context {
     pub(crate) fn fix_contract_missing(self) -> anyhow::Result<Context> {
-        let pt = sol::Translator::new(&Config::default()).translate(&self.hir);
+        let pt = sol::Translator::new(&self.cfg).translate(&self.hir);
         let source = sol::Formatter::new().emit(pt.clone());
         let filename = self.sol.to_string_lossy();
         let parsed = parse(&source).map_err(|diagnostics| {
