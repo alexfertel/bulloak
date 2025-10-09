@@ -19,6 +19,7 @@ fn scaffolds_trees() {
         "multiple_roots.tree",
         "removes_invalid_title_chars.tree",
         "hash_pair.tree",
+        "format_descriptions.tree",
         "revert_when.tree",
         "spurious_comments.tree",
     ];
@@ -61,6 +62,36 @@ fn scaffolds_trees_with_vm_skip() {
 
         let mut output_file_str = trimmed_extension.into_os_string();
         output_file_str.push("_vm_skip");
+
+        let mut output_file: std::path::PathBuf = output_file_str.into();
+        output_file.set_extension("t.sol");
+
+        let expected = fs::read_to_string(output_file).unwrap();
+
+        // We trim here because we don't care about ending newlines.
+        assert_eq!(expected.trim(), actual.trim());
+    }
+}
+
+#[cfg(not(target_os = "windows"))]
+#[test]
+fn scaffolds_trees_with_format_descriptions() {
+    let cwd = env::current_dir().unwrap();
+    let binary_path = get_binary_path();
+    let tests_path = cwd.join("tests").join("scaffold");
+    let trees = ["format_descriptions.tree"];
+    let args = vec!["--format-descriptions"];
+
+    for tree_name in trees {
+        let tree_path = tests_path.join(tree_name);
+        let output = cmd(&binary_path, "scaffold", &tree_path, &args);
+        let actual = String::from_utf8(output.stdout).unwrap();
+
+        let mut trimmed_extension = tree_path.clone();
+        trimmed_extension.set_extension("");
+
+        let mut output_file_str = trimmed_extension.into_os_string();
+        output_file_str.push("_formatted");
 
         let mut output_file: std::path::PathBuf = output_file_str.into();
         output_file.set_extension("t.sol");

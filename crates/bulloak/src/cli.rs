@@ -37,11 +37,13 @@ impl From<&Cli> for bulloak_foundry::config::Config {
                 solidity_version: cmd.solidity_version.clone(),
                 emit_vm_skip: cmd.with_vm_skip,
                 skip_modifiers: cmd.skip_modifiers,
+                format_descriptions: cmd.format_descriptions,
                 ..Self::default()
             },
             Commands::Check(cmd) => Self {
                 files: cmd.files.clone(),
                 skip_modifiers: cmd.skip_modifiers,
+                format_descriptions: cmd.format_descriptions,
                 ..Self::default()
             },
         }

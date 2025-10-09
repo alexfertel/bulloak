@@ -125,6 +125,11 @@ useful together with bulloak check `-m` (which suppresses missing‑modifier
 violations). If you use `-m` alone, the scaffolded file will not compile until
 you provide the modifier definitions (or re-run without `-m`).
 
+To normalize the generated comments, pass `-F` (or `--format-descriptions`).
+When enabled, bulloak capitalizes the first letter of each branch description
+and ensures it ends with a dot, so you don't need to touch the `.tree` file to
+get consistent sentence casing in the scaffolded test bodies.
+
 ### Check That Your Code And Spec Match
 
 You can use `bulloak check` to make sure that your Solidity files match your
@@ -205,6 +210,10 @@ warn: 13 checks failed (run `bulloak check --fix <.tree files>` to apply 11 fixe
 You can skip checking that the modifiers are present by passing the `-m` (or
 `--skip-modifiers`) option. This way, `bulloak` will not warn when a modifier is
 missing from the generated file.
+
+Use the same `--format-descriptions` flag when running `bulloak check` if you
+rely on the normalized comments. This keeps the structural matcher aligned with
+what `bulloak scaffold --format-descriptions` produces.
 
 #### Rules
 

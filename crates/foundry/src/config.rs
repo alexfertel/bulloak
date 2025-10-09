@@ -19,6 +19,8 @@ pub struct Config {
     pub solidity_version: String,
     /// Whether to add `vm.skip(true)` at the beginning of each test.
     pub emit_vm_skip: bool,
+    /// Whether to capitalize and punctuate branch descriptions.
+    pub format_descriptions: bool,
 }
 
 impl Default for Config {
@@ -28,6 +30,7 @@ impl Default for Config {
             solidity_version: DEFAULT_SOL_VERSION.to_owned(),
             emit_vm_skip: false,
             skip_modifiers: false,
+            format_descriptions: false,
         }
     }
 }
