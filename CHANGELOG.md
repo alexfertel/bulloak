@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.9.1] - 2025-10-15
+
+### Features
+
+- Add flag to capitalize and punctuate descriptions (#110)
+
+
+### Refactor
+
+- *(fmt)* Fix formatting
+
+
 ## [0.9.0] - 2025-09-17
 
 ### Bug Fixes

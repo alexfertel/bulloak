@@ -435,8 +435,8 @@ These are the current steps taken to publish `bulloak`:
 - Update the [CHANGELOG.md](./CHANGELOG.md) file with
   `git cliff -o CHANGELOG.md`. This step includes setting the proper header for
   the latest tag.
-- Commit the changes.
 - Run `cargo publish --dry-run` to make sure that everything looks good.
+- Commit the changes.
 - Create the corresponding git tag named after the version.
 - Push to origin.
 - Run `cargo publish`.

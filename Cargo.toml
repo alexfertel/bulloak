@@ -4,7 +4,7 @@ members = ["crates/bulloak", "crates/foundry", "crates/syntax"]
 
 [workspace.package]
 authors = ["Alexander Gonzalez <alexfertel97@gmail.com>"]
-version = "0.9.0"
+version = "0.9.1"
 license = "MIT OR Apache-2.0"
 edition = "2021"
 readme = "README.md"
