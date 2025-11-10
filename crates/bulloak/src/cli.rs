@@ -1,5 +1,5 @@
 //! `bulloak`'s CLI config.
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
 use figment::{providers::Serialized, Figment};
 use serde::{Deserialize, Serialize};
 
@@ -10,6 +10,13 @@ pub struct Cli {
     /// `bulloak`'s commands.
     #[clap(subcommand)]
     pub command: Commands,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, ValueEnum)]
+pub enum Backend {
+    /// original Foundry backend.
+    Solidity,
+    Noir,
 }
 
 /// `bulloak`'s commands.
@@ -44,6 +51,23 @@ impl From<&Cli> for bulloak_foundry::config::Config {
                 files: cmd.files.clone(),
                 skip_modifiers: cmd.skip_modifiers,
                 format_descriptions: cmd.format_descriptions,
+                ..Self::default()
+            },
+        }
+    }
+}
+
+impl From<&Cli> for bulloak_noir::config::Config {
+    fn from(cli: &Cli) -> Self {
+        match &cli.command {
+            Commands::Scaffold(cmd) => Self {
+                files: cmd.files.clone(),
+                skip_helpers: cmd.skip_modifiers,
+                format_descriptions: cmd.format_descriptions,
+                ..Self::default()
+            },
+            // TODO when we get to check
+            Commands::Check(_cmd) => Self {
                 ..Self::default()
             },
         }
