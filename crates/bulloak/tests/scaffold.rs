@@ -7,6 +7,31 @@ use pretty_assertions::assert_eq;
 
 mod common;
 
+/// Ensures behaviour is kept consistent across all the different backends, by running the same
+/// assertion closure on the result of both. The closure's second parameter is filled with the
+/// contents of the corresponding expected output file(if available), to account for the
+/// differences in output of every backend
+fn assert_on_all_parsers(
+    treefile: &str,
+    assertor: fn(std::process::Output, Option<String>),
+) {
+    let cwd = env::current_dir().unwrap();
+    let binary_path = get_binary_path();
+    let tests_path = cwd.join("tests").join("scaffold");
+    let tree_path = tests_path.join(treefile.to_string());
+
+    let expected_sol =
+        fs::read_to_string(tree_path.with_extension("t.sol")).ok();
+    let expected_noir =
+        fs::read_to_string(tree_path.with_extension("t.nr")).ok();
+
+    let solidity_output = cmd(&binary_path, "scaffold", &tree_path, &[]);
+    assertor(solidity_output, expected_sol);
+    let noir_output =
+        cmd(&binary_path, "scaffold", &tree_path, &["-l", "noir"]);
+    assertor(noir_output, expected_noir);
+}
+
 #[cfg(not(target_os = "windows"))]
 #[test]
 fn scaffolds_trees() {
@@ -143,20 +168,15 @@ fn skips_trees_when_file_exists() {
     }
 }
 
+#[cfg(not(target_os = "windows"))]
 #[test]
 fn errors_when_tree_is_empty() {
-    let cwd = env::current_dir().unwrap();
-    let binary_path = get_binary_path();
-    let tests_path = cwd.join("tests").join("scaffold");
-    let trees = ["empty.tree"];
-
-    for tree_name in trees {
-        let tree_path = tests_path.join(tree_name);
-        let output = cmd(&binary_path, "scaffold", &tree_path, &[]);
+    assert_on_all_parsers("empty.tree", |output, _| {
         let actual = String::from_utf8(output.stderr).unwrap();
-
+        assert_eq!(output.status.code().unwrap() , 1);
+        assert!(String::from_utf8(output.stdout).unwrap().is_empty());
         assert!(actual.contains("found an empty tree"));
-    }
+    });
 }
 
 #[test]
