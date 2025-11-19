@@ -5,23 +5,12 @@
 /// # Examples
 ///
 /// ```ignore
-/// assert_eq!(to_snake_case("When user is logged in"), "user_is_logged_in");
-/// assert_eq!(to_snake_case("It should return true"), "should_return_true");
+/// assert_eq!(to_snake_case("When user is logged in"), "when_user_is_logged_in");
+/// assert_eq!(to_snake_case("It should return true"), "it_should_return_true");
 /// ```
 pub(crate) fn to_snake_case(title: &str) -> String {
-    // Strip BDD prefixes (case-insensitive)
-    let title = title.trim();
-    let stripped = title
-        .strip_prefix("when ")
-        .or_else(|| title.strip_prefix("When "))
-        .or_else(|| title.strip_prefix("given "))
-        .or_else(|| title.strip_prefix("Given "))
-        .or_else(|| title.strip_prefix("it "))
-        .or_else(|| title.strip_prefix("It "))
-        .unwrap_or(title);
-
-    // Convert to snake_case
-    stripped
+    title
+        .trim()
         .chars()
         .filter_map(|c| {
             if c.is_alphanumeric() {
@@ -39,6 +28,27 @@ pub(crate) fn to_snake_case(title: &str) -> String {
         .join("_")
 }
 
+/// Convert a title to snake_case, stripping BDD prefixes.
+///
+/// # Examples
+///
+/// ```ignore
+/// assert_eq!(trim_keywords("When user is logged in"), "user is logged in");
+/// assert_eq!(trim_keywords("It should return true"), "should_return true");
+/// ```
+pub(crate) fn trim_keywords(input: &str) -> String {
+    // TODO: use keyword array
+    let result = input
+        .strip_prefix("when ")
+        .or_else(|| input.strip_prefix("When "))
+        .or_else(|| input.strip_prefix("given "))
+        .or_else(|| input.strip_prefix("Given "))
+        .or_else(|| input.strip_prefix("it "))
+        .or_else(|| input.strip_prefix("It "))
+        .unwrap_or(input);
+    result.to_string()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -47,16 +57,16 @@ mod tests {
     fn test_to_snake_case() {
         assert_eq!(
             to_snake_case("When user is logged in"),
-            "user_is_logged_in"
+            "when_user_is_logged_in"
         );
         assert_eq!(
             to_snake_case("It should return true"),
-            "should_return_true"
+            "it_should_return_true"
         );
-        assert_eq!(to_snake_case("given amount is zero"), "amount_is_zero");
+        assert_eq!(to_snake_case("given amount is zero"), "given_amount_is_zero");
         assert_eq!(
             to_snake_case("When first arg is bigger than second arg"),
-            "first_arg_is_bigger_than_second_arg"
+            "when_first_arg_is_bigger_than_second_arg"
         );
     }
 

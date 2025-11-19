@@ -57,7 +57,7 @@ impl From<&Cli> for bulloak_foundry::config::Config {
     }
 }
 
-impl From<&Cli> for bulloak_noir::config::Config {
+impl From<&Cli> for bulloak_noir::Config {
     fn from(cli: &Cli) -> Self {
         match &cli.command {
             Commands::Scaffold(cmd) => Self {
