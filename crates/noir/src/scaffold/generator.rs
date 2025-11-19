@@ -56,9 +56,9 @@ fn collect_helpers(children: &[Ast]) -> Vec<String> {
 fn collect_helpers_recursive(children: &[Ast], helpers: &mut HashSet<String>) {
     for child in children {
         if let Ast::Condition(condition) = child {
-            // only produce helpers for a branch if all other children are also branches, meaning
-            // there's an actual need to reuse them
-            if condition.children.iter().all(|c| match c {
+            // only produce helpers for a branch if any of its children is also a branch, meaning
+            // there's a potential need to reuse them
+            if condition.children.iter().any(|c| match c {
                 Ast::Condition(_) => true,
                 _ => false,
             }) {
@@ -107,7 +107,14 @@ fn generate_tests(
                 // Generate ONE test function for all actions under this
                 // condition
                 if !actions.is_empty() {
-                    tests.push(generate_test_function(&actions, &helpers, cfg));
+                    // use the last helper only if the action has silbings
+                    // that merit re-using it
+                    tests.push(generate_test_function(
+                        &actions,
+                        &helpers,
+                        cfg,
+                        condition.children.len() > 1,
+                    ));
                 }
 
                 // Process only nested Condition children (not actions!)
@@ -133,6 +140,7 @@ fn generate_tests(
                     &[action],
                     parent_helpers,
                     cfg,
+                    false
                 ));
             }
             _ => {}
@@ -147,6 +155,7 @@ fn generate_test_function(
     actions: &[&Action],
     helpers: &[String],
     cfg: &Config,
+    use_last_helper: bool,
 ) -> String {
     // Determine test name
     let test_name = if helpers.is_empty() {
@@ -175,7 +184,7 @@ fn generate_test_function(
     if !cfg.skip_helpers {
         let iter = helpers.iter();
         iter.clone().for_each(|helper| {
-            if helper != iter.clone().last().unwrap() {
+            if helper != iter.clone().last().unwrap() || use_last_helper {
                 use std::fmt::Write;
                 let _ = writeln!(body, "    {helper}();");
             }
