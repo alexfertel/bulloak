@@ -285,6 +285,38 @@ divide
     }
 
     #[test]
+    fn test_generate_with_revert() {
+        let tree = r"
+divide
+└── When divisor is zero
+    └── It should revert with division by zero.
+";
+
+        let ast = parse(tree).unwrap();
+        let cfg = Config::default();
+        let output = generate(&ast, &cfg).unwrap();
+
+        assert!(output.contains("#[test(should_fail)]"));
+        assert!(output.contains("unconstrained fn test_when_divisor_is_zero()"));
+    }
+
+    #[test]
+    fn test_dont_expect_failure_when_missing_it() {
+        let tree = r"
+sum
+└── When invoked
+    ├── It should never revert
+    └── It should never panic
+";
+
+        let ast = parse(tree).unwrap();
+        let cfg = Config::default();
+        let output = generate(&ast, &cfg).unwrap();
+
+        assert!(!output.contains("#[test(should_fail)]"));
+    }
+
+    #[test]
     fn test_skip_helpers() {
         let tree = r"
 test_root
