@@ -7,7 +7,9 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use bulloak_foundry::{constants::DEFAULT_SOL_VERSION, scaffold::scaffold as scaffold_solidity};
+use bulloak_foundry::{
+    constants::DEFAULT_SOL_VERSION, scaffold::scaffold as scaffold_solidity,
+};
 use bulloak_noir::scaffold as scaffold_noir;
 use clap::Parser;
 use forge_fmt::fmt;
@@ -123,8 +125,14 @@ impl Scaffold {
             }
             Backend::Noir => {
                 let formatted = scaffold_noir(&text, &cfg.into())?;
-                let output_file = file.with_extension("t.nr");
-                (formatted, output_file)
+                let output_filename = format!(
+                    "{}{}",
+                    file.file_stem().and_then(|s| s.to_str()).ok_or(
+                        anyhow::anyhow!("invalid filename: {}", file.display()),
+                    )?,
+                    "_test"
+                );
+                (formatted, file.with_file_name(output_filename).with_extension("nr"))
             }
         };
 

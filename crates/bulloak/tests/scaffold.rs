@@ -23,12 +23,12 @@ fn assert_on_all_parsers(
 
     let expected_sol =
         fs::read_to_string(tree_path.with_extension("t.sol")).ok();
-    let expected_noir = fs::read_to_string(format!(
-        "{},{}",
+    let noir_filename = tree_path.with_file_name(format!(
+        "{}{}",
         tree_path.file_stem().unwrap().to_str().unwrap(),
         "_test.nr"
-    ))
-    .ok();
+    ));
+    let expected_noir = fs::read_to_string(noir_filename).ok();
 
     let solidity_output = cmd(&binary_path, "scaffold", &tree_path, extra_args);
     assertor(solidity_output, expected_sol);
