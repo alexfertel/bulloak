@@ -1,5 +1,5 @@
 [package]
-name = "bulloak-noir"
+name = "bulloak-backend"
 version.workspace = true
 authors.workspace = true
 license.workspace = true
@@ -7,17 +7,12 @@ edition.workspace = true
 repository.workspace = true
 homepage.workspace = true
 documentation.workspace = true
-description.workspace = true
+description = "Core traits for bulloak backends"
 keywords.workspace = true
 categories.workspace = true
 
 [dependencies]
-bulloak-backend.workspace = true
-bulloak-syntax.workspace = true
 anyhow.workspace = true
-
-[dev-dependencies]
-pretty_assertions.workspace = true
 
 [lints]
 workspace = true

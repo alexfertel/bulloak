@@ -8,6 +8,7 @@
 //! correspond to a spec in the form of a `.tree`. This implementation allows
 //! for defining rules to be checked, which may be automatically fixed.
 
+pub mod backend;
 pub mod check;
 pub mod config;
 pub mod constants;
@@ -15,4 +16,5 @@ pub mod hir;
 pub mod scaffold;
 pub mod sol;
 
+pub use backend::FoundryBackend;
 pub use check::violation::{self, Violation, ViolationKind};

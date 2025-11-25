@@ -63,7 +63,10 @@ mod tests {
             to_snake_case("It should return true"),
             "it_should_return_true"
         );
-        assert_eq!(to_snake_case("given amount is zero"), "given_amount_is_zero");
+        assert_eq!(
+            to_snake_case("given amount is zero"),
+            "given_amount_is_zero"
+        );
         assert_eq!(
             to_snake_case("When first arg is bigger than second arg"),
             "when_first_arg_is_bigger_than_second_arg"

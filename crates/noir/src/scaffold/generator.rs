@@ -140,7 +140,7 @@ fn generate_tests(
                     &[action],
                     parent_helpers,
                     cfg,
-                    false
+                    false,
                 ));
             }
             _ => {}

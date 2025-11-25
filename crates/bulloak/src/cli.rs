@@ -12,11 +12,27 @@ pub struct Cli {
     pub command: Commands,
 }
 
+/// Available backend types for CLI argument parsing.
 #[derive(Debug, Serialize, Deserialize, Clone, ValueEnum)]
-pub enum Backend {
+pub enum BackendKind {
     /// original Foundry backend.
     Solidity,
     Noir,
+}
+
+impl BackendKind {
+    /// Creates a boxed Backend trait object from this BackendKind.
+    ///
+    /// This is the factory method that instantiates the correct backend
+    /// implementation with its configuration baked in.
+    pub fn into_backend(self, cli: &Cli) -> Box<dyn bulloak_backend::Backend> {
+        match self {
+            Self::Solidity => {
+                Box::new(bulloak_foundry::FoundryBackend::new(cli))
+            }
+            Self::Noir => Box::new(bulloak_noir::NoirBackend::new(cli)),
+        }
+    }
 }
 
 /// `bulloak`'s commands.
@@ -68,7 +84,7 @@ impl From<&Cli> for bulloak_noir::Config {
             },
             Commands::Check(_cmd) => {
                 todo!();
-            },
+            }
         }
     }
 }
