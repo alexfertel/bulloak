@@ -157,7 +157,7 @@ impl Scaffold {
                 file.as_path().blue()
             );
             eprintln!(
-                "    {} The corresponding `.t.sol` file already exists",
+                "    {} The corresponding testfile already exists",
                 "=".blue()
             );
             return;
