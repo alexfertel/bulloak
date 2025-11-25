@@ -10,7 +10,7 @@ pub struct Config {
     /// List of files being processed.
     pub files: Vec<PathBuf>,
     /// Skip generation of helper functions for conditions.
-    pub skip_helpers: bool,
+    pub skip_setup_hooks: bool,
     /// Format action descriptions (capitalize, etc).
     pub format_descriptions: bool,
 }

@@ -62,7 +62,7 @@ impl From<&Cli> for bulloak_noir::Config {
         match &cli.command {
             Commands::Scaffold(cmd) => Self {
                 files: cmd.files.clone(),
-                skip_helpers: cmd.skip_modifiers,
+                skip_setup_hooks: cmd.skip_modifiers,
                 format_descriptions: cmd.format_descriptions,
                 ..Self::default()
             },
