@@ -124,7 +124,6 @@ impl Scaffold {
                 (formatted, output_file)
             }
             Backend::Noir => {
-                let formatted = scaffold_noir(&text, &cfg.into())?;
                 let output_filename = format!(
                     "{}{}",
                     file.file_stem().and_then(|s| s.to_str()).ok_or(
@@ -132,7 +131,10 @@ impl Scaffold {
                     )?,
                     "_test"
                 );
-                (formatted, file.with_file_name(output_filename).with_extension("nr"))
+                (
+                    scaffold_noir(&text, &cfg.into())?,
+                    file.with_file_name(output_filename).with_extension("nr"),
+                )
             }
         };
 

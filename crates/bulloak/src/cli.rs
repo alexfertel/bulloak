@@ -66,9 +66,8 @@ impl From<&Cli> for bulloak_noir::Config {
                 format_descriptions: cmd.format_descriptions,
                 ..Self::default()
             },
-            // TODO when we get to check
-            Commands::Check(_cmd) => Self {
-                ..Self::default()
+            Commands::Check(_cmd) => {
+                todo!();
             },
         }
     }
