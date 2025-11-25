@@ -334,6 +334,7 @@ version = "0.9.1"
 dependencies = [
  "anyhow",
  "bulloak-foundry",
+ "bulloak-noir",
  "bulloak-syntax",
  "clap",
  "criterion",
@@ -360,6 +361,15 @@ dependencies = [
  "solang-parser",
  "tempfile",
  "thiserror",
+]
+
+[[package]]
+name = "bulloak-noir"
+version = "0.9.1"
+dependencies = [
+ "anyhow",
+ "bulloak-syntax",
+ "pretty_assertions",
 ]
 
 [[package]]

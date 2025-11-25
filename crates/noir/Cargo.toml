@@ -1,10 +1,9 @@
 [package]
-name = "bulloak"
+name = "bulloak-noir"
 version.workspace = true
 authors.workspace = true
 license.workspace = true
 edition.workspace = true
-readme = "./README.md"
 repository.workspace = true
 homepage.workspace = true
 documentation.workspace = true
@@ -14,24 +13,10 @@ categories.workspace = true
 
 [dependencies]
 bulloak-syntax.workspace = true
-bulloak-foundry.workspace = true
-bulloak-noir.workspace = true
-
 anyhow.workspace = true
-clap.workspace = true
-figment.workspace = true
-forge-fmt.workspace = true
-owo-colors.workspace = true
-serde.workspace = true
-glob = "0.3.2"
 
 [dev-dependencies]
 pretty_assertions.workspace = true
-criterion.workspace = true
-
-[[bench]]
-name = "emit"
-harness = false
 
 [lints]
 workspace = true
