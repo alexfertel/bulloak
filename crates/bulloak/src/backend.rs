@@ -59,6 +59,16 @@ impl Backend for SolidityBackend {
     }
 
     fn test_filename(&self, tree_file: &PathBuf) -> Result<PathBuf> {
+        let extension = tree_file.extension().ok_or(anyhow::anyhow!(
+            "invalid filename, {}",
+            tree_file.display()
+        ))?;
+        if extension != "tree" {
+            return Err(anyhow::anyhow!(
+                "invalid filename, {}",
+                tree_file.display()
+            ));
+        }
         Ok(tree_file.with_extension("t.sol"))
     }
 }
@@ -70,6 +80,16 @@ impl Backend for NoirBackend {
 
     fn test_filename(&self, tree_file: &PathBuf) -> Result<PathBuf> {
         let regex = Regex::new(r"\.tree$").unwrap();
+        let extension = tree_file.extension().ok_or(anyhow::anyhow!(
+            "invalid filename, {}",
+            tree_file.display()
+        ))?;
+        if extension != "tree" {
+            return Err(anyhow::anyhow!(
+                "invalid filename, {}",
+                tree_file.display()
+            ));
+        }
         let input_filename = tree_file.to_str().ok_or(anyhow::anyhow!(
             "invalid filename: {}",
             tree_file.display()
@@ -284,21 +304,21 @@ mod tests {
         };
 
         let input = PathBuf::from(".tree");
-        let result = noir_backend.test_filename(&input).unwrap();
-        assert_eq!(result, PathBuf::from("_test.nr"));
-        let result = sol_backend.test_filename(&input).unwrap();
-        assert_eq!(result, PathBuf::from(".t.sol"));
+        let result = noir_backend.test_filename(&input);
+        assert!(result.is_err());
+        let result = foundry_backend.test_filename(&input);
+        assert!(result.is_err());
 
         let input = PathBuf::from("/foo/.tree");
-        let result = noir_backend.test_filename(&input).unwrap();
-        assert_eq!(result, PathBuf::from("/foo/_test.nr"));
-        let result = sol_backend.test_filename(&input).unwrap();
-        assert_eq!(result, PathBuf::from("/foo/.t.sol"));
+        let result = noir_backend.test_filename(&input);
+        assert!(result.is_err());
+        let result = foundry_backend.test_filename(&input);
+        assert!(result.is_err());
 
         let input = PathBuf::from("src/.tree");
-        let result = noir_backend.test_filename(&input).unwrap();
-        assert_eq!(result, PathBuf::from("src/_test.nr"));
-        let result = sol_backend.test_filename(&input).unwrap();
-        assert_eq!(result, PathBuf::from("src/.t.sol"));
+        let result = noir_backend.test_filename(&input);
+        assert!(result.is_err());
+        let result = foundry_backend.test_filename(&input);
+        assert!(result.is_err());
     }
 }
