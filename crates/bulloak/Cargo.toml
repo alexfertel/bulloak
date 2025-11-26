@@ -24,6 +24,7 @@ forge-fmt.workspace = true
 owo-colors.workspace = true
 serde.workspace = true
 regex.workspace = true
+thiserror.workspace = true
 glob = "0.3.2"
 
 [dev-dependencies]

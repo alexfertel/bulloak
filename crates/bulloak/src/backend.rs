@@ -4,6 +4,7 @@
 //! along with their concrete implementations
 use regex::Regex;
 use std::path::PathBuf;
+use thiserror::Error;
 
 use anyhow::Result;
 use clap::ValueEnum;
@@ -32,6 +33,15 @@ pub enum BackendKind {
     Noir,
 }
 
+#[derive(Error, Debug)]
+enum BackendError {
+    #[error("invalid filename: {0}")]
+    InvalidFilename(PathBuf),
+
+    #[error("missing .tree extension: {0}")]
+    MissingTreeExtension(PathBuf),
+}
+
 /// Solidity/Foundry backend with baked-in config.
 pub(crate) struct SolidityBackend {
     config: bulloak_foundry::config::Config,
@@ -52,6 +62,16 @@ impl BackendKind {
     }
 }
 
+fn validate_extension(input: &PathBuf) -> Result<(), BackendError> {
+    let extension = input
+        .extension()
+        .ok_or(BackendError::InvalidFilename(input.to_owned()))?;
+    if extension != "tree" {
+        return Err(BackendError::MissingTreeExtension(input.to_owned()));
+    }
+    Ok(())
+}
+
 impl Backend for SolidityBackend {
     fn scaffold(&self, text: &str) -> Result<String> {
         let emitted = bulloak_foundry::scaffold::scaffold(text, &self.config)?;
@@ -59,16 +79,7 @@ impl Backend for SolidityBackend {
     }
 
     fn test_filename(&self, tree_file: &PathBuf) -> Result<PathBuf> {
-        let extension = tree_file.extension().ok_or(anyhow::anyhow!(
-            "invalid filename, {}",
-            tree_file.display()
-        ))?;
-        if extension != "tree" {
-            return Err(anyhow::anyhow!(
-                "invalid filename, {}",
-                tree_file.display()
-            ));
-        }
+        validate_extension(tree_file)?;
         Ok(tree_file.with_extension("t.sol"))
     }
 }
@@ -80,16 +91,7 @@ impl Backend for NoirBackend {
 
     fn test_filename(&self, tree_file: &PathBuf) -> Result<PathBuf> {
         let regex = Regex::new(r"\.tree$").unwrap();
-        let extension = tree_file.extension().ok_or(anyhow::anyhow!(
-            "invalid filename, {}",
-            tree_file.display()
-        ))?;
-        if extension != "tree" {
-            return Err(anyhow::anyhow!(
-                "invalid filename, {}",
-                tree_file.display()
-            ));
-        }
+        validate_extension(tree_file)?;
         let input_filename = tree_file.to_str().ok_or(anyhow::anyhow!(
             "invalid filename: {}",
             tree_file.display()
@@ -110,8 +112,8 @@ mod tests {
     use super::*;
     use std::{path::PathBuf, sync::LazyLock};
 
-    static NOIR_BACKEND: LazyLock<NoirBackend> = LazyLock::new(|| NoirBackend {
-        config: bulloak_noir::Config::default(),
+    static NOIR_BACKEND: LazyLock<NoirBackend> = LazyLock::new(|| {
+        NoirBackend { config: bulloak_noir::Config::default() }
     });
     static FOUNDRY_BACKEND: LazyLock<SolidityBackend> = LazyLock::new(|| {
         SolidityBackend { config: bulloak_foundry::config::Config::default() }
