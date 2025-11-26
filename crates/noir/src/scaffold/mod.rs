@@ -7,7 +7,7 @@ use generator::generate;
 /// Generates aztec-noir code from a `.tree` file. Has a uniform interface with the default
 /// solidity backend.
 /// TODO: should we define a Backend trait?
-pub fn scaffold(text: &String, cfg: &Config) -> Result<String> {
+pub fn scaffold(text: &str, cfg: &Config) -> Result<String> {
     let forest = parse(text)?;
     generate(&forest, cfg)
 }

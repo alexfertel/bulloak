@@ -64,7 +64,7 @@ impl Backend for SolidityBackend {
 
 impl Backend for NoirBackend {
     fn scaffold(&self, text: &str) -> Result<String> {
-        bulloak_noir::scaffold(&text.to_string(), &self.config)
+        bulloak_noir::scaffold(&text, &self.config)
     }
 
     fn test_filename(&self, tree_file: &PathBuf) -> Result<PathBuf> {
