@@ -1,5 +1,5 @@
 //! `bulloak`'s CLI config.
-use clap::{Parser, Subcommand, ValueEnum};
+use clap::{Parser, Subcommand};
 use figment::{providers::Serialized, Figment};
 use serde::{Deserialize, Serialize};
 
@@ -10,14 +10,6 @@ pub struct Cli {
     /// `bulloak`'s commands.
     #[clap(subcommand)]
     pub command: Commands,
-}
-
-/// Available backend types for CLI argument parsing.
-#[derive(Debug, Serialize, Deserialize, Clone, ValueEnum)]
-pub enum BackendKind {
-    /// original Foundry backend.
-    Solidity,
-    Noir,
 }
 
 /// `bulloak`'s commands.

@@ -13,7 +13,8 @@ use owo_colors::OwoColorize;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    cli::{BackendKind, Cli},
+    backend::BackendKind,
+    cli::Cli,
     glob::expand_glob,
 };
 

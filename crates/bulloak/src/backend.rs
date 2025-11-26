@@ -5,8 +5,10 @@
 use std::path::PathBuf;
 
 use anyhow::Result;
+use clap::ValueEnum;
+use serde::{Deserialize, Serialize};
 
-use crate::cli::{BackendKind, Cli};
+use crate::cli::Cli;
 
 /// Trait for backends that generate test files from `.tree` specifications.
 ///
@@ -19,6 +21,14 @@ pub trait Backend: Send + Sync {
 
     /// Returns the output test file path for a given tree file path.
     fn test_filename(&self, tree_file: &PathBuf) -> Result<PathBuf>;
+}
+
+/// Available backend types for CLI argument parsing.
+#[derive(Debug, Serialize, Deserialize, Clone, ValueEnum)]
+pub enum BackendKind {
+    /// original Foundry backend.
+    Solidity,
+    Noir,
 }
 
 /// Solidity/Foundry backend with baked-in config.
@@ -35,12 +45,8 @@ impl BackendKind {
     /// Creates a boxed backend instance with config derived from CLI.
     pub fn get(&self, cli: &Cli) -> Box<dyn Backend> {
         match self {
-            Self::Solidity => Box::new(SolidityBackend {
-                config: cli.into(),
-            }),
-            Self::Noir => Box::new(NoirBackend {
-                config: cli.into(),
-            }),
+            Self::Solidity => Box::new(SolidityBackend { config: cli.into() }),
+            Self::Noir => Box::new(NoirBackend { config: cli.into() }),
         }
     }
 }
