@@ -343,6 +343,7 @@ dependencies = [
  "glob",
  "owo-colors",
  "pretty_assertions",
+ "regex",
  "serde",
 ]
 
