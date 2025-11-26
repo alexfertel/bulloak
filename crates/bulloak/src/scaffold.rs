@@ -7,11 +7,8 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use std::ffi::OsStr;
-
-use bulloak_backend::Backend;
+use bulloak_foundry::constants::DEFAULT_SOL_VERSION;
 use clap::Parser;
-use forge_fmt::fmt;
 use owo_colors::OwoColorize;
 use serde::{Deserialize, Serialize};
 
@@ -19,8 +16,6 @@ use crate::{
     cli::{BackendKind, Cli},
     glob::expand_glob,
 };
-
-use bulloak_foundry::constants::DEFAULT_SOL_VERSION;
 
 /// Generate test files based on your spec.
 #[doc(hidden)]
@@ -79,9 +74,6 @@ impl Scaffold {
     ///
     /// If any errors occur during processing, they are collected and reported.
     pub(crate) fn run(&self, cfg: &Cli) {
-        // Create the backend instance with config baked in
-        let backend = self.backend_kind.clone().into_backend(cfg);
-
         let mut files = Vec::with_capacity(self.files.len());
         for pattern in &self.files {
             match expand_glob(pattern.clone()) {
@@ -100,7 +92,7 @@ impl Scaffold {
         let errors = files
             .iter()
             .filter_map(|file| {
-                self.process_file(file, backend.as_ref())
+                self.process_file(file, &cfg)
                     .map_err(|e| (file.as_path(), e))
                     .err()
             })
@@ -114,14 +106,12 @@ impl Scaffold {
 
     /// Processes a single input file using dynamic dispatch.
     ///
-    /// This method reads the input file, scaffolds the code using the backend, formats it, and
-    /// either writes it to a file or prints to stdout.
-    fn process_file(
-        &self,
-        file: &Path,
-        backend: &dyn Backend,
-    ) -> anyhow::Result<()> {
+    /// This method reads the input file, scaffolds the code using the backend,
+    /// formats it, and either writes it to a file or prints to stdout.
+    fn process_file(&self, file: &Path, cfg: &Cli) -> anyhow::Result<()> {
         let text = fs::read_to_string(file)?;
+        let backend = self.backend_kind.get(cfg);
+
         let emitted = backend.scaffold(&text)?;
 
         let output_file = backend.test_filename(&file.to_path_buf())?;

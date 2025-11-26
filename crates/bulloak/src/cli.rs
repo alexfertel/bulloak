@@ -20,21 +20,6 @@ pub enum BackendKind {
     Noir,
 }
 
-impl BackendKind {
-    /// Creates a boxed Backend trait object from this BackendKind.
-    ///
-    /// This is the factory method that instantiates the correct backend
-    /// implementation with its configuration baked in.
-    pub fn into_backend(self, cli: &Cli) -> Box<dyn bulloak_backend::Backend> {
-        match self {
-            Self::Solidity => {
-                Box::new(bulloak_foundry::FoundryBackend::new(cli))
-            }
-            Self::Noir => Box::new(bulloak_noir::NoirBackend::new(cli)),
-        }
-    }
-}
-
 /// `bulloak`'s commands.
 #[derive(Debug, Clone, Subcommand, Serialize, Deserialize)]
 pub enum Commands {

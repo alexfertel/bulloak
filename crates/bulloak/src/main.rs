@@ -1,6 +1,7 @@
 #![doc = include_str!("../README.md")]
 use std::process;
 
+mod backend;
 mod check;
 mod cli;
 mod glob;

@@ -4,12 +4,10 @@
 //! AST into a `_test.nr` file containing scaffolded and ready-to-run aztec
 //! tests.
 
-pub mod backend;
 mod config;
 mod constants;
 mod scaffold;
 mod utils;
 
-pub use backend::NoirBackend;
 pub use config::Config;
 pub use scaffold::scaffold;
