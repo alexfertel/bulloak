@@ -167,7 +167,7 @@ fn generate_test_function(
         )
     } else {
         // Under condition: test_{last_helper}
-        format!("{}_{}", TEST_PREFIX, &trim_keywords(helpers.last().unwrap()))
+        format!("{}_{}", TEST_PREFIX, &helpers.last().unwrap())
     };
 
     // Check if any action contains panic keywords
@@ -314,6 +314,29 @@ sum
         let output = generate(&ast, &cfg).unwrap();
 
         assert!(!output.contains("#[test(should_fail)]"));
+    }
+
+    #[test]
+    fn test_trim_keywords_from_title() {
+        let tree = r"
+sum
+├── It should never panic
+└── When adding two numbers
+    └── It should chug along
+";
+
+        let ast = parse(tree).unwrap();
+        let cfg = Config::default();
+        let output = generate(&ast, &cfg).unwrap();
+
+        assert!(output.contains("unconstrained fn test_should_never_panic()"));
+        assert!(
+            !output.contains("unconstrained fn test_it_should_never_panic()")
+        );
+        assert!(!output.contains("unconstrained fn test_adding_two_numbers()"));
+        assert!(
+            output.contains("unconstrained fn test_when_adding_two_numbers()")
+        );
     }
 
     #[test]
