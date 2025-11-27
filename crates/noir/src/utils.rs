@@ -1,13 +1,8 @@
 //! Utility functions for Noir code generation.
 
 /// Convert a title to snake_case, stripping BDD prefixes.
-///
-/// # Examples
-///
-/// ```ignore
-/// assert_eq!(to_snake_case("When user is logged in"), "when_user_is_logged_in");
-/// assert_eq!(to_snake_case("It should return true"), "it_should_return_true");
-/// ```
+/// "When user is logged in" ->  "when_user_is_logged_in"
+/// "It should return true" -> "it_should_return_true"
 pub(crate) fn to_snake_case(title: &str) -> String {
     title
         .trim()
@@ -29,13 +24,8 @@ pub(crate) fn to_snake_case(title: &str) -> String {
 }
 
 /// Convert a title to snake_case, stripping BDD prefixes.
-///
-/// # Examples
-///
-/// ```ignore
-/// assert_eq!(trim_keywords("When user is logged in"), "user is logged in");
-/// assert_eq!(trim_keywords("It should return true"), "should_return true");
-/// ```
+/// "When user is logged in"->"user is logged in"
+/// "It should return true"->"should return true"
 pub(crate) fn trim_keywords(input: &str) -> String {
     // TODO: use keyword array
     let result = input
@@ -52,6 +42,49 @@ pub(crate) fn trim_keywords(input: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_trim_keywords() {
+        // doesn't strip non-prefix keywords
+        assert_eq!(
+            trim_keywords("user found berries while on a walk"),
+            "user found berries while on a walk"
+        );
+        assert_eq!(
+            trim_keywords("Given user is logged in"),
+            "user is logged in"
+        );
+        assert_eq!(
+            trim_keywords("given user is logged in"),
+            "user is logged in"
+        );
+        assert_eq!(
+            trim_keywords("when user is logged in"),
+            "user is logged in"
+        );
+        assert_eq!(
+            trim_keywords("When user is logged in"),
+            "user is logged in"
+        );
+        assert_eq!(
+            trim_keywords("It should return true"),
+            "should return true"
+        );
+        // doesn't trim part of first word
+        assert_eq!(
+            trim_keywords("Its balance decreases"),
+            "Its balance decreases"
+        );
+        assert_eq!(
+            trim_keywords("its balance decreases"),
+            "its balance decreases"
+        );
+        // space is required
+        assert_eq!(
+            trim_keywords("It's balance decreases"),
+            "It's balance decreases"
+        );
+    }
 
     #[test]
     fn test_to_snake_case() {
