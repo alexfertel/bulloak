@@ -8,7 +8,7 @@ use bulloak_syntax::{Action, Ast};
 use crate::{
     config::Config,
     constants::{PANIC_KEYWORDS, TEST_PREFIX},
-    utils::{to_snake_case, trim_keywords},
+    utils::to_snake_case,
 };
 
 /// Generate Noir test code from an AST.
@@ -159,12 +159,15 @@ fn generate_test_function(
 ) -> String {
     // Determine test name
     let test_name = if helpers.is_empty() {
+        let title = &actions[0].title;
+        // trim 'it' from first-level assertions (not very frequent, but necessary for consistency
+        // with foundry backend)
+        let title = title
+            .strip_prefix("it ")
+            .or_else(|| title.strip_prefix("It "))
+            .unwrap_or(title);
         // Root level: test_{action_name}
-        format!(
-            "{}_{}",
-            TEST_PREFIX,
-            to_snake_case(&trim_keywords(&actions[0].title))
-        )
+        format!("{}_{}", TEST_PREFIX, to_snake_case(title))
     } else {
         // Under condition: test_{last_helper}
         format!("{}_{}", TEST_PREFIX, &helpers.last().unwrap())

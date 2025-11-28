@@ -23,68 +23,9 @@ pub(crate) fn to_snake_case(title: &str) -> String {
         .join("_")
 }
 
-/// Convert a title to snake_case, stripping BDD prefixes.
-/// "When user is logged in"->"user is logged in"
-/// "It should return true"->"should return true"
-pub(crate) fn trim_keywords(input: &str) -> String {
-    // TODO: use keyword array
-    let result = input
-        .strip_prefix("when ")
-        .or_else(|| input.strip_prefix("When "))
-        .or_else(|| input.strip_prefix("given "))
-        .or_else(|| input.strip_prefix("Given "))
-        .or_else(|| input.strip_prefix("it "))
-        .or_else(|| input.strip_prefix("It "))
-        .unwrap_or(input);
-    result.to_string()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_trim_keywords() {
-        // doesn't strip non-prefix keywords
-        assert_eq!(
-            trim_keywords("user found berries while on a walk"),
-            "user found berries while on a walk"
-        );
-        assert_eq!(
-            trim_keywords("Given user is logged in"),
-            "user is logged in"
-        );
-        assert_eq!(
-            trim_keywords("given user is logged in"),
-            "user is logged in"
-        );
-        assert_eq!(
-            trim_keywords("when user is logged in"),
-            "user is logged in"
-        );
-        assert_eq!(
-            trim_keywords("When user is logged in"),
-            "user is logged in"
-        );
-        assert_eq!(
-            trim_keywords("It should return true"),
-            "should return true"
-        );
-        // doesn't trim part of first word
-        assert_eq!(
-            trim_keywords("Its balance decreases"),
-            "Its balance decreases"
-        );
-        assert_eq!(
-            trim_keywords("its balance decreases"),
-            "its balance decreases"
-        );
-        // space is required
-        assert_eq!(
-            trim_keywords("It's balance decreases"),
-            "It's balance decreases"
-        );
-    }
 
     #[test]
     fn test_to_snake_case() {
