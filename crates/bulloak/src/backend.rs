@@ -110,147 +110,217 @@ impl Backend for NoirBackend {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::{path::PathBuf, sync::LazyLock};
-
-    static NOIR_BACKEND: LazyLock<NoirBackend> = LazyLock::new(|| {
-        NoirBackend { config: bulloak_noir::Config::default() }
-    });
-    static FOUNDRY_BACKEND: LazyLock<SolidityBackend> = LazyLock::new(|| {
-        SolidityBackend { config: bulloak_foundry::config::Config::default() }
-    });
 
     #[test]
     fn test_simple_tree_file() {
+        let noir_backend =
+            NoirBackend { config: bulloak_noir::Config::default() };
+        let foundry_backend = SolidityBackend {
+            config: bulloak_foundry::config::Config::default(),
+        };
+
         let input = PathBuf::from("MyContract.tree");
-        let result = NOIR_BACKEND.test_filename(&input).unwrap();
+        let result = noir_backend.test_filename(&input).unwrap();
         assert_eq!(result, PathBuf::from("MyContract_test.nr"));
 
-        let result = FOUNDRY_BACKEND.test_filename(&input).unwrap();
+        let result = foundry_backend.test_filename(&input).unwrap();
         assert_eq!(result, PathBuf::from("MyContract.t.sol"));
     }
 
     #[test]
     fn test_with_directory_path() {
+        let noir_backend =
+            NoirBackend { config: bulloak_noir::Config::default() };
+        let foundry_backend = SolidityBackend {
+            config: bulloak_foundry::config::Config::default(),
+        };
+
         let input = PathBuf::from("src/contracts/MyContract.tree");
-        let result = NOIR_BACKEND.test_filename(&input).unwrap();
+        let result = noir_backend.test_filename(&input).unwrap();
         assert_eq!(result, PathBuf::from("src/contracts/MyContract_test.nr"));
 
-        let result = FOUNDRY_BACKEND.test_filename(&input).unwrap();
+        let result = foundry_backend.test_filename(&input).unwrap();
         assert_eq!(result, PathBuf::from("src/contracts/MyContract.t.sol"));
     }
 
     #[test]
     fn test_with_multiple_dots() {
+        let noir_backend =
+            NoirBackend { config: bulloak_noir::Config::default() };
+        let foundry_backend = SolidityBackend {
+            config: bulloak_foundry::config::Config::default(),
+        };
+
         let input = PathBuf::from("My.Complex.Contract.tree");
-        let result = NOIR_BACKEND.test_filename(&input).unwrap();
+        let result = noir_backend.test_filename(&input).unwrap();
         assert_eq!(result, PathBuf::from("My.Complex.Contract_test.nr"));
-        let result = FOUNDRY_BACKEND.test_filename(&input).unwrap();
+        let result = foundry_backend.test_filename(&input).unwrap();
         assert_eq!(result, PathBuf::from("My.Complex.Contract.t.sol"));
     }
 
     #[test]
     fn test_already_has_test_suffix() {
+        let noir_backend =
+            NoirBackend { config: bulloak_noir::Config::default() };
+        let foundry_backend = SolidityBackend {
+            config: bulloak_foundry::config::Config::default(),
+        };
+
         let input = PathBuf::from("MyContract_test.tree");
-        let result = NOIR_BACKEND.test_filename(&input).unwrap();
+        let result = noir_backend.test_filename(&input).unwrap();
         // Should append another _test
         assert_eq!(result, PathBuf::from("MyContract_test_test.nr"));
-        let result = FOUNDRY_BACKEND.test_filename(&input).unwrap();
+        let result = foundry_backend.test_filename(&input).unwrap();
         assert_eq!(result, PathBuf::from("MyContract_test.t.sol"));
     }
 
     #[test]
     fn test_with_absolute_path() {
+        let noir_backend =
+            NoirBackend { config: bulloak_noir::Config::default() };
+        let foundry_backend = SolidityBackend {
+            config: bulloak_foundry::config::Config::default(),
+        };
+
         let input = PathBuf::from("/home/user/project/Contract.tree");
-        let result = NOIR_BACKEND.test_filename(&input).unwrap();
+        let result = noir_backend.test_filename(&input).unwrap();
         assert_eq!(
             result,
             PathBuf::from("/home/user/project/Contract_test.nr")
         );
-        let result = FOUNDRY_BACKEND.test_filename(&input).unwrap();
+        let result = foundry_backend.test_filename(&input).unwrap();
         assert_eq!(result, PathBuf::from("/home/user/project/Contract.t.sol"));
     }
 
     #[test]
     fn test_preserves_parent_directories() {
+        let noir_backend =
+            NoirBackend { config: bulloak_noir::Config::default() };
+        let foundry_backend = SolidityBackend {
+            config: bulloak_foundry::config::Config::default(),
+        };
+
         let input = PathBuf::from("tests/specs/nested/MyTest.tree");
-        let result = NOIR_BACKEND.test_filename(&input).unwrap();
+        let result = noir_backend.test_filename(&input).unwrap();
         assert_eq!(result, PathBuf::from("tests/specs/nested/MyTest_test.nr"));
-        let result = FOUNDRY_BACKEND.test_filename(&input).unwrap();
+        let result = foundry_backend.test_filename(&input).unwrap();
         assert_eq!(result, PathBuf::from("tests/specs/nested/MyTest.t.sol"));
     }
 
     #[test]
     fn test_no_extension() {
+        let noir_backend =
+            NoirBackend { config: bulloak_noir::Config::default() };
+        let foundry_backend = SolidityBackend {
+            config: bulloak_foundry::config::Config::default(),
+        };
+
         let input = PathBuf::from("MyContract");
-        let result = NOIR_BACKEND.test_filename(&input);
+        let result = noir_backend.test_filename(&input);
         assert!(result.is_err());
-        let result = FOUNDRY_BACKEND.test_filename(&input);
+        let result = foundry_backend.test_filename(&input);
         assert!(result.is_err());
     }
 
     #[test]
     fn test_wrong_extension() {
+        let noir_backend =
+            NoirBackend { config: bulloak_noir::Config::default() };
+        let foundry_backend = SolidityBackend {
+            config: bulloak_foundry::config::Config::default(),
+        };
+
         let input = PathBuf::from("MyContract.txt");
-        let result = NOIR_BACKEND.test_filename(&input);
+        let result = noir_backend.test_filename(&input);
         assert!(result.is_err());
-        let result = FOUNDRY_BACKEND.test_filename(&input);
+        let result = foundry_backend.test_filename(&input);
         assert!(result.is_err());
     }
 
     #[test]
     fn test_empty_fails() {
+        let noir_backend =
+            NoirBackend { config: bulloak_noir::Config::default() };
+        let foundry_backend = SolidityBackend {
+            config: bulloak_foundry::config::Config::default(),
+        };
+
         let input = PathBuf::from("");
-        let result = NOIR_BACKEND.test_filename(&input);
+        let result = noir_backend.test_filename(&input);
         assert!(result.is_err());
-        let result = FOUNDRY_BACKEND.test_filename(&input);
+        let result = foundry_backend.test_filename(&input);
         assert!(result.is_err());
     }
 
     #[test]
     fn test_directory_only_fails() {
+        let noir_backend =
+            NoirBackend { config: bulloak_noir::Config::default() };
+        let foundry_backend = SolidityBackend {
+            config: bulloak_foundry::config::Config::default(),
+        };
+
         let input = PathBuf::from("src/");
-        let result = NOIR_BACKEND.test_filename(&input);
+        let result = noir_backend.test_filename(&input);
         assert!(result.is_err());
-        let result = FOUNDRY_BACKEND.test_filename(&input);
+        let result = foundry_backend.test_filename(&input);
         assert!(result.is_err());
     }
 
     #[test]
     fn test_with_unicode() {
+        let noir_backend =
+            NoirBackend { config: bulloak_noir::Config::default() };
+        let foundry_backend = SolidityBackend {
+            config: bulloak_foundry::config::Config::default(),
+        };
+
         let input = PathBuf::from("🐻.tree");
-        let result = NOIR_BACKEND.test_filename(&input).unwrap();
+        let result = noir_backend.test_filename(&input).unwrap();
         assert_eq!(result, PathBuf::from("🐻_test.nr"));
-        let result = FOUNDRY_BACKEND.test_filename(&input).unwrap();
+        let result = foundry_backend.test_filename(&input).unwrap();
         assert_eq!(result, PathBuf::from("🐻.t.sol"));
     }
 
     #[test]
     fn test_with_spaces() {
+        let noir_backend =
+            NoirBackend { config: bulloak_noir::Config::default() };
+        let foundry_backend = SolidityBackend {
+            config: bulloak_foundry::config::Config::default(),
+        };
+
         let input = PathBuf::from("My Contract.tree");
-        let result = NOIR_BACKEND.test_filename(&input).unwrap();
+        let result = noir_backend.test_filename(&input).unwrap();
         assert_eq!(result, PathBuf::from("My Contract_test.nr"));
-        let result = FOUNDRY_BACKEND.test_filename(&input).unwrap();
+        let result = foundry_backend.test_filename(&input).unwrap();
         assert_eq!(result, PathBuf::from("My Contract.t.sol"));
     }
 
     #[test]
     fn test_only_extension() {
+        let noir_backend =
+            NoirBackend { config: bulloak_noir::Config::default() };
+        let foundry_backend = SolidityBackend {
+            config: bulloak_foundry::config::Config::default(),
+        };
+
         let input = PathBuf::from(".tree");
-        let result = NOIR_BACKEND.test_filename(&input);
+        let result = noir_backend.test_filename(&input);
         assert!(result.is_err());
-        let result = FOUNDRY_BACKEND.test_filename(&input);
+        let result = foundry_backend.test_filename(&input);
         assert!(result.is_err());
 
         let input = PathBuf::from("/foo/.tree");
-        let result = NOIR_BACKEND.test_filename(&input);
+        let result = noir_backend.test_filename(&input);
         assert!(result.is_err());
-        let result = FOUNDRY_BACKEND.test_filename(&input);
+        let result = foundry_backend.test_filename(&input);
         assert!(result.is_err());
 
         let input = PathBuf::from("src/.tree");
-        let result = NOIR_BACKEND.test_filename(&input);
+        let result = noir_backend.test_filename(&input);
         assert!(result.is_err());
-        let result = FOUNDRY_BACKEND.test_filename(&input);
+        let result = foundry_backend.test_filename(&input);
         assert!(result.is_err());
     }
 }
