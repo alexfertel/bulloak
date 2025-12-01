@@ -7,15 +7,14 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use bulloak_foundry::{constants::DEFAULT_SOL_VERSION, scaffold::scaffold as scaffold_solidity};
-use bulloak_noir::scaffold as scaffold_noir;
+use bulloak_foundry::constants::DEFAULT_SOL_VERSION;
 use clap::Parser;
-use forge_fmt::fmt;
 use owo_colors::OwoColorize;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    cli::{Backend, Cli},
+    backend::BackendKind,
+    cli::Cli,
     glob::expand_glob,
 };
 
@@ -57,8 +56,9 @@ pub struct Scaffold {
     /// Whether to capitalize and punctuate branch descriptions.
     #[arg(short = 'F', long = "format-descriptions", default_value_t = false)]
     pub format_descriptions: bool,
-    #[arg(short = 'l', long = "lang", value_enum, default_value_t = Backend::Solidity)]
-    pub backend: Backend,
+    /// The backend to use for code generation.
+    #[arg(short = 'l', long = "lang", value_enum, default_value_t = BackendKind::Solidity)]
+    pub backend_kind: BackendKind,
 }
 
 impl Default for Scaffold {
@@ -93,7 +93,7 @@ impl Scaffold {
         let errors = files
             .iter()
             .filter_map(|file| {
-                self.process_file(file, cfg)
+                self.process_file(file, &cfg)
                     .map_err(|e| (file.as_path(), e))
                     .err()
             })
@@ -105,28 +105,17 @@ impl Scaffold {
         }
     }
 
-    /// Processes a single input file.
+    /// Processes a single input file using dynamic dispatch.
     ///
-    /// This method reads the input file, scaffolds the code, formats
-    /// it, and either writes it to a file or prints it to stdout.
+    /// This method reads the input file, scaffolds the code using the backend,
+    /// formats it, and either writes it to a file or prints to stdout.
     fn process_file(&self, file: &Path, cfg: &Cli) -> anyhow::Result<()> {
         let text = fs::read_to_string(file)?;
-        let (emitted, output_file) = match self.backend {
-            Backend::Solidity => {
-                let emitted = scaffold_solidity(&text, &cfg.into())?;
-                let formatted = fmt(&emitted).unwrap_or_else(|err| {
-                    eprintln!("{}: {}", "WARN".yellow(), err);
-                    emitted
-                });
-                let output_file = file.with_extension("t.sol");
-                (formatted, output_file)
-            }
-            Backend::Noir => {
-                let formatted = scaffold_noir(&text, &cfg.into())?;
-                let output_file = file.with_extension("t.nr");
-                (formatted, output_file)
-            }
-        };
+        let backend = self.backend_kind.get(cfg);
+
+        let emitted = backend.scaffold(&text)?;
+
+        let output_file = backend.test_filename(&file.to_path_buf())?;
 
         if self.write_files {
             self.write_file(&emitted, &output_file);
@@ -149,7 +138,7 @@ impl Scaffold {
                 file.as_path().blue()
             );
             eprintln!(
-                "    {} The corresponding `.t.sol` file already exists",
+                "    {} The corresponding testfile already exists",
                 "=".blue()
             );
             return;

@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/bulloak", "crates/foundry","crates/noir", "crates/syntax"]
+members = ["crates/bulloak", "crates/foundry", "crates/noir", "crates/syntax"]
 
 [workspace.package]
 authors = ["Alexander Gonzalez <alexfertel97@gmail.com>"]
