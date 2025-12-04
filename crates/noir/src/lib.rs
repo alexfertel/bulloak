@@ -6,8 +6,11 @@
 
 mod config;
 mod constants;
+pub mod noir;
 mod scaffold;
+pub mod check;
 mod utils;
 
 pub use config::Config;
 pub use scaffold::scaffold;
+pub use check::check;

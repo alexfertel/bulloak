@@ -59,8 +59,11 @@ impl From<&Cli> for bulloak_noir::Config {
                 format_descriptions: cmd.format_descriptions,
                 ..Self::default()
             },
-            Commands::Check(_cmd) => {
-                todo!();
+            Commands::Check(cmd) => Self {
+                files: cmd.files.clone(),
+                skip_setup_hooks: cmd.skip_modifiers,
+                format_descriptions: cmd.format_descriptions,
+                ..Self::default()
             }
         }
     }

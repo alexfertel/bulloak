@@ -498,4 +498,27 @@ fn check_invalid_glob_warns_but_reports_success() {
         "expected success message, got: {}",
         stdout
     );
+
+    let bad_glob = cwd.join("tests").join("check").join("*[.tree");
+    let out = cmd(&bin, "check", &bad_glob, &["-l", "noir"]);
+
+    assert!(
+        out.status.success(),
+        "check should succeed even on invalid glob, got {:?}",
+        out
+    );
+
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(
+        stderr.contains("could not expand"),
+        "did not see warn on stderr: {}",
+        stderr
+    );
+
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(
+        stdout.contains("All checks completed successfully"),
+        "expected success message, got: {}",
+        stdout
+    );
 }

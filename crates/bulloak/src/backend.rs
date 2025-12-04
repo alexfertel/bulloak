@@ -49,7 +49,14 @@ pub(crate) struct SolidityBackend {
 
 /// Noir/Aztec backend with baked-in config.
 pub(crate) struct NoirBackend {
-    config: bulloak_noir::Config,
+    // TODO: make it private again after polymorphic Violation and Backend
+    pub config: bulloak_noir::Config,
+}
+
+impl NoirBackend{
+    pub(crate) fn check(&self, path: &PathBuf ) -> Result<Vec<bulloak_noir::check::Violation>>{
+        bulloak_noir::check(path, &self.config)
+    }
 }
 
 impl BackendKind {

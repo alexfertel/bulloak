@@ -14,9 +14,13 @@ categories.workspace = true
 [dependencies]
 bulloak-syntax.workspace = true
 anyhow.workspace = true
+tree-sitter = "0.20"
+tree-sitter-noir = "0.0.1"
 
 [dev-dependencies]
 pretty_assertions.workspace = true
+indoc = "2.0.5"
+tempfile = "3.8"
 
 [lints]
 workspace = true
