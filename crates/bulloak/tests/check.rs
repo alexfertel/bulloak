@@ -79,7 +79,7 @@ fn checks_modifiers_skipped_issue_81() {
 }
 
 #[test]
-fn checks_missing_sol_file() {
+fn checks_missing_test_file() {
     let cwd = env::current_dir().unwrap();
     let binary_path = get_binary_path();
     let tree_path =
@@ -89,6 +89,12 @@ fn checks_missing_sol_file() {
     let stderr = String::from_utf8(output.stderr).unwrap();
 
     assert!(stderr.contains("the tree is missing its matching Solidity file"));
+    assert!(stderr.contains("no_matching_sol.tree"));
+
+    let output = cmd(&binary_path, "check", &tree_path, &["-l", "noir"]);
+    let stderr = String::from_utf8(output.stderr).unwrap();
+
+    assert!(stderr.contains("the tree is missing its matching noir file"));
     assert!(stderr.contains("no_matching_sol.tree"));
 }
 
@@ -199,6 +205,13 @@ fn checks_invalid_tree() {
     assert!(stderr.contains(
         r#"an error occurred while parsing the tree: unexpected token '├'"#
     ));
+
+    let output = cmd(&binary_path, "check", &tree_path, &["-l", "noir"]);
+    let stderr = String::from_utf8(output.stderr).unwrap();
+
+    // it's okay to be less specific with error messages for now
+    assert!(stderr.contains(r#"bulloak error: unexpected token '├'"#));
+    assert!(stderr.contains(r#"Failed to parse tree file"#));
 }
 
 #[test]

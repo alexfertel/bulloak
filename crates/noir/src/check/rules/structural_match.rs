@@ -33,23 +33,45 @@ pub fn check(tree_path: &Path, cfg: &Config) -> Result<Vec<Violation>> {
 
     // Read the tree file
     let tree_text = fs::read_to_string(tree_path)?;
-    let ast = bulloak_syntax::parse_one(&tree_text)?;
+    let ast = match bulloak_syntax::parse_one(&tree_text) {
+        Err(e) => {
+            violations.push(Violation::new(
+                ViolationKind::TreeFileInvalid(format!(
+                    "an error occurred while parsing the tree: {}",
+                    e
+                )),
+                tree_path.display().to_string(),
+            ));
+            return Ok(violations);
+        }
+        Ok(a) => a,
+    };
 
     // Find corresponding Noir test file
+    // TODO re-use the test_filename function
     let file_stem =
-        tree_path.file_stem().and_then(|s| s.to_str()).ok_or_else(|| {
-            anyhow::anyhow!("Invalid tree file name: {}", tree_path.display())
-        })?;
+        match tree_path.file_stem().and_then(|s| s.to_str()) {
+            // TODO: this doesn't make a lot of sense tbh, if file path is invalid then we wouldn't
+            // be able to parse it above
+            None => {
+                violations.push(Violation::new(
+                    ViolationKind::TreeFileInvalid(format!(
+                        "Invalid filename: {}",
+                        tree_path.display()
+                    )),
+                    tree_path.display().to_string(),
+                ));
+                return Ok(violations);
+            }
+            Some(f) => f,
+        };
 
     let test_file = tree_path.with_file_name(format!("{file_stem}_test.nr"));
 
     if !test_file.exists() {
         violations.push(Violation::new(
-            ViolationKind::NoirFileInvalid(format!(
-                "File not found: {}",
-                test_file.display()
-            )),
-            test_file.display().to_string(),
+            ViolationKind::NoirFileMissing(),
+            tree_path.display().to_string(),
         ));
         return Ok(violations);
     }

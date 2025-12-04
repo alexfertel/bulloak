@@ -14,6 +14,10 @@ pub struct Violation {
 /// The kind of violation.
 #[derive(Debug, Clone)]
 pub enum ViolationKind {
+    /// The Tree file could not be parsed.
+    TreeFileInvalid(String),
+    /// The Noir file could not be read. violation.filename is enough to produce an error.
+    NoirFileMissing(),
     /// The Noir file could not be parsed.
     NoirFileInvalid(String),
     /// A test function is missing.
@@ -37,6 +41,12 @@ impl Violation {
 impl fmt::Display for Violation {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match &self.kind {
+            ViolationKind::TreeFileInvalid(err) => {
+                write!(f, "Failed to parse tree file {}: {}", self.file, err)
+            }
+            ViolationKind::NoirFileMissing() => {
+                write!(f, "the tree is missing its matching noir file: {}", self.file)
+            }
             ViolationKind::NoirFileInvalid(err) => {
                 write!(f, "Failed to parse Noir file {}: {}", self.file, err)
             }
