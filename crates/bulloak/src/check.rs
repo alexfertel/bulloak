@@ -178,9 +178,8 @@ impl Check {
     fn run_noir_check(&self, specs: Vec<PathBuf>, cfg: &Cli) {
         let backend = NoirBackend { config: cfg.into() };
 
-        let violations = self.collect_violations(&specs, |path| {
-            backend.check(path)
-        });
+        let violations =
+            self.collect_violations(&specs, |path| backend.check(path));
 
         self.report_violations(&violations);
     }

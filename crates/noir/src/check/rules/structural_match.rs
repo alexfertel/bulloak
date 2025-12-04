@@ -7,6 +7,7 @@ use bulloak_syntax::Ast;
 
 use crate::{
     check::violation::{Violation, ViolationKind},
+    constants::TEST_PREFIX,
     noir::ParsedNoirFile,
     utils::to_snake_case,
     Config,
@@ -49,22 +50,21 @@ pub fn check(tree_path: &Path, cfg: &Config) -> Result<Vec<Violation>> {
 
     // Find corresponding Noir test file
     // TODO re-use the test_filename function
-    let file_stem =
-        match tree_path.file_stem().and_then(|s| s.to_str()) {
-            // TODO: this doesn't make a lot of sense tbh, if file path is invalid then we wouldn't
-            // be able to parse it above
-            None => {
-                violations.push(Violation::new(
-                    ViolationKind::TreeFileInvalid(format!(
-                        "Invalid filename: {}",
-                        tree_path.display()
-                    )),
-                    tree_path.display().to_string(),
-                ));
-                return Ok(violations);
-            }
-            Some(f) => f,
-        };
+    let file_stem = match tree_path.file_stem().and_then(|s| s.to_str()) {
+        // TODO: this doesn't make a lot of sense tbh, if file path is invalid then we wouldn't
+        // be able to parse it above
+        None => {
+            violations.push(Violation::new(
+                ViolationKind::TreeFileInvalid(format!(
+                    "Invalid filename: {}",
+                    tree_path.display()
+                )),
+                tree_path.display().to_string(),
+            ));
+            return Ok(violations);
+        }
+        Some(f) => f,
+    };
 
     let test_file = tree_path.with_file_name(format!("{file_stem}_test.nr"));
 
@@ -209,16 +209,19 @@ fn collect_tests(
                 // One test function for all actions under this condition
                 if !actions.is_empty() {
                     let test_name = if helpers.is_empty() {
-                        // Root level action (shouldn't really happen with a
-                        // Condition parent, but handle
-                        // it just in case)
-                        format!("test_{}", to_snake_case(&actions[0].title))
+                        let title = &actions[0].title;
+                        // trim 'it' from first-level assertions (not very frequent, but necessary for consistency
+                        // with foundry backend)
+                        let title = title
+                            .strip_prefix("it ")
+                            .or_else(|| title.strip_prefix("It "))
+                            .unwrap_or(title);
+                        // Root level: test_{action_name}
+                        format!("{}_{}", TEST_PREFIX, to_snake_case(title))
                     } else {
-                        // Under conditions: use the last helper name, NOT the
-                        // action name
-                        format!("test_when_{}", helpers.last().unwrap())
+                        // Under condition: test_{last_helper}
+                        format!("{}_{}", TEST_PREFIX, &helpers.last().unwrap())
                     };
-
                     let should_fail =
                         actions.iter().any(|a| has_panic_keyword(&a.title));
 
@@ -240,10 +243,16 @@ fn collect_tests(
             }
             Ast::Action(action) => {
                 // Root-level action
-                let test_name =
-                    format!("test_{}", to_snake_case(&action.title));
+                let title = &action.title;
+                let title = &action
+                    .title
+                    .strip_prefix("it ")
+                    .or_else(|| title.strip_prefix("It "))
+                    .unwrap_or(title);
+                // Root level: test_{action_name}
+                let name = format!("{}_{}", TEST_PREFIX, to_snake_case(title));
                 let should_fail = has_panic_keyword(&action.title);
-                tests.push(TestInfo { name: test_name, should_fail });
+                tests.push(TestInfo { name, should_fail });
             }
             _ => {}
         }

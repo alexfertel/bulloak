@@ -45,13 +45,21 @@ impl fmt::Display for Violation {
                 write!(f, "Failed to parse tree file {}: {}", self.file, err)
             }
             ViolationKind::NoirFileMissing() => {
-                write!(f, "the tree is missing its matching noir file: {}", self.file)
+                write!(
+                    f,
+                    "the tree is missing its matching noir file: {}",
+                    self.file
+                )
             }
             ViolationKind::NoirFileInvalid(err) => {
                 write!(f, "Failed to parse Noir file {}: {}", self.file, err)
             }
             ViolationKind::TestFunctionMissing(name) => {
-                write!(f, "Missing test function '{}' in {}", name, self.file)
+                write!(
+                    f,
+                    r#"unconstrained fn "{}" is missing in {}"#,
+                    name, self.file
+                )
             }
             ViolationKind::HelperFunctionMissing(name) => {
                 write!(f, "Missing helper function '{}' in {}", name, self.file)

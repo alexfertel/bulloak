@@ -112,6 +112,15 @@ fn checks_empty_contract() {
     assert!(stderr.contains(
         r#"function "test_ShouldNotFindTheSolidityFile" is missing in .sol"#
     ));
+
+    let output = cmd(&binary_path, "check", &tree_path, &["-l", "noir"]);
+    let stderr = String::from_utf8(output.stderr).unwrap();
+
+    assert!(stderr
+        .contains(r#"unconstrained fn "test_should_never_revert" is missing"#));
+    assert!(stderr.contains(
+        r#"unconstrained fn "test_should_never_revert" is missing"#
+    ));
 }
 
 #[test]
