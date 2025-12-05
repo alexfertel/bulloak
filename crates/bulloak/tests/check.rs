@@ -46,6 +46,15 @@ fn checks_valid_structural_match() {
     assert!(
         stdout.contains("All checks completed successfully! No issues found.")
     );
+
+    let output = cmd(&binary_path, "check", &tree_path, &["-l", "noir"]);
+    let stderr = String::from_utf8(output.stderr).unwrap();
+    let stdout = String::from_utf8(output.stdout).unwrap();
+
+    assert_eq!("", stderr);
+    assert!(
+        stdout.contains("All checks completed successfully! No issues found.")
+    );
 }
 
 #[test]
