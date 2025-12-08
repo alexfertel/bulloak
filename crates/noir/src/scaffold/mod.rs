@@ -1,4 +1,4 @@
-mod generator;
+pub(crate) mod generator;
 use super::config::Config;
 use anyhow::Result;
 use bulloak_syntax::parse;

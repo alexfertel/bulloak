@@ -11,33 +11,35 @@ use crate::{
     utils::to_snake_case,
 };
 
-enum ExpectedTests {
-    Root(Root),
-    SetupHook(SetupHook),
-    TestFunction(TestFunction),
-    // TODO: Module
-}
-trait Scaffoldable {
+pub(crate) trait Scaffoldable {
     fn scaffold(&self, generate_setup_hooks: bool) -> String;
 }
 
-struct Root {
+pub(crate) struct Root {
     // TODO: Modules?
-    setup_hooks: Vec<SetupHook>,
-    tests: Vec<TestFunction>,
+    pub setup_hooks: Vec<SetupHook>,
+    pub tests: Vec<TestFunction>,
 }
 /// Used for both definition and invocation
 #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Debug)]
-struct SetupHook {
-    name: String,
+pub(crate) struct SetupHook {
+    pub name: String,
 }
 
-#[derive(Debug)]
-struct TestFunction {
-    name: String,
-    expect_fail: bool,
-    setup_hooks: Vec<SetupHook>,
-    actions: Vec<String>,
+#[derive(Debug, Hash, PartialEq, Eq)]
+pub(crate) struct TestFunction {
+    pub name: String,
+    pub expect_fail: bool,
+    pub setup_hooks: Vec<SetupHook>,
+    pub actions: Vec<String>,
+}
+
+impl Root {
+    pub(crate) fn new(forest: &Vec<Ast>) -> Root {
+        let tests = collect_tests(forest, &[]);
+        let setup_hooks = collect_helpers(forest);
+        Root { setup_hooks, tests }
+    }
 }
 
 impl Scaffoldable for Root {
@@ -89,26 +91,13 @@ impl Scaffoldable for SetupHook {
     }
 }
 
-impl Scaffoldable for ExpectedTests {
-    fn scaffold(&self, generate_setup_hooks: bool) -> String {
-        match self {
-            Self::Root(r) => r.scaffold(generate_setup_hooks),
-            Self::SetupHook(h) => h.scaffold(generate_setup_hooks),
-            Self::TestFunction(t) => t.scaffold(generate_setup_hooks),
-        }
-    }
-}
-
 /// Generate Noir test code from an AST.
 ///
 /// # Errors
 ///
 /// Returns an error if code generation fails.
 pub(super) fn generate(forest: &Vec<Ast>, cfg: &Config) -> Result<String> {
-    // Generate test functions
-    let tests = collect_tests(forest, &[]);
-    let setup_hooks = collect_helpers(forest);
-    let root = Root { setup_hooks, tests };
+    let root = Root::new(forest);
 
     Ok(root.scaffold(!cfg.skip_setup_hooks))
 }

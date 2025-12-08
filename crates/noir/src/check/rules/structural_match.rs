@@ -2,27 +2,14 @@
 
 use std::{collections::HashSet, fs, path::Path};
 
+use crate::scaffold::generator::{Root, SetupHook};
 use anyhow::Result;
-use bulloak_syntax::Ast;
 
 use crate::{
     check::violation::{Violation, ViolationKind},
-    constants::TEST_PREFIX,
     noir::ParsedNoirFile,
-    utils::to_snake_case,
     Config,
 };
-
-/// Expected test structure extracted from AST.
-struct ExpectedTests {
-    helpers: HashSet<String>,
-    test_functions: Vec<TestInfo>,
-}
-
-struct TestInfo {
-    name: String,
-    should_fail: bool,
-}
 
 /// Check that a Noir test file matches its tree specification.
 ///
@@ -34,7 +21,7 @@ pub fn check(tree_path: &Path, cfg: &Config) -> Result<Vec<Violation>> {
 
     // Read the tree file
     let tree_text = fs::read_to_string(tree_path)?;
-    let ast = match bulloak_syntax::parse_one(&tree_text) {
+    let forest = match bulloak_syntax::parse(&tree_text) {
         Err(e) => {
             violations.push(Violation::new(
                 ViolationKind::TreeFileInvalid(format!(
@@ -91,19 +78,19 @@ pub fn check(tree_path: &Path, cfg: &Config) -> Result<Vec<Violation>> {
     };
 
     // Extract expected structure from AST
-    let expected = extract_expected_structure(&ast, cfg)?;
+    let expected = Root::new(&forest);
 
     // Check helpers (if not skipped)
     if !cfg.skip_setup_hooks {
         let found_helpers = parsed.find_helper_functions();
-        let found_helper_set: HashSet<String> =
-            found_helpers.into_iter().collect();
+        let found_helper_set: HashSet<SetupHook> =
+            found_helpers.into_iter().map(|x| SetupHook { name: x }).collect();
 
-        for expected_helper in &expected.helpers {
+        for expected_helper in &expected.setup_hooks {
             if !found_helper_set.contains(expected_helper) {
                 violations.push(Violation::new(
                     ViolationKind::HelperFunctionMissing(
-                        expected_helper.clone(),
+                        expected_helper.name.clone(),
                     ),
                     test_file.display().to_string(),
                 ));
@@ -118,18 +105,19 @@ pub fn check(tree_path: &Path, cfg: &Config) -> Result<Vec<Violation>> {
         .map(|t| (t.name.clone(), t.has_should_fail))
         .collect();
 
-    for expected_test in &expected.test_functions {
+    for expected_test in &expected.tests {
         if let Some(&has_should_fail) = found_test_map.get(&expected_test.name)
         {
+            // TODO: compare invocation of setup hooks and inclusion of action comments
             // Test exists - check attributes
-            if expected_test.should_fail && !has_should_fail {
+            if expected_test.expect_fail && !has_should_fail {
                 violations.push(Violation::new(
                     ViolationKind::ShouldFailMissing(
                         expected_test.name.clone(),
                     ),
                     test_file.display().to_string(),
                 ));
-            } else if !expected_test.should_fail && has_should_fail {
+            } else if !expected_test.expect_fail && has_should_fail {
                 violations.push(Violation::new(
                     ViolationKind::ShouldFailUnexpected(
                         expected_test.name.clone(),
@@ -147,124 +135,6 @@ pub fn check(tree_path: &Path, cfg: &Config) -> Result<Vec<Violation>> {
     }
 
     Ok(violations)
-}
-
-/// Extract expected test structure from AST.
-fn extract_expected_structure(
-    ast: &Ast,
-    cfg: &Config,
-) -> Result<ExpectedTests> {
-    let ast_root = match ast {
-        Ast::Root(r) => r,
-        _ => anyhow::bail!("Expected Root node"),
-    };
-
-    let mut helpers = HashSet::new();
-    let mut test_functions = Vec::new();
-
-    if !cfg.skip_setup_hooks {
-        collect_helpers_recursive(&ast_root.children, &mut helpers);
-    }
-
-    collect_tests(&ast_root.children, &[], &mut test_functions, cfg);
-
-    Ok(ExpectedTests { helpers, test_functions })
-}
-
-/// Recursively collect helper names from conditions.
-fn collect_helpers_recursive(children: &[Ast], helpers: &mut HashSet<String>) {
-    for child in children {
-        if let Ast::Condition(condition) = child {
-            helpers.insert(to_snake_case(&condition.title));
-            collect_helpers_recursive(&condition.children, helpers);
-        }
-    }
-}
-
-/// Collect expected test functions.
-fn collect_tests(
-    children: &[Ast],
-    parent_helpers: &[String],
-    tests: &mut Vec<TestInfo>,
-    cfg: &Config,
-) {
-    for child in children {
-        match child {
-            Ast::Condition(condition) => {
-                let mut helpers = parent_helpers.to_vec();
-                if !cfg.skip_setup_hooks {
-                    helpers.push(to_snake_case(&condition.title));
-                }
-
-                // Collect all direct Action children
-                let actions: Vec<_> = condition
-                    .children
-                    .iter()
-                    .filter_map(|c| match c {
-                        Ast::Action(a) => Some(a),
-                        _ => None,
-                    })
-                    .collect();
-
-                // One test function for all actions under this condition
-                if !actions.is_empty() {
-                    let test_name = if helpers.is_empty() {
-                        let title = &actions[0].title;
-                        // trim 'it' from first-level assertions (not very frequent, but necessary for consistency
-                        // with foundry backend)
-                        let title = title
-                            .strip_prefix("it ")
-                            .or_else(|| title.strip_prefix("It "))
-                            .unwrap_or(title);
-                        // Root level: test_{action_name}
-                        format!("{}_{}", TEST_PREFIX, to_snake_case(title))
-                    } else {
-                        // Under condition: test_{last_helper}
-                        format!("{}_{}", TEST_PREFIX, &helpers.last().unwrap())
-                    };
-                    let should_fail =
-                        actions.iter().any(|a| has_panic_keyword(&a.title));
-
-                    tests.push(TestInfo { name: test_name, should_fail });
-                }
-
-                // Recursively process only nested Condition children (not
-                // actions!)
-                for child in &condition.children {
-                    if matches!(child, Ast::Condition(_)) {
-                        collect_tests(
-                            std::slice::from_ref(child),
-                            &helpers,
-                            tests,
-                            cfg,
-                        );
-                    }
-                }
-            }
-            Ast::Action(action) => {
-                // Root-level action
-                let title = &action.title;
-                let title = &action
-                    .title
-                    .strip_prefix("it ")
-                    .or_else(|| title.strip_prefix("It "))
-                    .unwrap_or(title);
-                // Root level: test_{action_name}
-                let name = format!("{}_{}", TEST_PREFIX, to_snake_case(title));
-                let should_fail = has_panic_keyword(&action.title);
-                tests.push(TestInfo { name, should_fail });
-            }
-            _ => {}
-        }
-    }
-}
-
-/// Check if a title contains panic keywords.
-fn has_panic_keyword(title: &str) -> bool {
-    let lower = title.to_lowercase();
-    crate::constants::PANIC_KEYWORDS
-        .iter()
-        .any(|keyword| lower.contains(keyword))
 }
 
 #[cfg(test)]
