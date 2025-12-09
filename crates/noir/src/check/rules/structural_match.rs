@@ -118,18 +118,19 @@ pub fn check(tree_path: &Path, cfg: &Config) -> Result<Vec<Violation>> {
         {
             // TODO: compare invocation of setup hooks and inclusion of action comments
             // Test exists - check attributes
-            if expected_test.expect_fail && !has_should_fail {
-                violations.push(Violation::new(
-                    ViolationKind::ShouldFailMissing(
+            let violation_kind =
+                match (expected_test.expect_fail, has_should_fail) {
+                    (true, false) => Some(ViolationKind::ShouldFailMissing(
                         expected_test.name.clone(),
-                    ),
-                    test_file.display().to_string(),
-                ));
-            } else if !expected_test.expect_fail && has_should_fail {
-                violations.push(Violation::new(
-                    ViolationKind::ShouldFailUnexpected(
+                    )),
+                    (false, true) => Some(ViolationKind::ShouldFailUnexpected(
                         expected_test.name.clone(),
-                    ),
+                    )),
+                    _ => None,
+                };
+            if let Some(kind) = violation_kind {
+                violations.push(Violation::new(
+                    kind,
                     test_file.display().to_string(),
                 ));
             }
