@@ -19,8 +19,16 @@ use crate::{
 pub fn check(tree_path: &Path, cfg: &Config) -> Result<Vec<Violation>> {
     let mut violations = Vec::new();
 
-    // Read the tree file
-    let tree_text = fs::read_to_string(tree_path)?;
+    let tree_text = match fs::read_to_string(tree_path) {
+        Err(e) => {
+            violations.push(Violation::new(
+                ViolationKind::TreeFileMissing(e.to_string()),
+                tree_path.display().to_string(),
+            ));
+            return Ok(violations);
+        }
+        Ok(a) => a,
+    };
     let forest = match bulloak_syntax::parse(&tree_text) {
         Err(e) => {
             violations.push(Violation::new(
@@ -210,5 +218,17 @@ mod tests {
 
         // Cleanup
         let _ = fs::remove_file(test_path);
+    }
+
+    #[test]
+    fn test_check_fails_when_missing_spec() {
+        let cfg = Config::default();
+        let violations = check(Path::new("not_there.tree"), &cfg).unwrap();
+
+        assert!(violations.len() == 1);
+        assert!(matches!(
+            violations[0].kind,
+            ViolationKind::TreeFileMissing(_)
+        ));
     }
 }
