@@ -44,22 +44,12 @@ pub fn check(tree_path: &Path, cfg: &Config) -> Result<Vec<Violation>> {
     };
 
     // Find corresponding Noir test file
-    // TODO re-use the test_filename function
-    let file_stem = match tree_path.file_stem().and_then(|s| s.to_str()) {
-        // TODO: this doesn't make a lot of sense tbh, if file path is invalid then we wouldn't
-        // be able to parse it above
-        None => {
-            violations.push(Violation::new(
-                ViolationKind::TreeFileInvalid(format!(
-                    "Invalid filename: {}",
-                    tree_path.display()
-                )),
-                tree_path.display().to_string(),
-            ));
-            return Ok(violations);
-        }
-        Some(f) => f,
-    };
+    // TODO don't bother reusing the test_filename function here since after the Big Backend
+    // Refactor this module won't know about filenames
+    let file_stem = tree_path
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or_else(|| panic!("this condition should be unreachable, as the file was successfully read once already."));
 
     let test_file = tree_path.with_file_name(format!("{file_stem}_test.nr"));
 
@@ -225,6 +215,18 @@ mod tests {
     fn test_check_fails_when_missing_spec() {
         let cfg = Config::default();
         let violations = check(Path::new("not_there.tree"), &cfg).unwrap();
+
+        assert!(violations.len() == 1);
+        assert!(matches!(
+            violations[0].kind,
+            ViolationKind::TreeFileMissing(_)
+        ));
+    }
+
+    #[test]
+    fn test_check_fails_when_empty_spec_filename() {
+        let cfg = Config::default();
+        let violations = check(Path::new(""), &cfg).unwrap();
 
         assert!(violations.len() == 1);
         assert!(matches!(
