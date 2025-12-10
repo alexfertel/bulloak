@@ -10,6 +10,7 @@ pub mod noir;
 mod scaffold;
 pub mod check;
 mod utils;
+mod test_structure;
 
 pub use config::Config;
 pub use scaffold::scaffold;

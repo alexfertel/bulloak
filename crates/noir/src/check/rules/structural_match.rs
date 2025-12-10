@@ -2,7 +2,7 @@
 
 use std::{collections::HashSet, fs, path::Path};
 
-use crate::scaffold::generator::{Root, SetupHook};
+use crate::test_structure::{Root, SetupHook};
 use anyhow::Result;
 
 use crate::{
