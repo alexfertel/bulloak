@@ -83,38 +83,31 @@ impl ParsedNoirFile {
         let name = self.get_function_name(node)?;
 
         // Check for should_fail
-        let has_should_fail = self.has_should_fail_attribute(node);
+        let has_should_fail = self.find_attribute(node, |x| x == "#[test(should_fail)]").is_some();
 
         Some(TestFunction { name, has_should_fail })
     }
 
     /// Check if a function has #[test] attribute.
     fn has_test_attribute<'a>(&self, node: Node<'a>) -> bool {
-        self.find_attribute(node, "test").is_some()
-    }
-
-    /// Check if a function has #[test(should_fail)] attribute.
-    fn has_should_fail_attribute<'a>(&self, node: Node<'a>) -> bool {
-        if let Some(attr_node) = self.find_attribute(node, "test") {
-            // Check if the attribute contains "should_fail"
-            let attr_text = self.node_text(attr_node);
-            return attr_text.contains("should_fail");
-        }
-        false
+        self.find_attribute(node, |x| {
+            x == "#[test(should_fail)]" || x == "#[test]"
+        })
+        .is_some()
     }
 
     /// Find a macro/attribute node by name (Noir uses "macro" for attributes).
-    fn find_attribute<'a>(
+    fn find_attribute<'a, F: Fn(&str) -> bool>(
         &self,
         node: Node<'a>,
-        attr_name: &str,
+        predicate: F,
     ) -> Option<Node<'a>> {
         // Look for macro nodes before the function
         let mut sibling = node.prev_sibling();
         while let Some(s) = sibling {
             if s.kind() == "macro" {
                 let text = self.node_text(s);
-                if text.contains(attr_name) {
+                if predicate(&text) {
                     return Some(s);
                 }
             } else if s.kind() == "identifier" {
