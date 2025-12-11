@@ -229,6 +229,64 @@ mod tests {
     }
 
     #[test]
+    fn test_dont_parse_other_macros() {
+        let source = r#"
+            #[gen_test]
+            fn test_panics() {
+                assert(false);
+            }
+            #[gen_test(should_fail)]
+            fn test_panics() {
+                assert(false);
+            }
+            #[test_fail(should_fail)]
+            fn test_panics() {
+                assert(false);
+            }
+        "#;
+
+        let parsed = ParsedNoirFile::parse(source).unwrap();
+        let test_fns = parsed.find_test_functions();
+
+        assert_eq!(test_fns.len(), 0);
+    }
+
+    #[test]
+    fn test_parse_with_extra_attributes() {
+        let source = r#"
+            #[test] #[derive(Debug)]
+            unconstrained fn test_something() {
+                assert(true);
+            }
+
+            #[codegen]
+            #[test]
+            unconstrained fn test_somethingelse() {
+                assert(true);
+            }
+
+            #[test(should_fail)]
+            #[foo]
+            unconstrained fn test_panics() {
+                assert(false);
+            }
+        "#;
+
+        let parsed = ParsedNoirFile::parse(source).unwrap();
+        let test_fns = parsed.find_test_functions();
+
+        assert_eq!(test_fns.len(), 3);
+        assert_eq!(test_fns[0].name, "test_something");
+        assert!(!test_fns[0].has_should_fail);
+
+        assert_eq!(test_fns[1].name, "test_somethingelse");
+        assert!(!test_fns[1].has_should_fail);
+
+        assert_eq!(test_fns[2].name, "test_panics");
+        assert!(test_fns[2].has_should_fail);
+    }
+
+    #[test]
     fn test_parse_unconstrained() {
         let source = r#"
             #[test]
