@@ -46,6 +46,15 @@ fn checks_valid_structural_match() {
     assert!(
         stdout.contains("All checks completed successfully! No issues found.")
     );
+
+    let output = cmd(&binary_path, "check", &tree_path, &["-l", "noir"]);
+    let stderr = String::from_utf8(output.stderr).unwrap();
+    let stdout = String::from_utf8(output.stdout).unwrap();
+
+    assert_eq!("", stderr);
+    assert!(
+        stdout.contains("All checks completed successfully! No issues found.")
+    );
 }
 
 #[test]
@@ -79,7 +88,7 @@ fn checks_modifiers_skipped_issue_81() {
 }
 
 #[test]
-fn checks_missing_sol_file() {
+fn checks_missing_test_file() {
     let cwd = env::current_dir().unwrap();
     let binary_path = get_binary_path();
     let tree_path =
@@ -89,6 +98,12 @@ fn checks_missing_sol_file() {
     let stderr = String::from_utf8(output.stderr).unwrap();
 
     assert!(stderr.contains("the tree is missing its matching Solidity file"));
+    assert!(stderr.contains("no_matching_sol.tree"));
+
+    let output = cmd(&binary_path, "check", &tree_path, &["-l", "noir"]);
+    let stderr = String::from_utf8(output.stderr).unwrap();
+
+    assert!(stderr.contains("the tree is missing its matching noir file"));
     assert!(stderr.contains("no_matching_sol.tree"));
 }
 
@@ -105,6 +120,15 @@ fn checks_empty_contract() {
         .contains(r#"function "test_ShouldNeverRevert" is missing in .sol"#));
     assert!(stderr.contains(
         r#"function "test_ShouldNotFindTheSolidityFile" is missing in .sol"#
+    ));
+
+    let output = cmd(&binary_path, "check", &tree_path, &["-l", "noir"]);
+    let stderr = String::from_utf8(output.stderr).unwrap();
+
+    assert!(stderr
+        .contains(r#"unconstrained fn "test_should_never_revert" is missing"#));
+    assert!(stderr.contains(
+        r#"unconstrained fn "test_should_never_revert" is missing"#
     ));
 }
 
@@ -199,6 +223,13 @@ fn checks_invalid_tree() {
     assert!(stderr.contains(
         r#"an error occurred while parsing the tree: unexpected token '├'"#
     ));
+
+    let output = cmd(&binary_path, "check", &tree_path, &["-l", "noir"]);
+    let stderr = String::from_utf8(output.stderr).unwrap();
+
+    // it's okay to be less specific with error messages for now
+    assert!(stderr.contains(r#"bulloak error: unexpected token '├'"#));
+    assert!(stderr.contains(r#"Failed to parse tree file"#));
 }
 
 #[test]
@@ -478,6 +509,29 @@ fn check_invalid_glob_warns_but_reports_success() {
 
     let bad_glob = cwd.join("tests").join("check").join("*[.tree");
     let out = cmd(&bin, "check", &bad_glob, &[]);
+
+    assert!(
+        out.status.success(),
+        "check should succeed even on invalid glob, got {:?}",
+        out
+    );
+
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(
+        stderr.contains("could not expand"),
+        "did not see warn on stderr: {}",
+        stderr
+    );
+
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(
+        stdout.contains("All checks completed successfully"),
+        "expected success message, got: {}",
+        stdout
+    );
+
+    let bad_glob = cwd.join("tests").join("check").join("*[.tree");
+    let out = cmd(&bin, "check", &bad_glob, &["-l", "noir"]);
 
     assert!(
         out.status.success(),

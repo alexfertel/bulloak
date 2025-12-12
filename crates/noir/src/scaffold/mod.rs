@@ -1,4 +1,5 @@
-mod generator;
+pub(crate) mod generator;
+pub(crate) mod scaffoldable;
 use super::config::Config;
 use anyhow::Result;
 use bulloak_syntax::parse;

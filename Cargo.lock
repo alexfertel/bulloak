@@ -371,7 +371,11 @@ version = "0.9.1"
 dependencies = [
  "anyhow",
  "bulloak-syntax",
+ "indoc",
  "pretty_assertions",
+ "tempfile",
+ "tree-sitter",
+ "tree-sitter-noir",
 ]
 
 [[package]]
@@ -3191,6 +3195,26 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c06d3da6113f116aaee68e4d601191614c9053067f9ab7f6edbcb161237daa54"
 dependencies = [
  "once_cell",
+]
+
+[[package]]
+name = "tree-sitter"
+version = "0.20.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e747b1f9b7b931ed39a548c1fae149101497de3c1fc8d9e18c62c1a66c683d3d"
+dependencies = [
+ "cc",
+ "regex",
+]
+
+[[package]]
+name = "tree-sitter-noir"
+version = "0.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f09a0f7c33f9ea1e0ca3e3469e6660fac2c7d9539ea37e5cc1b22d98f91a374a"
+dependencies = [
+ "cc",
+ "tree-sitter",
 ]
 
 [[package]]
