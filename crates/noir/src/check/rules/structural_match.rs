@@ -548,11 +548,11 @@ mod compare_trees_test {
         assert_eq!(violations.len(), 2);
         assert!(matches!(
             &violations[0].kind,
-            ViolationKind::TestFunctionMissing(x) if x == "test_b"
+            ViolationKind::SetupHookMissing(x) if x == "helper_a"
         ));
         assert!(matches!(
             &violations[1].kind,
-            ViolationKind::SetupHookMissing(x) if x == "helper_a"
+            ViolationKind::TestFunctionMissing(x) if x == "test_b"
         ));
     }
 
