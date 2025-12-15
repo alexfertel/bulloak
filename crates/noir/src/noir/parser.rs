@@ -5,13 +5,7 @@ use std::sync::LazyLock;
 use regex::Regex;
 use tree_sitter::{Node, Parser};
 
-use crate::test_structure::{SetupHook, TestFunction};
-
-#[derive(Clone)]
-enum Function {
-    SetupHook(SetupHook),
-    TestFunction(TestFunction),
-}
+use crate::test_structure::{SetupHook, TestFunction, Function};
 
 /// Parsed Noir test file.
 pub struct ParsedNoirFile {
@@ -48,7 +42,7 @@ impl ParsedNoirFile {
     }
 
     /// Find all test functions in the file.
-    pub fn find_test_functions(&self) -> Vec<TestFunction> {
+    pub(crate) fn find_test_functions(&self) -> Vec<TestFunction> {
         self.find_functions()
             .iter()
             .cloned()
@@ -63,7 +57,7 @@ impl ParsedNoirFile {
     }
 
     /// Find all helper functions (functions without #[test] attribute).
-    pub fn find_helper_functions(&self) -> Vec<SetupHook> {
+    pub(crate) fn find_helper_functions(&self) -> Vec<SetupHook> {
         self.find_functions()
             .iter()
             .cloned()

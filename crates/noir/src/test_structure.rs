@@ -23,16 +23,22 @@ impl Root {
 
 /// Used for both definition and invocation
 #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Debug)]
-pub struct SetupHook {
+pub(crate) struct SetupHook {
     pub name: String,
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone)]
-pub struct TestFunction {
+pub(crate) struct TestFunction {
     pub name: String,
     pub expect_fail: bool,
     pub setup_hooks: Vec<SetupHook>,
     pub actions: Vec<String>,
+}
+
+#[derive(Clone)]
+pub(crate) enum Function {
+    SetupHook(SetupHook),
+    TestFunction(TestFunction),
 }
 
 /// Collect all unique helper names from conditions.
