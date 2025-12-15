@@ -24,8 +24,12 @@ pub enum ViolationKind {
     NoirFileInvalid(String),
     /// A test function is missing.
     TestFunctionMissing(String),
-    /// A helper function is missing.
-    HelperFunctionMissing(String),
+    /// A setup hook is missing.
+    SetupHookMissing(String),
+    /// A test function is present, but in the incorrect place in the noir file.
+    TestFunctionWrongPosition(String),
+    /// A setup hook is present, but in the incorrect place in the noir file.
+    SetupHookWrongPosition(String),
     /// A test should have `#[test(should_fail)]` but doesn't.
     ShouldFailMissing(String),
     /// A test has `#[test(should_fail)]` but shouldn't.
@@ -59,15 +63,25 @@ impl fmt::Display for Violation {
             ViolationKind::NoirFileInvalid(err) => {
                 write!(f, "Failed to parse Noir file {}: {}", self.file, err)
             }
-            ViolationKind::TestFunctionMissing(name) => {
+            ViolationKind::TestFunctionWrongPosition(name) => {
                 write!(
                     f,
-                    r#"unconstrained fn "{}" is missing in {}"#,
+                    r#"Test function "{}" is in wrong position in {}"#,
                     name, self.file
                 )
             }
-            ViolationKind::HelperFunctionMissing(name) => {
-                write!(f, "Missing helper function '{}' in {}", name, self.file)
+            ViolationKind::SetupHookWrongPosition(name) => {
+                write!(f, "Setup hook '{}' is in wrong position in {}", name, self.file)
+            }
+            ViolationKind::TestFunctionMissing(name) => {
+                write!(
+                    f,
+                    r#"Test function "{}" is missing in {}"#,
+                    name, self.file
+                )
+            }
+            ViolationKind::SetupHookMissing(name) => {
+                write!(f, "Missing setup hook '{}' in {}", name, self.file)
             }
             ViolationKind::ShouldFailMissing(name) => {
                 write!(

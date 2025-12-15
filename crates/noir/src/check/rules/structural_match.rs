@@ -126,7 +126,7 @@ fn compare_trees(
                 if !skip_setup_hooks {
                     if !found_hooks.contains(h) {
                         violations.push(Violation::new(
-                            ViolationKind::HelperFunctionMissing(
+                            ViolationKind::SetupHookMissing(
                                 h.name.clone(),
                             ),
                             test_file.clone(),
@@ -442,9 +442,9 @@ mod compare_trees_test {
         assert_eq!(violations.len(), 1);
         assert!(matches!(
             violations[0].kind,
-            ViolationKind::HelperFunctionMissing(_)
+            ViolationKind::SetupHookMissing(_)
         ));
-        if let ViolationKind::HelperFunctionMissing(name) = &violations[0].kind
+        if let ViolationKind::SetupHookMissing(name) = &violations[0].kind
         {
             assert_eq!(name, "helper_foo");
         }
@@ -552,7 +552,7 @@ mod compare_trees_test {
         ));
         assert!(matches!(
             &violations[1].kind,
-            ViolationKind::HelperFunctionMissing(x) if x == "helper_a"
+            ViolationKind::SetupHookMissing(x) if x == "helper_a"
         ));
     }
 
