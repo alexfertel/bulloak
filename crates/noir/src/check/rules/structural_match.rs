@@ -74,13 +74,34 @@ pub fn check(tree_path: &Path, cfg: &Config) -> Result<Vec<Violation>> {
             return Ok(violations);
         }
     };
+    let parsed = Root {
+        setup_hooks: parsed.find_helper_functions(),
+        tests: parsed.find_test_functions(),
+    };
 
     // Extract expected structure from AST
     let expected = Root::new(&forest);
+    let comparison_violations = compare_trees(
+        &parsed,
+        &expected,
+        test_file.display().to_string(),
+        cfg.skip_setup_hooks,
+    );
+    violations.extend(comparison_violations);
+    Ok(violations)
+}
 
+/// iterate over the two trees and report on their differences
+fn compare_trees(
+    actual: &Root,
+    expected: &Root,
+    test_file: String,
+    skip_setup_hooks: bool,
+) -> Vec<Violation> {
+    let mut violations = Vec::new();
     // Check helpers (if not skipped)
-    if !cfg.skip_setup_hooks {
-        let found_helpers = parsed.find_helper_functions();
+    if !skip_setup_hooks {
+        let found_helpers = actual.setup_hooks.clone();
         let found_helper_set: HashSet<SetupHook> =
             found_helpers.into_iter().collect();
 
@@ -90,18 +111,16 @@ pub fn check(tree_path: &Path, cfg: &Config) -> Result<Vec<Violation>> {
                     ViolationKind::HelperFunctionMissing(
                         expected_helper.name.clone(),
                     ),
-                    test_file.display().to_string(),
+                    test_file.clone(),
                 ));
             }
         }
     }
 
     // Check test functions
-    let found_tests = parsed.find_test_functions();
-    let found_test_map: std::collections::HashMap<String, bool> = found_tests
-        .iter()
-        .map(|t| (t.name.clone(), t.expect_fail))
-        .collect();
+    let found_tests = actual.tests.clone();
+    let found_test_map: std::collections::HashMap<String, bool> =
+        found_tests.iter().map(|t| (t.name.clone(), t.expect_fail)).collect();
 
     for expected_test in &expected.tests {
         if let Some(&has_should_fail) = found_test_map.get(&expected_test.name)
@@ -119,21 +138,18 @@ pub fn check(tree_path: &Path, cfg: &Config) -> Result<Vec<Violation>> {
                     _ => None,
                 };
             if let Some(kind) = violation_kind {
-                violations.push(Violation::new(
-                    kind,
-                    test_file.display().to_string(),
-                ));
+                violations.push(Violation::new(kind, test_file.clone()));
             }
         } else {
             // Test is missing
             violations.push(Violation::new(
                 ViolationKind::TestFunctionMissing(expected_test.name.clone()),
-                test_file.display().to_string(),
+                test_file.clone(),
             ));
         }
     }
 
-    Ok(violations)
+    violations
 }
 
 #[cfg(test)]
