@@ -588,4 +588,134 @@ mod compare_trees_test {
             compare_trees(&actual, &expected, "test.nr".to_string(), false);
         assert_eq!(violations.len(), 0);
     }
+
+
+    #[test]
+    fn ordering_inverted() {
+        let actual = Root {
+            functions: vec![
+                Function::TestFunction(TestFunction {
+                    name: "test_b".to_string(),
+                    expect_fail: false,
+                    setup_hooks: vec![],
+                    actions: vec![],
+                }),
+                Function::SetupHook(SetupHook { name: "helper_a".to_string() }),
+            ],
+        };
+        let expected = Root {
+            functions: vec![
+                Function::SetupHook(SetupHook { name: "helper_a".to_string() }),
+                Function::TestFunction(TestFunction {
+                    name: "test_b".to_string(),
+                    expect_fail: false,
+                    setup_hooks: vec![],
+                    actions: vec![],
+                }),
+            ],
+        };
+        let violations =
+            compare_trees(&actual, &expected, "test.nr".to_string(), false);
+        assert_eq!(violations.len(), 2);
+        assert!(matches!(
+            &violations[0].kind,
+            ViolationKind::TestFunctionWrongPosition(x) if x == "test_b"
+        ));
+        assert!(matches!(
+            &violations[1].kind,
+            ViolationKind::SetupHookWrongPosition(x) if x == "helper_a"
+        ));
+    }
+
+    #[test]
+    fn ordering_incorrect_with_extra_function() {
+        let actual = Root {
+            functions: vec![
+                Function::SetupHook(SetupHook { name: "other_fun".to_string() }),
+                Function::TestFunction(TestFunction {
+                    name: "other_test".to_string(),
+                    expect_fail: false,
+                    setup_hooks: vec![],
+                    actions: vec![],
+                }),
+                Function::TestFunction(TestFunction {
+                    name: "test_b".to_string(),
+                    expect_fail: false,
+                    setup_hooks: vec![],
+                    actions: vec![],
+                }),
+                Function::TestFunction(TestFunction {
+                    name: "other_test".to_string(),
+                    expect_fail: false,
+                    setup_hooks: vec![],
+                    actions: vec![],
+                }),
+                Function::SetupHook(SetupHook { name: "helper_a".to_string() }),
+            ],
+        };
+        let expected = Root {
+            functions: vec![
+                Function::SetupHook(SetupHook { name: "helper_a".to_string() }),
+                Function::TestFunction(TestFunction {
+                    name: "test_b".to_string(),
+                    expect_fail: false,
+                    setup_hooks: vec![],
+                    actions: vec![],
+                }),
+            ],
+        };
+        let violations =
+            compare_trees(&actual, &expected, "test.nr".to_string(), false);
+        assert_eq!(violations.len(), 2);
+        assert!(matches!(
+            &violations[0].kind,
+            ViolationKind::TestFunctionWrongPosition(x) if x == "test_b"
+        ));
+        assert!(matches!(
+            &violations[1].kind,
+            ViolationKind::SetupHookWrongPosition(x) if x == "helper_a"
+        ));
+    }
+
+    #[test]
+    fn ordering_correct_with_extra_function() {
+        let actual = Root {
+            functions: vec![
+                Function::SetupHook(SetupHook { name: "other_fun".to_string() }),
+                Function::SetupHook(SetupHook { name: "helper_a".to_string() }),
+                Function::TestFunction(TestFunction {
+                    name: "other_test".to_string(),
+                    expect_fail: false,
+                    setup_hooks: vec![],
+                    actions: vec![],
+                }),
+                Function::TestFunction(TestFunction {
+                    name: "test_b".to_string(),
+                    expect_fail: false,
+                    setup_hooks: vec![],
+                    actions: vec![],
+                }),
+                Function::TestFunction(TestFunction {
+                    name: "other_test".to_string(),
+                    expect_fail: false,
+                    setup_hooks: vec![],
+                    actions: vec![],
+                }),
+            ],
+        };
+        let expected = Root {
+            functions: vec![
+                Function::SetupHook(SetupHook { name: "helper_a".to_string() }),
+                Function::TestFunction(TestFunction {
+                    name: "test_b".to_string(),
+                    expect_fail: false,
+                    setup_hooks: vec![],
+                    actions: vec![],
+                }),
+            ],
+        };
+        let violations =
+            compare_trees(&actual, &expected, "test.nr".to_string(), false);
+        assert_eq!(violations.len(), 0);
+    }
 }
