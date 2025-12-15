@@ -33,42 +33,12 @@ impl ParsedNoirFile {
         Ok(Self { source: source.to_string(), tree })
     }
 
-    fn find_functions(&self) -> Vec<Function> {
+    pub(crate) fn find_functions(&self) -> Vec<Function> {
         let mut functions = Vec::new();
         let root_node = self.tree.root_node();
 
         self.find_functions_recursive(root_node, &mut functions);
         functions
-    }
-
-    /// Find all test functions in the file.
-    pub(crate) fn find_test_functions(&self) -> Vec<TestFunction> {
-        self.find_functions()
-            .iter()
-            .cloned()
-            .filter_map(|x| {
-                if let Function::TestFunction(f) = x {
-                    Some(f)
-                } else {
-                    None
-                }
-            })
-            .collect()
-    }
-
-    /// Find all helper functions (functions without #[test] attribute).
-    pub(crate) fn find_helper_functions(&self) -> Vec<SetupHook> {
-        self.find_functions()
-            .iter()
-            .cloned()
-            .filter_map(|x| {
-                if let Function::SetupHook(f) = x {
-                    Some(f)
-                } else {
-                    None
-                }
-            })
-            .collect()
     }
 
     /// Recursively find test functions in a node and its children.
@@ -204,11 +174,15 @@ mod tests {
         "#;
 
         let parsed = ParsedNoirFile::parse(source).unwrap();
-        let test_fns = parsed.find_test_functions();
+        let functions = parsed.find_functions();
 
-        assert_eq!(test_fns.len(), 1);
-        assert_eq!(test_fns[0].name, "test_something");
-        assert!(!test_fns[0].expect_fail);
+        assert_eq!(functions.len(), 1);
+        if let Function::TestFunction(test_fn) = &functions[0] {
+            assert_eq!(test_fn.name, "test_something");
+            assert!(!test_fn.expect_fail);
+        } else {
+            panic!("Expected TestFunction");
+        }
     }
 
     #[test]
@@ -226,14 +200,22 @@ mod tests {
         "#;
 
         let parsed = ParsedNoirFile::parse(source).unwrap();
-        let test_fns = parsed.find_test_functions();
+        let functions = parsed.find_functions();
 
-        assert_eq!(test_fns.len(), 2);
-        assert_eq!(test_fns[0].name, "test_panics");
-        assert!(test_fns[0].expect_fail);
+        assert_eq!(functions.len(), 2);
+        if let Function::TestFunction(test_fn) = &functions[0] {
+            assert_eq!(test_fn.name, "test_panics");
+            assert!(test_fn.expect_fail);
+        } else {
+            panic!("Expected TestFunction");
+        }
 
-        assert_eq!(test_fns[1].name, "test_panics_specifically");
-        assert!(test_fns[1].expect_fail);
+        if let Function::TestFunction(test_fn) = &functions[1] {
+            assert_eq!(test_fn.name, "test_panics_specifically");
+            assert!(test_fn.expect_fail);
+        } else {
+            panic!("Expected TestFunction");
+        }
     }
 
     #[test]
@@ -254,9 +236,11 @@ mod tests {
         "#;
 
         let parsed = ParsedNoirFile::parse(source).unwrap();
-        let test_fns = parsed.find_test_functions();
+        let functions = parsed.find_functions();
 
-        assert_eq!(test_fns.len(), 0);
+        // All functions should be SetupHooks since none have #[test] attribute
+        assert_eq!(functions.len(), 3);
+        assert!(functions.iter().all(|f| matches!(f, Function::SetupHook(_))));
     }
 
     #[test]
@@ -281,17 +265,29 @@ mod tests {
         "#;
 
         let parsed = ParsedNoirFile::parse(source).unwrap();
-        let test_fns = parsed.find_test_functions();
+        let functions = parsed.find_functions();
 
-        assert_eq!(test_fns.len(), 3);
-        assert_eq!(test_fns[0].name, "test_something");
-        assert!(!test_fns[0].expect_fail);
+        assert_eq!(functions.len(), 3);
+        if let Function::TestFunction(test_fn) = &functions[0] {
+            assert_eq!(test_fn.name, "test_something");
+            assert!(!test_fn.expect_fail);
+        } else {
+            panic!("Expected TestFunction");
+        }
 
-        assert_eq!(test_fns[1].name, "test_somethingelse");
-        assert!(!test_fns[1].expect_fail);
+        if let Function::TestFunction(test_fn) = &functions[1] {
+            assert_eq!(test_fn.name, "test_somethingelse");
+            assert!(!test_fn.expect_fail);
+        } else {
+            panic!("Expected TestFunction");
+        }
 
-        assert_eq!(test_fns[2].name, "test_panics");
-        assert!(test_fns[2].expect_fail);
+        if let Function::TestFunction(test_fn) = &functions[2] {
+            assert_eq!(test_fn.name, "test_panics");
+            assert!(test_fn.expect_fail);
+        } else {
+            panic!("Expected TestFunction");
+        }
     }
 
     #[test]
@@ -309,13 +305,21 @@ mod tests {
         "#;
 
         let parsed = ParsedNoirFile::parse(source).unwrap();
-        let test_fns = parsed.find_test_functions();
+        let functions = parsed.find_functions();
 
-        assert_eq!(test_fns.len(), 2);
-        assert_eq!(test_fns[0].name, "test_something");
-        assert!(!test_fns[0].expect_fail);
-        assert_eq!(test_fns[1].name, "test_panics");
-        assert!(test_fns[1].expect_fail);
+        assert_eq!(functions.len(), 2);
+        if let Function::TestFunction(test_fn) = &functions[0] {
+            assert_eq!(test_fn.name, "test_something");
+            assert!(!test_fn.expect_fail);
+        } else {
+            panic!("Expected TestFunction");
+        }
+        if let Function::TestFunction(test_fn) = &functions[1] {
+            assert_eq!(test_fn.name, "test_panics");
+            assert!(test_fn.expect_fail);
+        } else {
+            panic!("Expected TestFunction");
+        }
     }
 
     #[test]
@@ -332,14 +336,21 @@ mod tests {
         "#;
 
         let parsed = ParsedNoirFile::parse(source).unwrap();
-        let helpers = parsed.find_helper_functions();
+        let functions = parsed.find_functions();
 
-        assert!(!helpers.is_empty());
-        assert!(helpers
-            .iter()
-            .map(|x| x.name.clone())
-            .collect::<String>()
-            .contains(&"helper_function".to_string()));
+        assert_eq!(functions.len(), 2);
+        // First function should be a helper (SetupHook)
+        if let Function::SetupHook(helper) = &functions[0] {
+            assert_eq!(helper.name, "helper_function");
+        } else {
+            panic!("Expected SetupHook");
+        }
+        // Second function should be a test function
+        if let Function::TestFunction(test_fn) = &functions[1] {
+            assert_eq!(test_fn.name, "test_something");
+        } else {
+            panic!("Expected TestFunction");
+        }
     }
 
     mod parse_test_attribute_tests {

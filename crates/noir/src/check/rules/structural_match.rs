@@ -2,7 +2,7 @@
 
 use std::{collections::HashSet, fs, path::Path};
 
-use crate::test_structure::{Root, SetupHook};
+use crate::test_structure::{Function, Root, SetupHook};
 use anyhow::Result;
 
 use crate::{
@@ -74,10 +74,7 @@ pub fn check(tree_path: &Path, cfg: &Config) -> Result<Vec<Violation>> {
             return Ok(violations);
         }
     };
-    let parsed = Root {
-        setup_hooks: parsed.find_helper_functions(),
-        tests: parsed.find_test_functions(),
-    };
+    let parsed = Root { functions: parsed.find_functions() };
 
     // Extract expected structure from AST
     let expected = Root::new(&forest);
@@ -99,53 +96,69 @@ fn compare_trees(
     skip_setup_hooks: bool,
 ) -> Vec<Violation> {
     let mut violations = Vec::new();
-    // Check helpers (if not skipped)
-    if !skip_setup_hooks {
-        let found_helpers = actual.setup_hooks.clone();
-        let found_helper_set: HashSet<SetupHook> =
-            found_helpers.into_iter().collect();
 
-        for expected_helper in &expected.setup_hooks {
-            if !found_helper_set.contains(expected_helper) {
-                violations.push(Violation::new(
-                    ViolationKind::HelperFunctionMissing(
-                        expected_helper.name.clone(),
-                    ),
-                    test_file.clone(),
-                ));
+    let found_tests: std::collections::HashMap<String, bool> = actual
+        .functions
+        .iter()
+        .filter_map(|x| {
+            if let Function::TestFunction(t) = x {
+                Some((t.name.clone(), t.expect_fail))
+            } else {
+                None
             }
-        }
-    }
-
-    // Check test functions
-    let found_tests = actual.tests.clone();
-    let found_test_map: std::collections::HashMap<String, bool> =
-        found_tests.iter().map(|t| (t.name.clone(), t.expect_fail)).collect();
-
-    for expected_test in &expected.tests {
-        if let Some(&has_should_fail) = found_test_map.get(&expected_test.name)
-        {
-            // TODO: compare invocation of setup hooks and inclusion of action comments
-            // Test exists - check attributes
-            let violation_kind =
-                match (expected_test.expect_fail, has_should_fail) {
-                    (true, false) => Some(ViolationKind::ShouldFailMissing(
-                        expected_test.name.clone(),
-                    )),
-                    (false, true) => Some(ViolationKind::ShouldFailUnexpected(
-                        expected_test.name.clone(),
-                    )),
-                    _ => None,
-                };
-            if let Some(kind) = violation_kind {
-                violations.push(Violation::new(kind, test_file.clone()));
+        })
+        .collect();
+    let found_hooks: HashSet<SetupHook> = actual
+        .functions
+        .iter()
+        .filter_map(|x| {
+            if let Function::SetupHook(h) = x {
+                Some(h.clone())
+            } else {
+                None
             }
-        } else {
-            // Test is missing
-            violations.push(Violation::new(
-                ViolationKind::TestFunctionMissing(expected_test.name.clone()),
-                test_file.clone(),
-            ));
+        })
+        .collect();
+
+    for expected in &expected.functions {
+        match expected {
+            Function::SetupHook(h) => {
+                if !skip_setup_hooks {
+                    if !found_hooks.contains(h) {
+                        violations.push(Violation::new(
+                            ViolationKind::HelperFunctionMissing(
+                                h.name.clone(),
+                            ),
+                            test_file.clone(),
+                        ));
+                    }
+                }
+            }
+            Function::TestFunction(t) => {
+                if let Some(&has_should_fail) = found_tests.get(&t.name) {
+                    // TODO: compare invocation of setup hooks and inclusion of action comments
+                    let violation_kind = match (t.expect_fail, has_should_fail)
+                    {
+                        (true, false) => Some(
+                            ViolationKind::ShouldFailMissing(t.name.clone()),
+                        ),
+                        (false, true) => Some(
+                            ViolationKind::ShouldFailUnexpected(t.name.clone()),
+                        ),
+                        _ => None,
+                    };
+                    if let Some(kind) = violation_kind {
+                        violations
+                            .push(Violation::new(kind, test_file.clone()));
+                    }
+                } else {
+                    // Test is missing
+                    violations.push(Violation::new(
+                        ViolationKind::TestFunctionMissing(t.name.clone()),
+                        test_file.clone(),
+                    ));
+                }
+            }
         }
     }
 

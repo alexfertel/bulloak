@@ -9,15 +9,21 @@ use crate::{
 
 pub(crate) struct Root {
     // TODO: Modules?
-    pub setup_hooks: Vec<SetupHook>,
-    pub tests: Vec<TestFunction>,
+    pub functions: Vec<Function>,
 }
 
 impl Root {
     pub(crate) fn new(forest: &Vec<Ast>) -> Root {
-        let tests = collect_tests(forest, &[]);
-        let setup_hooks = collect_helpers(forest);
-        Root { setup_hooks, tests }
+        let mut functions = Vec::<Function>::new();
+        functions.extend(
+            collect_helpers(forest).into_iter().map(|x| Function::SetupHook(x)),
+        );
+        functions.extend(
+            collect_tests(forest, &[])
+                .into_iter()
+                .map(|x| Function::TestFunction(x)),
+        );
+        Root { functions }
     }
 }
 
@@ -35,7 +41,7 @@ pub(crate) struct TestFunction {
     pub actions: Vec<String>,
 }
 
-#[derive(Clone)]
+#[derive(PartialEq, Eq, Hash, Clone)]
 pub(crate) enum Function {
     SetupHook(SetupHook),
     TestFunction(TestFunction),
