@@ -29,6 +29,12 @@ warn: incorrect position for function "test_WhenThereIsReentrancy""#
     for (expected, actual) in expected.zip(actual) {
         assert_eq!(expected, actual);
     }
+
+    let output = cmd(&binary_path, "check", &tree_path, &["-l", "noir"]);
+    let stderr = String::from_utf8(output.stderr).unwrap();
+    assert!(stderr.contains("Missing helper function 'given_the_stream_is_cold'"));
+    assert!(stderr.contains("Missing helper function 'when_the_sender_does_not_revert'"));
+    assert!(stderr.contains("invalid_sol_structure_test.nr"));
 }
 
 #[test]
