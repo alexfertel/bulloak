@@ -26,6 +26,10 @@ pub enum ViolationKind {
     TestFunctionMissing(String),
     /// A setup hook is missing.
     SetupHookMissing(String),
+    /// A test function name is present as a setup hook
+    TestFunctionWrongType(String),
+    /// A setup hook name is present as a test function
+    SetupHookWrongType(String),
     /// A test function is present, but in the incorrect place in the noir file.
     TestFunctionWrongPosition(String),
     /// A setup hook is present, but in the incorrect place in the noir file.
@@ -82,6 +86,16 @@ impl fmt::Display for Violation {
             }
             ViolationKind::SetupHookMissing(name) => {
                 write!(f, r#"Missing setup hook "{}" in {}"#, name, self.file)
+            }
+            ViolationKind::TestFunctionWrongType(name) => {
+                write!(
+                    f,
+                    r#"Test function "{}" is missing its #[test] directive {}"#,
+                    name, self.file
+                )
+            }
+            ViolationKind::SetupHookWrongType(name) => {
+                write!(f, r#"Setup hook "{}" has unexpected #[test] directive in {}"#, name, self.file)
             }
             ViolationKind::ShouldFailMissing(name) => {
                 write!(

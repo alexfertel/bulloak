@@ -138,16 +138,14 @@ fn compare_trees(
         }
 
         match (expected, found) {
-            // TODO: more specific error
             (Function::SetupHook(_), Function::TestFunction(_)) => violations
                 .push(Violation::new(
-                    ViolationKind::SetupHookMissing(expected.name()),
+                    ViolationKind::SetupHookWrongType(expected.name()),
                     test_file.clone(),
                 )),
-            // TODO: more specific error
             (Function::TestFunction(_), Function::SetupHook(_)) => violations
                 .push(Violation::new(
-                    ViolationKind::TestFunctionMissing(expected.name()),
+                    ViolationKind::TestFunctionWrongType(expected.name()),
                     test_file.clone(),
                 )),
             // setup hooks dont really have any attributes and we are not comparing order yet
@@ -601,11 +599,11 @@ mod compare_trees_test {
         assert_eq!(violations.len(), 2);
         assert!(matches!(
             &violations[0].kind,
-            ViolationKind::SetupHookMissing(x) if x == "helper_a"
+            ViolationKind::SetupHookWrongType(x) if x == "helper_a"
         ));
         assert!(matches!(
             &violations[1].kind,
-            ViolationKind::TestFunctionMissing(x) if x == "test_b"
+            ViolationKind::TestFunctionWrongType(x) if x == "test_b"
         ));
     }
 
