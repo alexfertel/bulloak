@@ -372,7 +372,6 @@ dependencies = [
  "anyhow",
  "bulloak-syntax",
  "indoc",
- "once_cell",
  "pretty_assertions",
  "regex",
  "tempfile",

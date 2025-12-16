@@ -1,7 +1,7 @@
 //! Noir code parser using tree-sitter.
 
 use anyhow::{Context, Result};
-use once_cell::sync::Lazy;
+use std::sync::LazyLock;
 use regex::Regex;
 use tree_sitter::{Node, Parser};
 
@@ -164,7 +164,7 @@ impl ParsedNoirFile {
 /// it doesn't yet supports stuff like `#[othermacro] #[test]` but that's not used afaik, and the
 /// treesitterparser may even produce different attributes for each
 /// matches beggining and end of string, so nothing else can be on that line
-static TEST_ATTR_PATTERN: Lazy<Regex> = Lazy::new(|| {
+static TEST_ATTR_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
     // ^\s*#\[\s*test\s* -- #[test , with any whitespace
     // (?: non capturing group start
     //   \( literal (
@@ -180,7 +180,7 @@ static TEST_ATTR_PATTERN: Lazy<Regex> = Lazy::new(|| {
 });
 
 /// does NOT match beggining and end of string, so it should be used after TEST_ATTR_PATTERN
-static SHOULD_FAIL_PATTERN: Lazy<Regex> = Lazy::new(|| {
+static SHOULD_FAIL_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
     // branch 1: should_fail (matching group is optional)
     // branch 2: should_fail_with <whitespace> = <whitespace> and quotes with *anything* in between
     Regex::new(r#"should_fail(?:_with\s*=\s*"[^"]*")?"#).unwrap()
