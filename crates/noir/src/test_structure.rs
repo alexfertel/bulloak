@@ -41,10 +41,19 @@ pub(crate) struct TestFunction {
     pub actions: Vec<String>,
 }
 
-#[derive(PartialEq, Eq, Hash, Clone)]
+#[derive(PartialEq, Eq, Hash, Clone, Debug)]
 pub(crate) enum Function {
     SetupHook(SetupHook),
     TestFunction(TestFunction),
+}
+
+impl Function {
+    pub(crate) fn name(&self) -> String {
+        match self {
+            Function::TestFunction(f) => f.name.clone(),
+            Function::SetupHook(h) => h.name.clone(),
+        }
+    }
 }
 
 /// Collect all unique helper names from conditions.
