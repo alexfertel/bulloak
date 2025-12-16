@@ -32,13 +32,13 @@ warn: incorrect position for function "test_WhenThereIsReentrancy""#
 
     let output = cmd(&binary_path, "check", &tree_path, &["-l", "noir"]);
     let stderr = String::from_utf8(output.stderr).unwrap();
-    assert!(stderr.contains("Missing setup hook 'given_the_stream_is_cold'"));
-    assert!(stderr.contains("Missing setup hook 'when_the_sender_does_not_revert'"));
-    assert!(stderr.contains("incorrect position for test function 'test_when_there_is_reentrancy'"));
-    assert!(stderr.contains("incorrect position for test function 'test_when_the_sender_reverts'"));
-    assert!(stderr.contains("incorrect position for test function 'test_given_the_streams_status_is_canceled'"));
-    assert!(stderr.contains("incorrect position for test function 'test_given_the_streams_status_is_settled'"));
-    assert!(stderr.contains("invalid_sol_structure_test.nr"));
+    assert!(stderr.contains(r#"Missing setup hook "given_the_stream_is_cold""#));
+    assert!(stderr.contains(r#"Missing setup hook "when_the_sender_does_not_revert""#));
+    assert!(stderr.contains(r#"Test function "test_when_there_is_reentrancy" is in wrong position in"#));
+    assert!(stderr.contains(r#"Test function "test_when_the_sender_reverts" is in wrong position in"#));
+    assert!(stderr.contains(r#"Test function "test_given_the_streams_status_is_canceled" is in wrong position in"#));
+    assert!(stderr.contains(r#"Test function "test_given_the_streams_status_is_settled" is in wrong position in"#));
+    assert!(stderr.contains(r#"invalid_sol_structure_test.nr"#));
 }
 
 #[test]

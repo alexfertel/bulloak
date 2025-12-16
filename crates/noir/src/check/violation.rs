@@ -71,7 +71,7 @@ impl fmt::Display for Violation {
                 )
             }
             ViolationKind::SetupHookWrongPosition(name) => {
-                write!(f, "Setup hook '{}' is in wrong position in {}", name, self.file)
+                write!(f, r#"Setup hook "{}" is in wrong position in {}"#, name, self.file)
             }
             ViolationKind::TestFunctionMissing(name) => {
                 write!(
@@ -81,19 +81,19 @@ impl fmt::Display for Violation {
                 )
             }
             ViolationKind::SetupHookMissing(name) => {
-                write!(f, "Missing setup hook '{}' in {}", name, self.file)
+                write!(f, r#"Missing setup hook "{}" in {}"#, name, self.file)
             }
             ViolationKind::ShouldFailMissing(name) => {
                 write!(
                     f,
-                    "Test '{}' should have #[test(should_fail)] in {}",
+                    r#"Test "{}" should have #[test(should_fail)] in {}"#,
                     name, self.file
                 )
             }
             ViolationKind::ShouldFailUnexpected(name) => {
                 write!(
                     f,
-                    "Test '{}' has #[test(should_fail)] but shouldn't in {}",
+                    r#"Test "{}" has #[test(should_fail)] but shouldn't in {}"#,
                     name, self.file
                 )
             }
