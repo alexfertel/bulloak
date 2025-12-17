@@ -82,7 +82,7 @@ pub fn check(tree_path: &Path, cfg: &Config) -> Result<Vec<Violation>> {
     if !cfg.skip_setup_hooks {
         let found_helpers = parsed.find_helper_functions();
         let found_helper_set: HashSet<SetupHook> =
-            found_helpers.into_iter().map(|x| SetupHook { name: x }).collect();
+            found_helpers.into_iter().collect();
 
         for expected_helper in &expected.setup_hooks {
             if !found_helper_set.contains(expected_helper) {
@@ -100,7 +100,7 @@ pub fn check(tree_path: &Path, cfg: &Config) -> Result<Vec<Violation>> {
     let found_tests = parsed.find_test_functions();
     let found_test_map: std::collections::HashMap<String, bool> = found_tests
         .iter()
-        .map(|t| (t.name.clone(), t.has_should_fail))
+        .map(|t| (t.name.clone(), t.expect_fail))
         .collect();
 
     for expected_test in &expected.tests {

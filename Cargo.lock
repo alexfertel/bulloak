@@ -373,6 +373,7 @@ dependencies = [
  "bulloak-syntax",
  "indoc",
  "pretty_assertions",
+ "regex",
  "tempfile",
  "tree-sitter",
  "tree-sitter-noir",

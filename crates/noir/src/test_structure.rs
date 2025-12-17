@@ -23,12 +23,12 @@ impl Root {
 
 /// Used for both definition and invocation
 #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Debug)]
-pub(crate) struct SetupHook {
+pub struct SetupHook {
     pub name: String,
 }
 
-#[derive(Debug, Hash, PartialEq, Eq)]
-pub(crate) struct TestFunction {
+#[derive(Debug, Hash, PartialEq, Eq, Clone)]
+pub struct TestFunction {
     pub name: String,
     pub expect_fail: bool,
     pub setup_hooks: Vec<SetupHook>,
