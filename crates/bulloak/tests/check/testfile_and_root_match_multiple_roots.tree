@@ -1,0 +1,5 @@
+testfile_and_root_match_multiple_roots::functionA
+└── it should always do thing
+
+testfile_and_root_match_multiple_roots::functionB
+└── it should always do other thing
