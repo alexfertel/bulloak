@@ -219,6 +219,27 @@ fn errors_when_root_contract_identifier_is_missing_multiple_roots() {
     }
 }
 
+#[cfg(not(target_os = "windows"))]
+#[test]
+fn errors_when_root_contract_identifier_is_inconsistent_multiple_roots() {
+    let cwd = env::current_dir().unwrap();
+    let binary_path = get_binary_path();
+    let tree_path = cwd
+        .join("tests")
+        .join("scaffold")
+        .join("contract_names_mismatch_multiple_roots.tree");
+
+    let output = cmd(&binary_path, "scaffold", &tree_path, &[]);
+    let actual = String::from_utf8(output.stderr).unwrap();
+
+    assert!(actual.contains("contract name mismatch: expected 'ContractName', found 'OtherContractName'"));
+
+    let output = cmd(&binary_path, "scaffold", &tree_path, &["-l", "noir"]);
+    let actual = String::from_utf8(output.stderr).unwrap();
+
+    assert!(actual.contains("{}: an error occurred while parsing the tree: module name mismatch: expected 'ContractName', found OtherContractName''\n   {} {}"));
+}
+
 /// If you pass an invalid glob to `bulloak scaffold`,
 /// it should warn but still exit code = 0 and produce no contract.
 #[test]
