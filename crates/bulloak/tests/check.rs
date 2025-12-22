@@ -29,6 +29,16 @@ warn: incorrect position for function "test_WhenThereIsReentrancy""#
     for (expected, actual) in expected.zip(actual) {
         assert_eq!(expected, actual);
     }
+
+    let output = cmd(&binary_path, "check", &tree_path, &["-l", "noir"]);
+    let stderr = String::from_utf8(output.stderr).unwrap();
+    assert!(stderr.contains(r#"Missing setup hook "given_the_stream_is_cold""#));
+    assert!(stderr.contains(r#"Missing setup hook "when_the_sender_does_not_revert""#));
+    assert!(stderr.contains(r#"Test function "test_when_there_is_reentrancy" is in wrong position in"#));
+    assert!(stderr.contains(r#"Test function "test_when_the_sender_reverts" is in wrong position in"#));
+    assert!(stderr.contains(r#"Test function "test_given_the_streams_status_is_canceled" is in wrong position in"#));
+    assert!(stderr.contains(r#"Test function "test_given_the_streams_status_is_settled" is in wrong position in"#));
+    assert!(stderr.contains(r#"invalid_sol_structure_test.nr"#));
 }
 
 #[test]
@@ -126,9 +136,9 @@ fn checks_empty_contract() {
     let stderr = String::from_utf8(output.stderr).unwrap();
 
     assert!(stderr
-        .contains(r#"unconstrained fn "test_should_never_revert" is missing"#));
+        .contains(r#"Test function "test_should_never_revert" is missing"#));
     assert!(stderr.contains(
-        r#"unconstrained fn "test_should_never_revert" is missing"#
+        r#"Test function "test_should_never_revert" is missing"#
     ));
 }
 

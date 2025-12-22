@@ -9,30 +9,51 @@ use crate::{
 
 pub(crate) struct Root {
     // TODO: Modules?
-    pub setup_hooks: Vec<SetupHook>,
-    pub tests: Vec<TestFunction>,
+    pub functions: Vec<Function>,
 }
 
 impl Root {
     pub(crate) fn new(forest: &Vec<Ast>) -> Root {
-        let tests = collect_tests(forest, &[]);
-        let setup_hooks = collect_helpers(forest);
-        Root { setup_hooks, tests }
+        let mut functions = Vec::<Function>::new();
+        functions.extend(
+            collect_helpers(forest).into_iter().map(|x| Function::SetupHook(x)),
+        );
+        functions.extend(
+            collect_tests(forest, &[])
+                .into_iter()
+                .map(|x| Function::TestFunction(x)),
+        );
+        Root { functions }
     }
 }
 
 /// Used for both definition and invocation
 #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Debug)]
-pub struct SetupHook {
+pub(crate) struct SetupHook {
     pub name: String,
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone)]
-pub struct TestFunction {
+pub(crate) struct TestFunction {
     pub name: String,
     pub expect_fail: bool,
     pub setup_hooks: Vec<SetupHook>,
     pub actions: Vec<String>,
+}
+
+#[derive(PartialEq, Eq, Hash, Clone, Debug)]
+pub(crate) enum Function {
+    SetupHook(SetupHook),
+    TestFunction(TestFunction),
+}
+
+impl Function {
+    pub(crate) fn name(&self) -> String {
+        match self {
+            Function::TestFunction(f) => f.name.clone(),
+            Function::SetupHook(h) => h.name.clone(),
+        }
+    }
 }
 
 /// Collect all unique helper names from conditions.

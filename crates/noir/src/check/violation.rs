@@ -24,8 +24,16 @@ pub enum ViolationKind {
     NoirFileInvalid(String),
     /// A test function is missing.
     TestFunctionMissing(String),
-    /// A helper function is missing.
-    HelperFunctionMissing(String),
+    /// A setup hook is missing.
+    SetupHookMissing(String),
+    /// A test function name is present as a setup hook
+    TestFunctionWrongType(String),
+    /// A setup hook name is present as a test function
+    SetupHookWrongType(String),
+    /// A test function is present, but in the incorrect place in the noir file.
+    TestFunctionWrongPosition(String),
+    /// A setup hook is present, but in the incorrect place in the noir file.
+    SetupHookWrongPosition(String),
     /// A test should have `#[test(should_fail)]` but doesn't.
     ShouldFailMissing(String),
     /// A test has `#[test(should_fail)]` but shouldn't.
@@ -59,27 +67,47 @@ impl fmt::Display for Violation {
             ViolationKind::NoirFileInvalid(err) => {
                 write!(f, "Failed to parse Noir file {}: {}", self.file, err)
             }
-            ViolationKind::TestFunctionMissing(name) => {
+            ViolationKind::TestFunctionWrongPosition(name) => {
                 write!(
                     f,
-                    r#"unconstrained fn "{}" is missing in {}"#,
+                    r#"Test function "{}" is in wrong position in {}"#,
                     name, self.file
                 )
             }
-            ViolationKind::HelperFunctionMissing(name) => {
-                write!(f, "Missing helper function '{}' in {}", name, self.file)
+            ViolationKind::SetupHookWrongPosition(name) => {
+                write!(f, r#"Setup hook "{}" is in wrong position in {}"#, name, self.file)
+            }
+            ViolationKind::TestFunctionMissing(name) => {
+                write!(
+                    f,
+                    r#"Test function "{}" is missing in {}"#,
+                    name, self.file
+                )
+            }
+            ViolationKind::SetupHookMissing(name) => {
+                write!(f, r#"Missing setup hook "{}" in {}"#, name, self.file)
+            }
+            ViolationKind::TestFunctionWrongType(name) => {
+                write!(
+                    f,
+                    r#"Test function "{}" is missing its #[test] directive {}"#,
+                    name, self.file
+                )
+            }
+            ViolationKind::SetupHookWrongType(name) => {
+                write!(f, r#"Setup hook "{}" has unexpected #[test] directive in {}"#, name, self.file)
             }
             ViolationKind::ShouldFailMissing(name) => {
                 write!(
                     f,
-                    "Test '{}' should have #[test(should_fail)] in {}",
+                    r#"Test "{}" should have #[test(should_fail)] in {}"#,
                     name, self.file
                 )
             }
             ViolationKind::ShouldFailUnexpected(name) => {
                 write!(
                     f,
-                    "Test '{}' has #[test(should_fail)] but shouldn't in {}",
+                    r#"Test "{}" has #[test(should_fail)] but shouldn't in {}"#,
                     name, self.file
                 )
             }

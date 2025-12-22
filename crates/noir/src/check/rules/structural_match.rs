@@ -1,8 +1,12 @@
 //! Structural matching rule for Noir tests.
 
-use std::{collections::HashSet, fs, path::Path};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    fs,
+    path::Path,
+};
 
-use crate::test_structure::{Root, SetupHook};
+use crate::test_structure::{Function, Root};
 use anyhow::Result;
 
 use crate::{
@@ -74,70 +78,147 @@ pub fn check(tree_path: &Path, cfg: &Config) -> Result<Vec<Violation>> {
             return Ok(violations);
         }
     };
+    let parsed = Root { functions: parsed.find_functions() };
 
     // Extract expected structure from AST
     let expected = Root::new(&forest);
-
-    // Check helpers (if not skipped)
-    if !cfg.skip_setup_hooks {
-        let found_helpers = parsed.find_helper_functions();
-        let found_helper_set: HashSet<SetupHook> =
-            found_helpers.into_iter().collect();
-
-        for expected_helper in &expected.setup_hooks {
-            if !found_helper_set.contains(expected_helper) {
-                violations.push(Violation::new(
-                    ViolationKind::HelperFunctionMissing(
-                        expected_helper.name.clone(),
-                    ),
-                    test_file.display().to_string(),
-                ));
-            }
-        }
-    }
-
-    // Check test functions
-    let found_tests = parsed.find_test_functions();
-    let found_test_map: std::collections::HashMap<String, bool> = found_tests
-        .iter()
-        .map(|t| (t.name.clone(), t.expect_fail))
-        .collect();
-
-    for expected_test in &expected.tests {
-        if let Some(&has_should_fail) = found_test_map.get(&expected_test.name)
-        {
-            // TODO: compare invocation of setup hooks and inclusion of action comments
-            // Test exists - check attributes
-            let violation_kind =
-                match (expected_test.expect_fail, has_should_fail) {
-                    (true, false) => Some(ViolationKind::ShouldFailMissing(
-                        expected_test.name.clone(),
-                    )),
-                    (false, true) => Some(ViolationKind::ShouldFailUnexpected(
-                        expected_test.name.clone(),
-                    )),
-                    _ => None,
-                };
-            if let Some(kind) = violation_kind {
-                violations.push(Violation::new(
-                    kind,
-                    test_file.display().to_string(),
-                ));
-            }
-        } else {
-            // Test is missing
-            violations.push(Violation::new(
-                ViolationKind::TestFunctionMissing(expected_test.name.clone()),
-                test_file.display().to_string(),
-            ));
-        }
-    }
-
+    let comparison_violations = compare_trees(
+        parsed,
+        expected,
+        test_file.display().to_string(),
+        cfg.skip_setup_hooks,
+    );
+    violations.extend(comparison_violations);
     Ok(violations)
 }
 
+/// iterate over the two trees and report on their differences
+fn compare_trees(
+    actual: Root,
+    expected: Root,
+    test_file: String,
+    skip_setup_hooks: bool,
+) -> Vec<Violation> {
+    let mut violations = Vec::new();
+    let expected_set: BTreeSet<String> =
+        expected.functions.iter().map(|x| x.name()).collect();
+
+    // name -> (full obj, index)
+    let found_fns: BTreeMap<String, (Function, usize)> = actual
+        .functions
+        .into_iter()
+        // should I define a custom Hash implementation that hashes the name only?
+        .filter(|x| expected_set.contains(&x.name()))
+        .enumerate() // indices within the set of functions that we care about, not within all functions
+        .map(|(k, v)| (v.name(), (v, k)))
+        .collect();
+
+    for expected in &expected.functions {
+        let found;
+        if let Some((f, _)) = found_fns.get(&expected.name()) {
+            found = f;
+        } else {
+            match expected {
+                Function::SetupHook(_) => {
+                    if !skip_setup_hooks {
+                        violations.push(Violation::new(
+                            ViolationKind::SetupHookMissing(expected.name()),
+                            test_file.clone(),
+                        ));
+                    }
+                }
+                Function::TestFunction(_) => {
+                    violations.push(Violation::new(
+                        ViolationKind::TestFunctionMissing(expected.name()),
+                        test_file.clone(),
+                    ));
+                }
+            }
+            continue;
+        }
+
+        match (expected, found) {
+            (Function::SetupHook(_), Function::TestFunction(_)) => violations
+                .push(Violation::new(
+                    ViolationKind::SetupHookWrongType(expected.name()),
+                    test_file.clone(),
+                )),
+            (Function::TestFunction(_), Function::SetupHook(_)) => violations
+                .push(Violation::new(
+                    ViolationKind::TestFunctionWrongType(expected.name()),
+                    test_file.clone(),
+                )),
+            // setup hooks dont really have any attributes and we are not comparing order yet
+            (Function::SetupHook(_), Function::SetupHook(_)) => {}
+            (
+                Function::TestFunction(expected),
+                Function::TestFunction(found),
+            ) => {
+                // TODO: compare invocation of setup hooks and inclusion of action comments
+                // (not present in foundry backend but would be cool)
+                let violation_kind =
+                    match (expected.expect_fail, found.expect_fail) {
+                        (true, false) => {
+                            Some(ViolationKind::ShouldFailMissing(
+                                expected.name.clone(),
+                            ))
+                        }
+                        (false, true) => {
+                            Some(ViolationKind::ShouldFailUnexpected(
+                                expected.name.clone(),
+                            ))
+                        }
+                        _ => None,
+                    };
+                if let Some(kind) = violation_kind {
+                    violations.push(Violation::new(kind, test_file.clone()));
+                }
+            }
+        }
+    }
+
+    let present_expected_fns: BTreeMap<String, (Function, usize)> = expected
+        .functions
+        .iter()
+        .filter(|x| found_fns.contains_key(&x.name()))
+        .enumerate()
+        .map(|(i, v)| (v.name(), (v.clone(), i)))
+        .collect();
+    for (name, (expected, expected_index)) in present_expected_fns {
+        let (found, found_index) = found_fns
+            .get(&name)
+            .unwrap_or_else(|| panic!("just filtered for this!"));
+
+        match (expected.clone(), found) {
+            (
+                Function::TestFunction(_),
+                Function::TestFunction(_),
+            )
+            | (Function::SetupHook(_), Function::SetupHook(_)) => {
+                if *found_index != expected_index {
+                    violations.push(Violation::new(
+                        match expected {
+                            Function::SetupHook(_) => {
+                                ViolationKind::SetupHookWrongPosition(name)
+                            }
+                            Function::TestFunction(_) => {
+                                ViolationKind::TestFunctionWrongPosition(name)
+                            }
+                        },
+                        test_file.clone(),
+                    ));
+                }
+            }
+            // Already handled when searching for wrong type/missing fns above
+            // we can't really comment on the ordering of a function that is of a wrong type
+            _ => {}
+        };
+    }
+    violations
+}
+
 #[cfg(test)]
-mod tests {
+mod check_test {
     use std::io::Write;
 
     use indoc::indoc;
@@ -233,5 +314,462 @@ mod tests {
             violations[0].kind,
             ViolationKind::TreeFileMissing(_)
         ));
+    }
+}
+
+#[cfg(test)]
+mod compare_trees_test {
+    use super::*;
+    use crate::test_structure::{SetupHook, TestFunction};
+
+    #[test]
+    fn empty_both() {
+        let actual = Root { functions: vec![] };
+        let expected = Root { functions: vec![] };
+        let violations =
+            compare_trees(actual, expected, "test.nr".to_string(), false);
+        assert_eq!(violations.len(), 0);
+    }
+
+    #[test]
+    fn matching_single_test() {
+        let actual = Root {
+            functions: vec![Function::TestFunction(TestFunction {
+                name: "test_foo".to_string(),
+                expect_fail: false,
+                setup_hooks: vec![],
+                actions: vec![],
+            })],
+        };
+        let expected = Root {
+            functions: vec![Function::TestFunction(TestFunction {
+                name: "test_foo".to_string(),
+                expect_fail: false,
+                setup_hooks: vec![],
+                actions: vec![],
+            })],
+        };
+        let violations =
+            compare_trees(actual, expected, "test.nr".to_string(), false);
+        assert_eq!(violations.len(), 0);
+    }
+
+    #[test]
+    fn missing_test_function() {
+        let actual = Root { functions: vec![] };
+        let expected = Root {
+            functions: vec![Function::TestFunction(TestFunction {
+                name: "test_foo".to_string(),
+                expect_fail: false,
+                setup_hooks: vec![],
+                actions: vec![],
+            })],
+        };
+        let violations =
+            compare_trees(actual, expected, "test.nr".to_string(), false);
+        assert_eq!(violations.len(), 1);
+        assert!(matches!(
+            violations[0].kind,
+            ViolationKind::TestFunctionMissing(_)
+        ));
+        if let ViolationKind::TestFunctionMissing(name) = &violations[0].kind {
+            assert_eq!(name, "test_foo");
+        }
+    }
+
+    #[test]
+    fn missing_multiple_tests() {
+        let actual = Root { functions: vec![] };
+        let expected = Root {
+            functions: vec![
+                Function::TestFunction(TestFunction {
+                    name: "test_foo".to_string(),
+                    expect_fail: false,
+                    setup_hooks: vec![],
+                    actions: vec![],
+                }),
+                Function::TestFunction(TestFunction {
+                    name: "test_bar".to_string(),
+                    expect_fail: false,
+                    setup_hooks: vec![],
+                    actions: vec![],
+                }),
+            ],
+        };
+        let violations =
+            compare_trees(actual, expected, "test.nr".to_string(), false);
+        assert_eq!(violations.len(), 2);
+        assert!(violations
+            .iter()
+            .all(|v| matches!(v.kind, ViolationKind::TestFunctionMissing(_))));
+    }
+
+    #[test]
+    fn should_fail_missing() {
+        let actual = Root {
+            functions: vec![Function::TestFunction(TestFunction {
+                name: "test_foo".to_string(),
+                expect_fail: false,
+                setup_hooks: vec![],
+                actions: vec![],
+            })],
+        };
+        let expected = Root {
+            functions: vec![Function::TestFunction(TestFunction {
+                name: "test_foo".to_string(),
+                expect_fail: true,
+                setup_hooks: vec![],
+                actions: vec![],
+            })],
+        };
+        let violations =
+            compare_trees(actual, expected, "test.nr".to_string(), false);
+        assert_eq!(violations.len(), 1);
+        assert!(matches!(
+            violations[0].kind,
+            ViolationKind::ShouldFailMissing(_)
+        ));
+        if let ViolationKind::ShouldFailMissing(name) = &violations[0].kind {
+            assert_eq!(name, "test_foo");
+        }
+    }
+
+    #[test]
+    fn should_fail_unexpected() {
+        let actual = Root {
+            functions: vec![Function::TestFunction(TestFunction {
+                name: "test_foo".to_string(),
+                expect_fail: true,
+                setup_hooks: vec![],
+                actions: vec![],
+            })],
+        };
+        let expected = Root {
+            functions: vec![Function::TestFunction(TestFunction {
+                name: "test_foo".to_string(),
+                expect_fail: false,
+                setup_hooks: vec![],
+                actions: vec![],
+            })],
+        };
+        let violations =
+            compare_trees(actual, expected, "test.nr".to_string(), false);
+        assert_eq!(violations.len(), 1);
+        assert!(matches!(
+            violations[0].kind,
+            ViolationKind::ShouldFailUnexpected(_)
+        ));
+        if let ViolationKind::ShouldFailUnexpected(name) = &violations[0].kind {
+            assert_eq!(name, "test_foo");
+        }
+    }
+
+    #[test]
+    fn matching_helper_function() {
+        let actual = Root {
+            functions: vec![Function::SetupHook(SetupHook {
+                name: "helper_foo".to_string(),
+            })],
+        };
+        let expected = Root {
+            functions: vec![Function::SetupHook(SetupHook {
+                name: "helper_foo".to_string(),
+            })],
+        };
+        let violations =
+            compare_trees(actual, expected, "test.nr".to_string(), false);
+        assert_eq!(violations.len(), 0);
+    }
+
+    #[test]
+    fn missing_helper_function() {
+        let actual = Root { functions: vec![] };
+        let expected = Root {
+            functions: vec![Function::SetupHook(SetupHook {
+                name: "helper_foo".to_string(),
+            })],
+        };
+        let violations =
+            compare_trees(actual, expected, "test.nr".to_string(), false);
+        assert_eq!(violations.len(), 1);
+        assert!(matches!(
+            violations[0].kind,
+            ViolationKind::SetupHookMissing(_)
+        ));
+        if let ViolationKind::SetupHookMissing(name) = &violations[0].kind {
+            assert_eq!(name, "helper_foo");
+        }
+    }
+
+    #[test]
+    fn skip_setup_hooks_enabled() {
+        let actual = Root { functions: vec![] };
+        let expected = Root {
+            functions: vec![Function::SetupHook(SetupHook {
+                name: "helper_foo".to_string(),
+            })],
+        };
+        let violations =
+            compare_trees(actual, expected, "test.nr".to_string(), true);
+        // Should not report missing helper when skip_setup_hooks is true
+        assert_eq!(violations.len(), 0);
+    }
+
+    #[test]
+    fn skip_setup_hooks_still_checks_tests() {
+        let actual = Root { functions: vec![] };
+        let expected = Root {
+            functions: vec![
+                Function::SetupHook(SetupHook {
+                    name: "helper_foo".to_string(),
+                }),
+                Function::TestFunction(TestFunction {
+                    name: "test_bar".to_string(),
+                    expect_fail: false,
+                    setup_hooks: vec![],
+                    actions: vec![],
+                }),
+            ],
+        };
+        let violations =
+            compare_trees(actual, expected, "test.nr".to_string(), true);
+        // Should still report missing test even with skip_setup_hooks
+        assert_eq!(violations.len(), 1);
+        assert!(matches!(
+            violations[0].kind,
+            ViolationKind::TestFunctionMissing(_)
+        ));
+    }
+
+    #[test]
+    fn mixed_functions() {
+        let actual = Root {
+            functions: vec![
+                Function::SetupHook(SetupHook { name: "helper_a".to_string() }),
+                Function::TestFunction(TestFunction {
+                    name: "test_b".to_string(),
+                    expect_fail: false,
+                    setup_hooks: vec![],
+                    actions: vec![],
+                }),
+            ],
+        };
+        let expected = Root {
+            functions: vec![
+                Function::SetupHook(SetupHook { name: "helper_a".to_string() }),
+                Function::TestFunction(TestFunction {
+                    name: "test_b".to_string(),
+                    expect_fail: false,
+                    setup_hooks: vec![],
+                    actions: vec![],
+                }),
+            ],
+        };
+        let violations =
+            compare_trees(actual, expected, "test.nr".to_string(), false);
+        assert_eq!(violations.len(), 0);
+    }
+
+    #[test]
+    fn incorrect_type() {
+        let actual = Root {
+            functions: vec![
+                Function::SetupHook(SetupHook { name: "test_b".to_string() }),
+                Function::TestFunction(TestFunction {
+                    name: "helper_a".to_string(),
+                    expect_fail: false,
+                    setup_hooks: vec![],
+                    actions: vec![],
+                }),
+            ],
+        };
+        let expected = Root {
+            functions: vec![
+                Function::SetupHook(SetupHook { name: "helper_a".to_string() }),
+                Function::TestFunction(TestFunction {
+                    name: "test_b".to_string(),
+                    expect_fail: false,
+                    setup_hooks: vec![],
+                    actions: vec![],
+                }),
+            ],
+        };
+        let violations =
+            compare_trees(actual, expected, "test.nr".to_string(), false);
+        assert_eq!(violations.len(), 2);
+        assert!(matches!(
+            &violations[0].kind,
+            ViolationKind::SetupHookWrongType(x) if x == "helper_a"
+        ));
+        assert!(matches!(
+            &violations[1].kind,
+            ViolationKind::TestFunctionWrongType(x) if x == "test_b"
+        ));
+    }
+
+    #[test]
+    fn extra_functions_in_actual() {
+        // Extra functions in actual should not cause violations
+        // (compare_trees only checks that expected functions are present)
+        let actual = Root {
+            functions: vec![
+                Function::TestFunction(TestFunction {
+                    name: "test_foo".to_string(),
+                    expect_fail: false,
+                    setup_hooks: vec![],
+                    actions: vec![],
+                }),
+                Function::TestFunction(TestFunction {
+                    name: "test_extra".to_string(),
+                    expect_fail: false,
+                    setup_hooks: vec![],
+                    actions: vec![],
+                }),
+            ],
+        };
+        let expected = Root {
+            functions: vec![Function::TestFunction(TestFunction {
+                name: "test_foo".to_string(),
+                expect_fail: false,
+                setup_hooks: vec![],
+                actions: vec![],
+            })],
+        };
+        let violations =
+            compare_trees(actual, expected, "test.nr".to_string(), false);
+        assert_eq!(violations.len(), 0);
+    }
+
+    #[test]
+    fn ordering_inverted() {
+        let actual = Root {
+            functions: vec![
+                Function::TestFunction(TestFunction {
+                    name: "test_b".to_string(),
+                    expect_fail: false,
+                    setup_hooks: vec![],
+                    actions: vec![],
+                }),
+                Function::SetupHook(SetupHook { name: "helper_a".to_string() }),
+            ],
+        };
+        let expected = Root {
+            functions: vec![
+                Function::SetupHook(SetupHook { name: "helper_a".to_string() }),
+                Function::TestFunction(TestFunction {
+                    name: "test_b".to_string(),
+                    expect_fail: false,
+                    setup_hooks: vec![],
+                    actions: vec![],
+                }),
+            ],
+        };
+        let violations =
+            compare_trees(actual, expected, "test.nr".to_string(), false);
+        assert_eq!(violations.len(), 2);
+        assert!(matches!(
+            &violations[0].kind,
+            ViolationKind::SetupHookWrongPosition(x) if x == "helper_a"
+        ));
+        assert!(matches!(
+            &violations[1].kind,
+            ViolationKind::TestFunctionWrongPosition(x) if x == "test_b"
+        ));
+    }
+
+    #[test]
+    fn ordering_incorrect_with_extra_function() {
+        let actual = Root {
+            functions: vec![
+                Function::SetupHook(SetupHook {
+                    name: "other_fun".to_string(),
+                }),
+                Function::TestFunction(TestFunction {
+                    name: "other_test".to_string(),
+                    expect_fail: false,
+                    setup_hooks: vec![],
+                    actions: vec![],
+                }),
+                Function::TestFunction(TestFunction {
+                    name: "test_b".to_string(),
+                    expect_fail: false,
+                    setup_hooks: vec![],
+                    actions: vec![],
+                }),
+                Function::TestFunction(TestFunction {
+                    name: "other_test".to_string(),
+                    expect_fail: false,
+                    setup_hooks: vec![],
+                    actions: vec![],
+                }),
+                Function::SetupHook(SetupHook { name: "helper_a".to_string() }),
+            ],
+        };
+        let expected = Root {
+            functions: vec![
+                Function::SetupHook(SetupHook { name: "helper_a".to_string() }),
+                Function::TestFunction(TestFunction {
+                    name: "test_b".to_string(),
+                    expect_fail: false,
+                    setup_hooks: vec![],
+                    actions: vec![],
+                }),
+            ],
+        };
+        let violations =
+            compare_trees(actual, expected, "test.nr".to_string(), false);
+        assert_eq!(violations.len(), 2);
+        assert!(matches!(
+            &violations[0].kind,
+            ViolationKind::SetupHookWrongPosition(x) if x == "helper_a"
+        ));
+        assert!(matches!(
+            &violations[1].kind,
+            ViolationKind::TestFunctionWrongPosition(x) if x == "test_b"
+        ));
+    }
+
+    #[test]
+    fn ordering_correct_with_extra_function() {
+        let actual = Root {
+            functions: vec![
+                Function::SetupHook(SetupHook {
+                    name: "other_fun".to_string(),
+                }),
+                Function::SetupHook(SetupHook { name: "helper_a".to_string() }),
+                Function::TestFunction(TestFunction {
+                    name: "other_test".to_string(),
+                    expect_fail: false,
+                    setup_hooks: vec![],
+                    actions: vec![],
+                }),
+                Function::TestFunction(TestFunction {
+                    name: "test_b".to_string(),
+                    expect_fail: false,
+                    setup_hooks: vec![],
+                    actions: vec![],
+                }),
+                Function::TestFunction(TestFunction {
+                    name: "other_test".to_string(),
+                    expect_fail: false,
+                    setup_hooks: vec![],
+                    actions: vec![],
+                }),
+            ],
+        };
+        let expected = Root {
+            functions: vec![
+                Function::SetupHook(SetupHook { name: "helper_a".to_string() }),
+                Function::TestFunction(TestFunction {
+                    name: "test_b".to_string(),
+                    expect_fail: false,
+                    setup_hooks: vec![],
+                    actions: vec![],
+                }),
+            ],
+        };
+        let violations =
+            compare_trees(actual, expected, "test.nr".to_string(), false);
+        assert_eq!(violations.len(), 0);
     }
 }
