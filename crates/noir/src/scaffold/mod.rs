@@ -1,7 +1,9 @@
 pub(crate) mod generator;
 pub(crate) mod scaffoldable;
+use crate::utils::get_module_name;
+
 use super::config::Config;
-use anyhow::Result;
+use anyhow::{bail, Result};
 use bulloak_syntax::parse;
 use generator::generate;
 
@@ -10,6 +12,21 @@ use generator::generate;
 /// TODO: should we define a Backend trait?
 pub fn scaffold(text: &str, cfg: &Config) -> Result<String> {
     let forest = parse(text)?;
+
+    match get_module_name(&forest) {
+        None => {} // empty tree
+        // tree has only one root
+        Some(Ok(_)) => {
+            // TODO: check if it matches the filename
+        }
+        Some(Err((expected, second))) => {
+            bail!(
+                "module name mismatch: expected '{}', found '{}'",
+                expected,
+                second
+            );
+        }
+    }
     generate(&forest, cfg)
 }
 
