@@ -372,6 +372,7 @@ dependencies = [
  "anyhow",
  "bulloak-syntax",
  "indoc",
+ "owo-colors",
  "pretty_assertions",
  "regex",
  "tempfile",

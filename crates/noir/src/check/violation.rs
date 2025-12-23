@@ -2,6 +2,8 @@
 
 use std::fmt;
 
+use owo_colors::OwoColorize;
+
 /// A violation found when checking a Noir test file.
 #[derive(Debug, Clone)]
 pub struct Violation {
@@ -62,7 +64,8 @@ impl fmt::Display for Violation {
                 )
             }
             ViolationKind::TreeFileInvalid(err) => {
-                write!(f, "Failed to parse tree file {}: {}", self.file, err)
+                writeln!(f, "{}: {}", "warn".yellow(), err)?;
+                write!(f, "   {} {}", "-->".blue(), self.file)
             }
             ViolationKind::NoirFileMissing() => {
                 write!(
@@ -77,8 +80,8 @@ impl fmt::Display for Violation {
             ViolationKind::TreeFileWrongRoot(actual, expected) => {
                 write!(
                     f,
-                    r#"Tree root "{}" should match treefile name "{}" in "{}""#,
-                    actual, expected, self.file
+                    r#"Tree root "{}" should match treefile name: "{}""#,
+                    actual, expected
                 )
             }
             ViolationKind::TestFunctionWrongPosition(name) => {
