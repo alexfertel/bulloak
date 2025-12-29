@@ -265,7 +265,7 @@ fn errors_when_only_one_file_errors_others_are_still_scaffolded() {
         r#"// SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.0;
 
-contract HashPairTestSanitize {
+contract basic {
     function test_ShouldNeverRevert() external {
         // It should never revert.
     }
