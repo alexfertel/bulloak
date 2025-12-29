@@ -109,11 +109,11 @@ impl Scaffold {
     ///
     /// This method reads the input file, scaffolds the code using the backend,
     /// formats it, and either writes it to a file or prints to stdout.
-    fn process_file(&self, file: &Path, cfg: &Cli) -> anyhow::Result<()> {
+    fn process_file(&self, file: &PathBuf, cfg: &Cli) -> anyhow::Result<()> {
         let text = fs::read_to_string(file)?;
         let backend = self.backend_kind.get(cfg);
 
-        let emitted = backend.scaffold(&text)?;
+        let emitted = backend.scaffold(&text, file)?;
 
         let output_file = backend.test_filename(&file.to_path_buf())?;
 
