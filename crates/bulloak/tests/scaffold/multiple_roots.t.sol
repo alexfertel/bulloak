@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.0;
 
-contract MultipleRootsTreeTest {
+contract multiple_roots {
     function test_Function1_ShouldNeverRevert() external {
         // It should never revert.
     }
