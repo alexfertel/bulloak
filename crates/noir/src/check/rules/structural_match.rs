@@ -109,7 +109,7 @@ ViolationKind::TreeFileInvalid(format!(
             return Ok(violations);
         }
     };
-    let parsed = Root { functions: parsed.find_functions() };
+    let parsed = Root { functions: parsed.find_functions(), modules: vec![] };
 
     // Extract expected structure from AST
     let expected = Root::new(&forest);
@@ -351,8 +351,8 @@ mod compare_trees_test {
 
     #[test]
     fn empty_both() {
-        let actual = Root { functions: vec![] };
-        let expected = Root { functions: vec![] };
+        let actual = Root { functions: vec![], modules: vec![] };
+        let expected = Root { functions: vec![], modules: vec![] };
         let violations =
             compare_trees(actual, expected, "test.nr".to_string(), false);
         assert_eq!(violations.len(), 0);
@@ -367,6 +367,7 @@ mod compare_trees_test {
                 setup_hooks: vec![],
                 actions: vec![],
             })],
+            modules: vec![],
         };
         let expected = Root {
             functions: vec![Function::TestFunction(TestFunction {
@@ -375,6 +376,7 @@ mod compare_trees_test {
                 setup_hooks: vec![],
                 actions: vec![],
             })],
+            modules: vec![],
         };
         let violations =
             compare_trees(actual, expected, "test.nr".to_string(), false);
@@ -383,7 +385,7 @@ mod compare_trees_test {
 
     #[test]
     fn missing_test_function() {
-        let actual = Root { functions: vec![] };
+        let actual = Root { functions: vec![], modules: vec![] };
         let expected = Root {
             functions: vec![Function::TestFunction(TestFunction {
                 name: "test_foo".to_string(),
@@ -391,6 +393,7 @@ mod compare_trees_test {
                 setup_hooks: vec![],
                 actions: vec![],
             })],
+            modules: vec![],
         };
         let violations =
             compare_trees(actual, expected, "test.nr".to_string(), false);
@@ -406,7 +409,7 @@ mod compare_trees_test {
 
     #[test]
     fn missing_multiple_tests() {
-        let actual = Root { functions: vec![] };
+        let actual = Root { functions: vec![], modules: vec![] };
         let expected = Root {
             functions: vec![
                 Function::TestFunction(TestFunction {
@@ -422,6 +425,7 @@ mod compare_trees_test {
                     actions: vec![],
                 }),
             ],
+            modules: vec![],
         };
         let violations =
             compare_trees(actual, expected, "test.nr".to_string(), false);
@@ -440,6 +444,7 @@ mod compare_trees_test {
                 setup_hooks: vec![],
                 actions: vec![],
             })],
+            modules: vec![],
         };
         let expected = Root {
             functions: vec![Function::TestFunction(TestFunction {
@@ -448,6 +453,7 @@ mod compare_trees_test {
                 setup_hooks: vec![],
                 actions: vec![],
             })],
+            modules: vec![],
         };
         let violations =
             compare_trees(actual, expected, "test.nr".to_string(), false);
@@ -470,6 +476,7 @@ mod compare_trees_test {
                 setup_hooks: vec![],
                 actions: vec![],
             })],
+            modules: vec![],
         };
         let expected = Root {
             functions: vec![Function::TestFunction(TestFunction {
@@ -478,6 +485,7 @@ mod compare_trees_test {
                 setup_hooks: vec![],
                 actions: vec![],
             })],
+            modules: vec![],
         };
         let violations =
             compare_trees(actual, expected, "test.nr".to_string(), false);
@@ -497,11 +505,13 @@ mod compare_trees_test {
             functions: vec![Function::SetupHook(SetupHook {
                 name: "helper_foo".to_string(),
             })],
+            modules: vec![],
         };
         let expected = Root {
             functions: vec![Function::SetupHook(SetupHook {
                 name: "helper_foo".to_string(),
             })],
+            modules: vec![],
         };
         let violations =
             compare_trees(actual, expected, "test.nr".to_string(), false);
@@ -510,11 +520,12 @@ mod compare_trees_test {
 
     #[test]
     fn missing_helper_function() {
-        let actual = Root { functions: vec![] };
+        let actual = Root { functions: vec![], modules: vec![] };
         let expected = Root {
             functions: vec![Function::SetupHook(SetupHook {
                 name: "helper_foo".to_string(),
             })],
+            modules: vec![],
         };
         let violations =
             compare_trees(actual, expected, "test.nr".to_string(), false);
@@ -530,11 +541,12 @@ mod compare_trees_test {
 
     #[test]
     fn skip_setup_hooks_enabled() {
-        let actual = Root { functions: vec![] };
+        let actual = Root { functions: vec![], modules: vec![] };
         let expected = Root {
             functions: vec![Function::SetupHook(SetupHook {
                 name: "helper_foo".to_string(),
             })],
+            modules: vec![],
         };
         let violations =
             compare_trees(actual, expected, "test.nr".to_string(), true);
@@ -544,7 +556,7 @@ mod compare_trees_test {
 
     #[test]
     fn skip_setup_hooks_still_checks_tests() {
-        let actual = Root { functions: vec![] };
+        let actual = Root { functions: vec![], modules: vec![] };
         let expected = Root {
             functions: vec![
                 Function::SetupHook(SetupHook {
@@ -557,6 +569,7 @@ mod compare_trees_test {
                     actions: vec![],
                 }),
             ],
+            modules: vec![],
         };
         let violations =
             compare_trees(actual, expected, "test.nr".to_string(), true);
@@ -580,6 +593,7 @@ mod compare_trees_test {
                     actions: vec![],
                 }),
             ],
+            modules: vec![],
         };
         let expected = Root {
             functions: vec![
@@ -591,6 +605,7 @@ mod compare_trees_test {
                     actions: vec![],
                 }),
             ],
+            modules: vec![],
         };
         let violations =
             compare_trees(actual, expected, "test.nr".to_string(), false);
@@ -609,6 +624,7 @@ mod compare_trees_test {
                     actions: vec![],
                 }),
             ],
+            modules: vec![],
         };
         let expected = Root {
             functions: vec![
@@ -620,6 +636,7 @@ mod compare_trees_test {
                     actions: vec![],
                 }),
             ],
+            modules: vec![],
         };
         let violations =
             compare_trees(actual, expected, "test.nr".to_string(), false);
@@ -653,6 +670,7 @@ mod compare_trees_test {
                     actions: vec![],
                 }),
             ],
+            modules: vec![],
         };
         let expected = Root {
             functions: vec![Function::TestFunction(TestFunction {
@@ -661,6 +679,7 @@ mod compare_trees_test {
                 setup_hooks: vec![],
                 actions: vec![],
             })],
+            modules: vec![],
         };
         let violations =
             compare_trees(actual, expected, "test.nr".to_string(), false);
@@ -679,6 +698,7 @@ mod compare_trees_test {
                 }),
                 Function::SetupHook(SetupHook { name: "helper_a".to_string() }),
             ],
+            modules: vec![],
         };
         let expected = Root {
             functions: vec![
@@ -690,6 +710,7 @@ mod compare_trees_test {
                     actions: vec![],
                 }),
             ],
+            modules: vec![],
         };
         let violations =
             compare_trees(actual, expected, "test.nr".to_string(), false);
@@ -731,6 +752,7 @@ mod compare_trees_test {
                 }),
                 Function::SetupHook(SetupHook { name: "helper_a".to_string() }),
             ],
+            modules: vec![],
         };
         let expected = Root {
             functions: vec![
@@ -742,6 +764,7 @@ mod compare_trees_test {
                     actions: vec![],
                 }),
             ],
+            modules: vec![],
         };
         let violations =
             compare_trees(actual, expected, "test.nr".to_string(), false);
@@ -783,6 +806,7 @@ mod compare_trees_test {
                     actions: vec![],
                 }),
             ],
+            modules: vec![],
         };
         let expected = Root {
             functions: vec![
@@ -794,6 +818,7 @@ mod compare_trees_test {
                     actions: vec![],
                 }),
             ],
+            modules: vec![],
         };
         let violations =
             compare_trees(actual, expected, "test.nr".to_string(), false);

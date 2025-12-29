@@ -8,7 +8,7 @@ use crate::{
 };
 
 pub(crate) struct Root {
-    // TODO: Modules?
+    pub modules: Vec<Module>,
     pub functions: Vec<Function>,
 }
 
@@ -23,7 +23,7 @@ impl Root {
                 .into_iter()
                 .map(|x| Function::TestFunction(x)),
         );
-        Root { functions }
+        Root { functions, modules: Vec::new() }
     }
 }
 
@@ -33,7 +33,13 @@ pub(crate) struct SetupHook {
     pub name: String,
 }
 
-#[derive(Debug, Hash, PartialEq, Eq, Clone)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Debug)]
+pub(crate) struct Module {
+    pub name: String,
+    pub functions: Vec<Function>,
+}
+
+#[derive(Debug, Hash, PartialEq, PartialOrd, Ord, Eq, Clone)]
 pub(crate) struct TestFunction {
     pub name: String,
     pub expect_fail: bool,
@@ -41,7 +47,7 @@ pub(crate) struct TestFunction {
     pub actions: Vec<String>,
 }
 
-#[derive(PartialEq, Eq, Hash, Clone, Debug)]
+#[derive(PartialEq, Eq, Hash, Clone, PartialOrd, Ord, Debug)]
 pub(crate) enum Function {
     SetupHook(SetupHook),
     TestFunction(TestFunction),

@@ -50,8 +50,7 @@ fn scaffolds_trees() {
         // "format_descriptions.tree",
         // TODO: when we get to multi-root treefiles
         // "hash_pair.tree",
-        // TODO: when we get to multi-root treefiles
-        // "multiple_roots.tree",
+        "multiple_roots.tree",
         "removes_invalid_title_chars.tree",
         "revert_when.tree",
         // TODO: not sure when
