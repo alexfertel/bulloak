@@ -14,16 +14,54 @@ pub(crate) struct Root {
 
 impl Root {
     pub(crate) fn new(forest: &Vec<Ast>) -> Root {
+        let mut modules = Vec::new();
         let mut functions = Vec::<Function>::new();
-        functions.extend(
-            collect_helpers(forest).into_iter().map(|x| Function::SetupHook(x)),
-        );
-        functions.extend(
-            collect_tests(forest, &[])
-                .into_iter()
-                .map(|x| Function::TestFunction(x)),
-        );
-        Root { functions, modules: Vec::new() }
+        match forest.iter().len() {
+            0 => Root { functions, modules },
+            1 => {
+                functions.extend(
+                    collect_helpers(forest)
+                        .into_iter()
+                        .map(|x| Function::SetupHook(x)),
+                );
+                functions.extend(
+                    collect_tests(forest, &[])
+                        .into_iter()
+                        .map(|x| Function::TestFunction(x)),
+                );
+                Root { functions, modules }
+            }
+            _ => {
+                for ast in forest {
+                    let Ast::Root(root) = ast else {
+                        panic!("AST forest should start with roots")
+                    };
+                    let submodule_name = get_submodule_name(
+                        &root.contract_name,
+                    )
+                    .unwrap_or_else(|| todo!("when better parsing names"));
+
+                    let tree_slice = std::slice::from_ref(ast);
+                    let helpers = collect_helpers(tree_slice);
+
+                    let mut local_functions = Vec::new();
+                    local_functions.extend(
+                        helpers.into_iter().map(|x| Function::SetupHook(x)),
+                    );
+                    local_functions.extend(
+                        collect_tests(tree_slice, &[])
+                            .into_iter()
+                            .map(|x| Function::TestFunction(x)),
+                    );
+
+                    modules.push(Module {
+                        name: submodule_name.to_string(),
+                        functions: local_functions,
+                    });
+                }
+                Root { modules, functions: Vec::new() }
+            }
+        }
     }
 }
 
