@@ -313,7 +313,6 @@ test_root
 
     #[test]
     fn test_root_with_special_characters_in_submodule() {
-        // Test how the root name with :: is handled when there are multiple roots
         let tree = r"
 TestRoot::foo==bar
 └── It should work fine
@@ -408,8 +407,6 @@ Contract::foo<bar
 ";
         let forest = parse(tree).unwrap();
         let result = Root::new(&forest);
-
-        // Should fail because of duplicate module names
         assert!(result.is_err());
         let err = result.unwrap_err();
         assert!(err
@@ -417,7 +414,7 @@ Contract::foo<bar
             .contains("submodule foobar has more than one definition"));
     }
 
-    // A proper HIR-based implementation may also create a setup hook to
+    // A proper HIR-based implementation may also create a setup hook for when_c
     #[test]
     fn test_hoist_shared_setup() {
         let tree = r"
