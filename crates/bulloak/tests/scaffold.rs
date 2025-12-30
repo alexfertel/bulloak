@@ -48,8 +48,7 @@ fn scaffolds_trees() {
         // "complex.tree",
         // TODO: not sure when
         // "format_descriptions.tree",
-        // TODO: when we get to multi-root treefiles
-        // "hash_pair.tree",
+        "hash_pair.tree",
         "multiple_roots.tree",
         "removes_invalid_title_chars.tree",
         "revert_when.tree",
@@ -162,7 +161,7 @@ fn skips_trees_when_file_exists() {
         "basic.tree",
         // TODO: when we get to multiple roots
         // "complex.tree",
-        // "multiple_roots.tree"
+        "multiple_roots.tree"
     ];
 
     for tree_name in trees {
