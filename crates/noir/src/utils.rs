@@ -28,8 +28,10 @@ pub(crate) fn to_snake_case(title: &str) -> String {
 /// Extracts the module and submodule name from a root name
 pub(crate) fn parse_root_name(contract_name: &str) -> (String, Option<String>) {
     (
-        contract_name.split("::").next().unwrap_or(contract_name).to_string(),
-        contract_name.split("::").nth(1).and_then(|x| Some(x.to_string())),
+        to_snake_case(
+            contract_name.split("::").next().unwrap_or(contract_name),
+        ),
+        contract_name.split("::").nth(1).and_then(|x| Some(to_snake_case(x))),
     )
 }
 /// Checks that all roots in a multi-root tree have consistent module names.
