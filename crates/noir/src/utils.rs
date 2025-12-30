@@ -25,14 +25,12 @@ pub(crate) fn to_snake_case(title: &str) -> String {
         .join("_")
 }
 
-/// Extracts the module name from a contract_name (the part before "::" if present).
-fn split_module_name(contract_name: &str) -> &str {
-    contract_name.split("::").next().unwrap_or(contract_name)
-}
-
-/// Extracts the submodule name from a contract_name (the part after "::" if present).
-pub(crate) fn get_submodule_name(contract_name: &str) -> Option<&str> {
-    contract_name.split("::").nth(1)
+/// Extracts the module and submodule name from a root name
+pub(crate) fn parse_root_name(contract_name: &str) -> (String, Option<String>) {
+    (
+        contract_name.split("::").next().unwrap_or(contract_name).to_string(),
+        contract_name.split("::").nth(1).and_then(|x| Some(x.to_string())),
+    )
 }
 /// Checks that all roots in a multi-root tree have consistent module names.
 /// Returns a violation if module names are inconsistent.
@@ -46,7 +44,7 @@ pub(crate) fn get_module_name(
         let Ast::Root(root) = ast else {
             panic!("tree does not start with a root");
         };
-        let module_name = split_module_name(&root.contract_name).to_string();
+        let (module_name, _) = parse_root_name(&root.contract_name);
 
         match expected_module {
             None => {

@@ -5,7 +5,7 @@ use std::collections::HashSet;
 
 use crate::{
     constants::{PANIC_KEYWORDS, TEST_PREFIX},
-    utils::{get_submodule_name, to_snake_case},
+    utils::{parse_root_name, to_snake_case},
 };
 
 pub(crate) struct Root {
@@ -38,9 +38,11 @@ impl Root {
                     let Ast::Root(root) = ast else {
                         panic!("AST forest should start with roots")
                     };
-                    let name = get_submodule_name(&root.contract_name)
-                        .unwrap_or_else(|| todo!("when better parsing names"))
-                        .to_string();
+                    let (module_name, name) =
+                        parse_root_name(&root.contract_name);
+                    let Some(name) = name else {
+                        bail!("invalid root name for multi-root treefile: {} must define module::submodule", module_name);
+                    };
 
                     let tree_slice = std::slice::from_ref(ast);
                     let helpers = collect_helpers(tree_slice);

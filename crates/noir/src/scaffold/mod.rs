@@ -132,4 +132,22 @@ Module::Function
             .to_string()
             .contains("submodule Function has more than one definition")));
     }
+
+    #[test]
+    fn two_roots_no_submodule() {
+        let file_contents = r"
+Module
+└── When thing exists
+    └── it should work
+
+Module
+└── When second thing exists
+    └── it should work";
+        let output = scaffold(
+            &file_contents.to_string(),
+            &PathBuf::from("Module.tree"),
+            &Config::default(),
+        );
+        assert!(output.is_err_and(|err| err.to_string().contains("invalid root name for multi-root treefile: Module must define module::submodule")));
+    }
 }
