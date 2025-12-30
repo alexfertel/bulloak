@@ -21,13 +21,13 @@ pub fn scaffold(
 
     match get_module_name(&forest) {
         None => {} // empty tree
-        // tree has only one root
+        // tree has only one root module
         Some(Ok(actual)) => {
             let expected = treefile
-        .file_stem()
-        .and_then(|s| s.to_str())
-        .unwrap_or_else(|| panic!("this condition should be unreachable, as the file was successfully read once already."));
-            // TODO: check if it matches the filename
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or_else(|| panic!("this condition should be unreachable, as the file was successfully read once already."));
+
             if actual != expected {
                 bail!(
                     "module name mismatch: expected '{}', found '{}'",
