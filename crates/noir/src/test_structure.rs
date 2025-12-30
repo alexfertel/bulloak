@@ -1,4 +1,5 @@
 //! Noir testfile representation
+use anyhow::{bail, Result};
 use bulloak_syntax::{Action, Ast};
 use std::collections::HashSet;
 
@@ -13,11 +14,11 @@ pub(crate) struct Root {
 }
 
 impl Root {
-    pub(crate) fn new(forest: &Vec<Ast>) -> Root {
+    pub(crate) fn new(forest: &Vec<Ast>) -> Result<Root> {
         let mut modules = Vec::new();
         let mut functions = Vec::<Function>::new();
         match forest.iter().len() {
-            0 => Root { functions, modules },
+            0 => Ok(Root { functions, modules }),
             1 => {
                 functions.extend(
                     collect_helpers(forest)
@@ -29,17 +30,17 @@ impl Root {
                         .into_iter()
                         .map(|x| Function::TestFunction(x)),
                 );
-                Root { functions, modules }
+                Ok(Root { functions, modules })
             }
             _ => {
+                let mut names: HashSet<String> = HashSet::new();
                 for ast in forest {
                     let Ast::Root(root) = ast else {
                         panic!("AST forest should start with roots")
                     };
-                    let submodule_name = get_submodule_name(
-                        &root.contract_name,
-                    )
-                    .unwrap_or_else(|| todo!("when better parsing names"));
+                    let name = get_submodule_name(&root.contract_name)
+                        .unwrap_or_else(|| todo!("when better parsing names"))
+                        .to_string();
 
                     let tree_slice = std::slice::from_ref(ast);
                     let helpers = collect_helpers(tree_slice);
@@ -54,12 +55,17 @@ impl Root {
                             .map(|x| Function::TestFunction(x)),
                     );
 
-                    modules.push(Module {
-                        name: submodule_name.to_string(),
-                        functions: local_functions,
-                    });
+                    if !names.insert(name.clone()) {
+                        bail!(
+                            "submodule {} has more than one definition",
+                            name
+                        );
+                    }
+
+                    modules.push(Module { name, functions: local_functions });
                 }
-                Root { modules, functions: Vec::new() }
+
+                Ok(Root { modules, functions: Vec::new() })
             }
         }
     }

@@ -112,4 +112,24 @@ mod OtherFunction {
 ";
         assert_eq!(output.trim(), expected.trim());
     }
+
+    #[test]
+    fn two_roots_repeated_submodule() {
+        let file_contents = r"
+Module::Function
+└── When thing exists
+    └── it should work
+
+Module::Function
+└── When thing exists
+    └── it should work";
+        let output = scaffold(
+            &file_contents.to_string(),
+            &PathBuf::from("Module.tree"),
+            &Config::default(),
+        );
+        assert!(output.is_err_and(|err| err
+            .to_string()
+            .contains("submodule Function has more than one definition")));
+    }
 }

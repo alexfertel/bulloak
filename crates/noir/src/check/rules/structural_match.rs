@@ -112,7 +112,8 @@ ViolationKind::TreeFileInvalid(format!(
     let parsed = Root { functions: parsed.find_functions(), modules: vec![] };
 
     // Extract expected structure from AST
-    let expected = Root::new(&forest);
+    // TODO: handle this error explicitly
+    let expected = Root::new(&forest)?;
     let comparison_violations = compare_trees(
         parsed,
         expected,
