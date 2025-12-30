@@ -2,7 +2,7 @@
 
 use bulloak_syntax::Ast;
 
-/// Convert a title to snake_case, stripping BDD prefixes.
+/// Convert a title to snake_case
 /// "When user is logged in" ->  "when_user_is_logged_in"
 /// "It should return true" -> "it_should_return_true"
 pub(crate) fn to_snake_case(title: &str) -> String {
@@ -13,6 +13,32 @@ pub(crate) fn to_snake_case(title: &str) -> String {
             if c.is_alphanumeric() {
                 Some(c.to_ascii_lowercase())
             } else if c.is_whitespace() {
+                Some('_')
+            } else if c == '_' {
+                Some('_')
+            } else {
+                None
+            }
+        })
+        .collect::<String>()
+        .split('_')
+        .filter(|s| !s.is_empty())
+        .collect::<Vec<_>>()
+        .join("_")
+}
+
+/// Convert {,sub}modules to snake case, but keeping uppercase characters, which are allowable in
+/// module names
+fn sanitize_module_name(title: &str) -> String {
+    title
+        .trim()
+        .chars()
+        .filter_map(|c| {
+            if c.is_alphanumeric() {
+                Some(c)
+            } else if c.is_whitespace() {
+                Some('_')
+            } else if c == '_' {
                 Some('_')
             } else {
                 None
@@ -28,10 +54,10 @@ pub(crate) fn to_snake_case(title: &str) -> String {
 /// Extracts the module and submodule name from a root name
 pub(crate) fn parse_root_name(contract_name: &str) -> (String, Option<String>) {
     (
-        to_snake_case(
+        sanitize_module_name(
             contract_name.split("::").next().unwrap_or(contract_name),
         ),
-        contract_name.split("::").nth(1).and_then(|x| Some(to_snake_case(x))),
+        contract_name.split("::").nth(1).and_then(|x| Some(sanitize_module_name(x))),
     )
 }
 /// Checks that all roots in a multi-root tree have consistent module names.
@@ -93,5 +119,23 @@ mod tests {
     fn test_to_snake_case_with_special_chars() {
         assert_eq!(to_snake_case("It's working!"), "its_working");
         assert_eq!(to_snake_case("value > 100"), "value_100");
+    }
+
+    #[test]
+    fn test_to_snake_case_with_underscores() {
+        assert_eq!(to_snake_case("It's_working!"), "its_working");
+        assert_eq!(to_snake_case("value_is_100"), "value_is_100");
+    }
+
+    #[test]
+    fn test_sanitize_module_name_with_special_chars() {
+        assert_eq!(sanitize_module_name("It's working!"), "Its_working");
+        assert_eq!(sanitize_module_name("value > 100"), "value_100");
+    }
+
+    #[test]
+    fn test_sanitize_module_name_with_underscores() {
+        assert_eq!(sanitize_module_name("It's_working!"), "Its_working");
+        assert_eq!(sanitize_module_name("value_is_100"), "value_is_100");
     }
 }

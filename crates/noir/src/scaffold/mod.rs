@@ -148,6 +148,6 @@ Module
             &PathBuf::from("Module.tree"),
             &Config::default(),
         );
-        assert!(output.is_err_and(|err| err.to_string().contains(r#"an error occurred while parsing the tree: separator missing at tree root #1 "no_submodule_multi_root". Expected to find `::` between the contract name and the function name when multiple roots exist"#)));
+        assert!(output.is_err_and(|err| err.to_string().contains(r#"an error occurred while parsing the tree: separator missing at tree root #1 "Module". Expected to find `::` between the contract name and the function name when multiple roots exist"#)));
     }
 }

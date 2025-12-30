@@ -394,7 +394,7 @@ Contract::Module1
         let err = result.unwrap_err();
         assert!(err
             .to_string()
-            .contains("submodule module1 has more than one definition"));
+            .contains("submodule Module1 has more than one definition"));
     }
 
     #[test]
