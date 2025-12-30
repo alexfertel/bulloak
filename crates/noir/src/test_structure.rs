@@ -18,6 +18,8 @@ impl Root {
     pub(crate) fn new(forest: &Vec<Ast>) -> Result<Root> {
         let mut modules = Vec::new();
         let mut functions = Vec::<Function>::new();
+        let mut all_hooks: HashSet<String> = HashSet::new();
+        let mut repeated_hooks: HashSet<String> = HashSet::new();
         match forest.iter().len() {
             0 => Ok(Root { functions, modules }),
             1 => {
@@ -44,13 +46,27 @@ impl Root {
                     let Some(name) = name else {
                         bail!(
                             r#"an error occurred while parsing the tree: separator missing at tree root #{} "{}". Expected to find `::` between the contract name and the function name when multiple roots exist"#,
-                            index+1, // solidity backend uses 1-indexing
+                            index + 1, // solidity backend uses 1-indexing
                             module_name
                         );
                     };
+                    if !names.insert(name.clone()) {
+                        bail!(
+                            "submodule {} has more than one definition",
+                            name
+                        );
+                    }
 
                     let tree_slice = std::slice::from_ref(ast);
                     let helpers = collect_helpers(tree_slice);
+
+                    for helper in &helpers {
+                        // returns false if the key is already present
+                        if !all_hooks.insert(helper.name.clone()) {
+                            // we don't care if it's repeated one or multiple times
+                            repeated_hooks.insert(helper.name.clone());
+                        }
+                    }
 
                     let mut local_functions = Vec::new();
                     local_functions.extend(
@@ -61,18 +77,15 @@ impl Root {
                             .into_iter()
                             .map(|x| Function::TestFunction(x)),
                     );
-
-                    if !names.insert(name.clone()) {
-                        bail!(
-                            "submodule {} has more than one definition",
-                            name
-                        );
-                    }
-
                     modules.push(Module { name, functions: local_functions });
                 }
 
-                Ok(Root { modules, functions: Vec::new() })
+                modules = modules.into_iter().map(|module| Module{
+                    name: module.name.clone(),
+                    functions: module.functions.into_iter().filter(|fun| !repeated_hooks.contains(&fun.name())).collect()
+                }).collect();
+
+                Ok(Root { modules, functions: repeated_hooks.into_iter().map(|name| Function::SetupHook(SetupHook{name})).collect() })
             }
         }
     }
@@ -335,7 +348,7 @@ test_root
         let forest = parse(tree).unwrap();
         let root = Root::new(&forest).unwrap();
 
-        assert_eq!(root.functions.len() , 4);
+        assert_eq!(root.functions.len(), 4);
         assert_eq!(root.functions[0].name(), "when_a");
         assert!(matches!(root.functions[0], Function::SetupHook(_)));
         assert_eq!(root.functions[1].name(), "when_b");
@@ -379,7 +392,9 @@ Contract::Module1
 
         assert!(result.is_err());
         let err = result.unwrap_err();
-        assert!(err.to_string().contains("submodule module1 has more than one definition"));
+        assert!(err
+            .to_string()
+            .contains("submodule module1 has more than one definition"));
     }
 
     #[test]
@@ -397,6 +412,51 @@ Contract::foo<bar
         // Should fail because of duplicate module names
         assert!(result.is_err());
         let err = result.unwrap_err();
-        assert!(err.to_string().contains("submodule foobar has more than one definition"));
+        assert!(err
+            .to_string()
+            .contains("submodule foobar has more than one definition"));
+    }
+
+    // A proper HIR-based implementation may also create a setup hook to
+    #[test]
+    fn test_hoist_shared_setup() {
+        let tree = r"
+Contract::foo
+└── When B
+    ├── It should work.
+    └── When C
+        └── It should also work.
+
+Contract::bar
+└── When A
+    └── When B
+        ├── It should produce a special side effect
+        └── When C
+            └── It should also work.
+";
+        let forest = parse(tree).unwrap();
+        let root = Root::new(&forest).unwrap();
+
+        assert_eq!(root.functions.iter().len(), 1);
+        assert_eq!(root.functions[0].name(), "when_b");
+        assert!(matches!(root.functions[0], Function::SetupHook(_)));
+
+        let foo_module = &root.modules[0];
+        assert_eq!(foo_module.name, "foo");
+        assert_eq!(foo_module.functions.len(), 2);
+        assert_eq!(foo_module.functions[0].name(), "test_when_b");
+        assert!(matches!(foo_module.functions[0], Function::TestFunction(_)));
+        assert_eq!(foo_module.functions[1].name(), "test_when_c");
+        assert!(matches!(foo_module.functions[1], Function::TestFunction(_)));
+
+        let bar_module = &root.modules[1];
+        assert_eq!(bar_module.name, "bar");
+        assert_eq!(bar_module.functions.len(), 3);
+        assert_eq!(bar_module.functions[0].name(), "when_a");
+        assert!(matches!(bar_module.functions[0], Function::SetupHook(_)));
+        assert_eq!(bar_module.functions[1].name(), "test_when_b");
+        assert!(matches!(bar_module.functions[1], Function::TestFunction(_)));
+        assert_eq!(bar_module.functions[2].name(), "test_when_c");
+        assert!(matches!(bar_module.functions[2], Function::TestFunction(_)));
     }
 }
