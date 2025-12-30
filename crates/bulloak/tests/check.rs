@@ -218,8 +218,10 @@ fn checks_noir_testfile_and_root_match() {
 fn checks_noir_testfile_and_root_match_multiple_roots() {
     let cwd = env::current_dir().unwrap();
     let binary_path = get_binary_path();
-    let tree_path =
-        cwd.join("tests").join("check").join("testfile_and_root_match_multiple_roots.tree");
+    let tree_path = cwd
+        .join("tests")
+        .join("check")
+        .join("testfile_and_root_match_multiple_roots.tree");
 
     let output = cmd(&binary_path, "check", &tree_path, &["-l", "noir"]);
     let stderr = String::from_utf8(output.stderr).unwrap();
@@ -232,8 +234,10 @@ fn checks_noir_testfile_and_root_match_multiple_roots() {
 fn checks_noir_testfile_and_root_mismatch_multiple_roots() {
     let cwd = env::current_dir().unwrap();
     let binary_path = get_binary_path();
-    let tree_path =
-        cwd.join("tests").join("check").join("testfile_and_root_mismatch_multiple_roots.tree");
+    let tree_path = cwd
+        .join("tests")
+        .join("check")
+        .join("testfile_and_root_mismatch_multiple_roots.tree");
 
     let output = cmd(&binary_path, "check", &tree_path, &["-l", "noir"]);
     let stderr = String::from_utf8(output.stderr).unwrap();
@@ -257,7 +261,6 @@ fn checks_noir_testfile_and_root_mismatch() {
         r#"Tree root "Mismatch" should match treefile name: "testfile_and_root_mismatch""#
     ));
 }
-
 
 #[cfg(not(target_os = "windows"))]
 #[test]
@@ -635,4 +638,56 @@ fn check_invalid_glob_warns_but_reports_success() {
         "expected success message, got: {}",
         stdout
     );
+}
+
+// ignored until we fix https://github.com/alexfertel/bulloak/issues/114
+#[test]
+#[ignore]
+fn checks_repeated_submodule_error_solidity() {
+    let cwd = env::current_dir().unwrap();
+    let binary_path = get_binary_path();
+    let tree_path =
+        cwd.join("tests").join("check").join("repeated_submodule.tree");
+
+    let output = cmd(&binary_path, "check", &tree_path, &[]);
+    let stderr = String::from_utf8(output.stderr).unwrap();
+
+    assert!(stderr.contains(
+        r#"an error occurred while parsing the tree: submodule Function has more than one definition"#
+    ));
+}
+
+#[test]
+fn checks_repeated_submodule_error_noir() {
+    let cwd = env::current_dir().unwrap();
+    let binary_path = get_binary_path();
+    let tree_path =
+        cwd.join("tests").join("check").join("repeated_submodule.tree");
+
+    let output = cmd(&binary_path, "check", &tree_path, &["-l", "noir"]);
+    let stderr = String::from_utf8(output.stderr).unwrap();
+
+    assert!(
+        stderr.contains(r#"submodule Function has more than one definition"#)
+    );
+}
+
+#[test]
+fn checks_no_submodule_multi_root_error() {
+    let cwd = env::current_dir().unwrap();
+    let binary_path = get_binary_path();
+    let tree_path =
+        cwd.join("tests").join("check").join("no_submodule_multi_root.tree");
+
+    let output = cmd(&binary_path, "check", &tree_path, &[]);
+    let stderr = String::from_utf8(output.stderr).unwrap();
+
+    assert!(stderr.contains(
+        r#"an error occurred while parsing the tree: separator missing at tree root #1. Expected to find `::` between the contract name and the function name when multiple roots exist"#
+    ));
+
+    let output = cmd(&binary_path, "check", &tree_path, &["-l", "noir"]);
+    let stderr = String::from_utf8(output.stderr).unwrap();
+
+    assert!(stderr.contains(r#"an error occurred while parsing the tree: separator missing at tree root #1 "no_submodule_multi_root". Expected to find `::` between the contract name and the function name when multiple roots exist"#));
 }

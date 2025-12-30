@@ -111,9 +111,18 @@ ViolationKind::TreeFileInvalid(format!(
     };
     let parsed = Root { functions: parsed.find_functions(), modules: vec![] };
 
-    // Extract expected structure from AST
-    // TODO: handle this error explicitly
-    let expected = Root::new(&forest)?;
+    // An AST may be valid syntactically but not semantically,
+    // in which case we cannot produce a testfile structure from it
+    let expected = match Root::new(&forest) {
+        Ok(r) => r,
+        Err(e) => {
+            violations.push(Violation::new(
+                ViolationKind::TreeFileInvalid(e.to_string()),
+                tree_path.display().to_string(),
+            ));
+            return Ok(violations);
+        }
+    };
     let comparison_violations = compare_trees(
         parsed,
         expected,
