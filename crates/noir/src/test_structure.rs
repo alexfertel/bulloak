@@ -4,7 +4,7 @@ use std::collections::HashSet;
 
 use crate::{
     constants::{PANIC_KEYWORDS, TEST_PREFIX},
-    utils::to_snake_case,
+    utils::{get_submodule_name, to_snake_case},
 };
 
 pub(crate) struct Root {

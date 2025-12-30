@@ -28,7 +28,11 @@ pub(crate) fn to_snake_case(title: &str) -> String {
 /// Extracts the module name from a contract_name (the part before "::" if present).
 fn split_module_name(contract_name: &str) -> &str {
     contract_name.split("::").next().unwrap_or(contract_name)
+}
 
+/// Extracts the submodule name from a contract_name (the part after "::" if present).
+pub(crate) fn get_submodule_name(contract_name: &str) -> Option<&str> {
+    contract_name.split("::").nth(1)
 }
 /// Checks that all roots in a multi-root tree have consistent module names.
 /// Returns a violation if module names are inconsistent.
