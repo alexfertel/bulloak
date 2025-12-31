@@ -133,20 +133,20 @@ ViolationKind::TreeFileInvalid(format!(
     Ok(violations)
 }
 
-/// iterate over the two trees and report on their differences
-fn compare_trees(
-    actual: Root,
-    expected: Root,
+/// compare two lists of functions, and return
+fn compare_function_array(
+    actual: Vec<Function>,
+    expected: Vec<Function>,
     test_file: String,
+    module_name: String,
     skip_setup_hooks: bool,
 ) -> Vec<Violation> {
     let mut violations = Vec::new();
     let expected_set: BTreeSet<String> =
-        expected.functions.iter().map(|x| x.name()).collect();
+        expected.iter().map(|x| x.name()).collect();
 
     // name -> (full obj, index)
     let found_fns: BTreeMap<String, (Function, usize)> = actual
-        .functions
         .into_iter()
         // should I define a custom Hash implementation that hashes the name only?
         .filter(|x| expected_set.contains(&x.name()))
@@ -154,7 +154,7 @@ fn compare_trees(
         .map(|(k, v)| (v.name(), (v, k)))
         .collect();
 
-    for expected in &expected.functions {
+    for expected in &expected {
         let found;
         if let Some((f, _)) = found_fns.get(&expected.name()) {
             found = f;
@@ -163,14 +163,20 @@ fn compare_trees(
                 Function::SetupHook(_) => {
                     if !skip_setup_hooks {
                         violations.push(Violation::new(
-                            ViolationKind::SetupHookMissing(expected.name()),
+                            ViolationKind::SetupHookMissing(
+                                expected.name(),
+                                module_name.clone(),
+                            ),
                             test_file.clone(),
                         ));
                     }
                 }
                 Function::TestFunction(_) => {
                     violations.push(Violation::new(
-                        ViolationKind::TestFunctionMissing(expected.name()),
+                        ViolationKind::TestFunctionMissing(
+                            expected.name(),
+                            module_name.clone(),
+                        ),
                         test_file.clone(),
                     ));
                 }
@@ -181,12 +187,18 @@ fn compare_trees(
         match (expected, found) {
             (Function::SetupHook(_), Function::TestFunction(_)) => violations
                 .push(Violation::new(
-                    ViolationKind::SetupHookWrongType(expected.name()),
+                    ViolationKind::SetupHookWrongType(
+                        expected.name(),
+                        module_name.clone(),
+                    ),
                     test_file.clone(),
                 )),
             (Function::TestFunction(_), Function::SetupHook(_)) => violations
                 .push(Violation::new(
-                    ViolationKind::TestFunctionWrongType(expected.name()),
+                    ViolationKind::TestFunctionWrongType(
+                        expected.name(),
+                        module_name.clone(),
+                    ),
                     test_file.clone(),
                 )),
             // setup hooks dont really have any attributes and we are not comparing order yet
@@ -202,11 +214,13 @@ fn compare_trees(
                         (true, false) => {
                             Some(ViolationKind::ShouldFailMissing(
                                 expected.name.clone(),
+                                module_name.clone(),
                             ))
                         }
                         (false, true) => {
                             Some(ViolationKind::ShouldFailUnexpected(
                                 expected.name.clone(),
+                                module_name.clone(),
                             ))
                         }
                         _ => None,
@@ -219,7 +233,6 @@ fn compare_trees(
     }
 
     let present_expected_fns: BTreeMap<String, (Function, usize)> = expected
-        .functions
         .iter()
         .filter(|x| found_fns.contains_key(&x.name()))
         .enumerate()
@@ -237,10 +250,16 @@ fn compare_trees(
                     violations.push(Violation::new(
                         match expected {
                             Function::SetupHook(_) => {
-                                ViolationKind::SetupHookWrongPosition(name)
+                                ViolationKind::SetupHookWrongPosition(
+                                    name,
+                                    module_name.clone(),
+                                )
                             }
                             Function::TestFunction(_) => {
-                                ViolationKind::TestFunctionWrongPosition(name)
+                                ViolationKind::TestFunctionWrongPosition(
+                                    name,
+                                    module_name.clone(),
+                                )
                             }
                         },
                         test_file.clone(),
@@ -253,6 +272,22 @@ fn compare_trees(
         };
     }
     violations
+}
+
+/// iterate over the two trees and report on their differences
+fn compare_trees(
+    actual: Root,
+    expected: Root,
+    test_file: String,
+    skip_setup_hooks: bool,
+) -> Vec<Violation> {
+    compare_function_array(
+        actual.functions,
+        expected.functions,
+        test_file.clone(),
+        test_file, // test file matches module name, it's better than passing 'root'
+        skip_setup_hooks,
+    )
 }
 
 #[cfg(test)]
@@ -287,9 +322,10 @@ mod check_test {
         let violations = check(tree_file.path(), &cfg).unwrap();
 
         assert!(violations.len() > 0);
-        assert!(violations
-            .iter()
-            .any(|v| matches!(v.kind, ViolationKind::TestFunctionMissing(_))));
+        assert!(violations.iter().any(|v| matches!(
+            v.kind,
+            ViolationKind::TestFunctionMissing(_, _)
+        )));
 
         // Cleanup
         let _ = fs::remove_file(test_path);
@@ -323,7 +359,7 @@ mod check_test {
 #[cfg(test)]
 mod compare_trees_test {
     use super::*;
-    use crate::test_structure::{SetupHook, TestFunction};
+    use crate::test_structure::{Module, SetupHook, TestFunction};
 
     #[test]
     fn empty_both() {
@@ -376,9 +412,10 @@ mod compare_trees_test {
         assert_eq!(violations.len(), 1);
         assert!(matches!(
             violations[0].kind,
-            ViolationKind::TestFunctionMissing(_)
+            ViolationKind::TestFunctionMissing(_,_)
         ));
-        if let ViolationKind::TestFunctionMissing(name) = &violations[0].kind {
+        if let ViolationKind::TestFunctionMissing(name, _) = &violations[0].kind
+        {
             assert_eq!(name, "test_foo");
         }
     }
@@ -408,7 +445,7 @@ mod compare_trees_test {
         assert_eq!(violations.len(), 2);
         assert!(violations
             .iter()
-            .all(|v| matches!(v.kind, ViolationKind::TestFunctionMissing(_))));
+            .all(|v| matches!(v.kind, ViolationKind::TestFunctionMissing(_,_))));
     }
 
     #[test]
@@ -436,9 +473,9 @@ mod compare_trees_test {
         assert_eq!(violations.len(), 1);
         assert!(matches!(
             violations[0].kind,
-            ViolationKind::ShouldFailMissing(_)
+            ViolationKind::ShouldFailMissing(_,_)
         ));
-        if let ViolationKind::ShouldFailMissing(name) = &violations[0].kind {
+        if let ViolationKind::ShouldFailMissing(name,_) = &violations[0].kind {
             assert_eq!(name, "test_foo");
         }
     }
@@ -468,9 +505,9 @@ mod compare_trees_test {
         assert_eq!(violations.len(), 1);
         assert!(matches!(
             violations[0].kind,
-            ViolationKind::ShouldFailUnexpected(_)
+            ViolationKind::ShouldFailUnexpected(_,_)
         ));
-        if let ViolationKind::ShouldFailUnexpected(name) = &violations[0].kind {
+        if let ViolationKind::ShouldFailUnexpected(name,_) = &violations[0].kind {
             assert_eq!(name, "test_foo");
         }
     }
@@ -508,9 +545,9 @@ mod compare_trees_test {
         assert_eq!(violations.len(), 1);
         assert!(matches!(
             violations[0].kind,
-            ViolationKind::SetupHookMissing(_)
+            ViolationKind::SetupHookMissing(_,_)
         ));
-        if let ViolationKind::SetupHookMissing(name) = &violations[0].kind {
+        if let ViolationKind::SetupHookMissing(name,_) = &violations[0].kind {
             assert_eq!(name, "helper_foo");
         }
     }
@@ -553,7 +590,7 @@ mod compare_trees_test {
         assert_eq!(violations.len(), 1);
         assert!(matches!(
             violations[0].kind,
-            ViolationKind::TestFunctionMissing(_)
+            ViolationKind::TestFunctionMissing(_,_)
         ));
     }
 
@@ -619,11 +656,11 @@ mod compare_trees_test {
         assert_eq!(violations.len(), 2);
         assert!(matches!(
             &violations[0].kind,
-            ViolationKind::SetupHookWrongType(x) if x == "helper_a"
+            ViolationKind::SetupHookWrongType(x,_) if x == "helper_a"
         ));
         assert!(matches!(
             &violations[1].kind,
-            ViolationKind::TestFunctionWrongType(x) if x == "test_b"
+            ViolationKind::TestFunctionWrongType(x,_) if x == "test_b"
         ));
     }
 
@@ -693,11 +730,11 @@ mod compare_trees_test {
         assert_eq!(violations.len(), 2);
         assert!(matches!(
             &violations[0].kind,
-            ViolationKind::SetupHookWrongPosition(x) if x == "helper_a"
+            ViolationKind::SetupHookWrongPosition(x,_) if x == "helper_a"
         ));
         assert!(matches!(
             &violations[1].kind,
-            ViolationKind::TestFunctionWrongPosition(x) if x == "test_b"
+            ViolationKind::TestFunctionWrongPosition(x,_) if x == "test_b"
         ));
     }
 
@@ -747,11 +784,11 @@ mod compare_trees_test {
         assert_eq!(violations.len(), 2);
         assert!(matches!(
             &violations[0].kind,
-            ViolationKind::SetupHookWrongPosition(x) if x == "helper_a"
+            ViolationKind::SetupHookWrongPosition(x,_) if x == "helper_a"
         ));
         assert!(matches!(
             &violations[1].kind,
-            ViolationKind::TestFunctionWrongPosition(x) if x == "test_b"
+            ViolationKind::TestFunctionWrongPosition(x,_) if x == "test_b"
         ));
     }
 
