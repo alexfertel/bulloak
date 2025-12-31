@@ -205,7 +205,7 @@ fn parse_test_attribute(attribute: &str) -> (bool, bool) {
 }
 
 #[cfg(test)]
-mod tests {
+mod find_functions_test {
     use super::*;
 
     #[test]
@@ -396,175 +396,347 @@ mod tests {
             panic!("Expected TestFunction");
         }
     }
+    #[test]
+    fn test_find_functions_excludes_module_contents() {
+        let source = r#"
+                fn root_helper() {
+                    // root level helper
+                }
 
-    mod parse_test_attribute_tests {
-        use super::*;
+                #[test]
+                fn root_test() {
+                    assert(true);
+                }
 
-        #[test]
-        fn test_simple_test_attribute() {
-            let attr = String::from("#[test]");
-            let (is_test, should_fail) = parse_test_attribute(&attr);
-            assert!(is_test);
-            assert!(!should_fail);
+                mod test_module {
+                    fn module_helper() {
+                        // module helper
+                    }
+
+                    #[test]
+                    fn module_test() {
+                        assert(true);
+                    }
+                }
+            "#;
+
+        let parsed = ParsedNoirFile::parse(source).unwrap();
+        let functions = parsed.find_functions();
+
+        // Should only find root-level functions, not module contents
+        assert_eq!(functions.len(), 2);
+        assert_eq!(functions[0].name(), "root_helper");
+        assert_eq!(functions[1].name(), "root_test");
+    }
+}
+
+#[cfg(test)]
+mod parse_test_attribute_tests {
+    use super::*;
+
+    #[test]
+    fn test_simple_test_attribute() {
+        let attr = String::from("#[test]");
+        let (is_test, should_fail) = parse_test_attribute(&attr);
+        assert!(is_test);
+        assert!(!should_fail);
+    }
+
+    #[test]
+    fn test_should_fail_attribute() {
+        let attr = String::from("#[test(should_fail)]");
+        let (is_test, should_fail) = parse_test_attribute(&attr);
+        assert!(is_test);
+        assert!(should_fail);
+    }
+
+    #[test]
+    fn test_should_fail_with_message() {
+        let attr =
+            String::from("#[test(should_fail_with = \"error message\")]");
+        let (is_test, should_fail) = parse_test_attribute(&attr);
+        assert!(is_test);
+        assert!(should_fail);
+    }
+
+    #[test]
+    fn test_should_fail_with_empty_message() {
+        let attr = String::from("#[test(should_fail_with = \"\")]");
+        let (is_test, should_fail) = parse_test_attribute(&attr);
+        assert!(is_test);
+        assert!(should_fail);
+    }
+
+    #[test]
+    fn test_non_test_attribute() {
+        let attr = String::from("#[derive(Debug)]");
+        let (is_test, should_fail) = parse_test_attribute(&attr);
+        assert!(!is_test);
+        assert!(!should_fail);
+    }
+
+    #[test]
+    fn test_similar_but_not_test_attribute() {
+        let attr = String::from("#[gen_test]");
+        let (is_test, should_fail) = parse_test_attribute(&attr);
+        assert!(!is_test);
+        assert!(!should_fail);
+    }
+
+    #[test]
+    fn test_test_prefix_but_not_test() {
+        let attr = String::from("#[test_fail]");
+        let (is_test, should_fail) = parse_test_attribute(&attr);
+        assert!(!is_test);
+        assert!(!should_fail);
+    }
+
+    #[test]
+    fn test_test_suffix_but_not_test() {
+        let attr = String::from("#[unit_test]");
+        let (is_test, should_fail) = parse_test_attribute(&attr);
+        assert!(!is_test);
+        assert!(!should_fail);
+    }
+
+    /// probably not even picked up by the parser
+    #[test]
+    fn test_empty_string() {
+        let attr = String::from("");
+        let (is_test, should_fail) = parse_test_attribute(&attr);
+        assert!(!is_test);
+        assert!(!should_fail);
+    }
+
+    #[test]
+    fn test_whitespace_before_attribute() {
+        let attr = String::from("#[ test]");
+        let (is_test, should_fail) = parse_test_attribute(&attr);
+        assert!(is_test);
+        assert!(!should_fail);
+    }
+
+    #[test]
+    fn test_whitespace_before_hash() {
+        let attr = String::from(" #[test]");
+        let (is_test, should_fail) = parse_test_attribute(&attr);
+        assert!(is_test);
+        assert!(!should_fail);
+    }
+
+    #[test]
+    fn test_whitespace_after_attribute() {
+        let attr = String::from("#[test ]");
+        let (is_test, should_fail) = parse_test_attribute(&attr);
+        assert!(is_test);
+        assert!(!should_fail);
+    }
+
+    #[test]
+    fn test_whitespace_after_bracket() {
+        let attr = String::from("#[test] ");
+        let (is_test, should_fail) = parse_test_attribute(&attr);
+        assert!(is_test);
+        assert!(!should_fail);
+    }
+
+    #[test]
+    fn test_whitespace_in_attribute() {
+        let attr = String::from("#[test( should_fail )]");
+        let (is_test, should_fail) = parse_test_attribute(&attr);
+        assert!(is_test);
+        assert!(should_fail);
+    }
+
+    /// probably not even picked up by the parser
+    #[test]
+    fn test_no_brackets() {
+        let attr = String::from("test");
+        let (is_test, should_fail) = parse_test_attribute(&attr);
+        assert!(!is_test);
+        assert!(!should_fail);
+    }
+
+    /// probably not even picked up by the parser
+    #[test]
+    fn test_missing_hash() {
+        let attr = String::from("[test]");
+        let (is_test, should_fail) = parse_test_attribute(&attr);
+        assert!(!is_test);
+        assert!(!should_fail);
+    }
+
+    /// probably not even picked up by the parser
+    #[test]
+    fn test_unclosed_bracket() {
+        let attr = String::from("#[test");
+        let (is_test, should_fail) = parse_test_attribute(&attr);
+        assert!(!is_test);
+        assert!(!should_fail);
+    }
+
+    #[test]
+    fn test_should_fail_with_special_chars_in_message() {
+        let attr =
+            String::from("#[test(should_fail_with = \"error: [1] (foo)\")]");
+        let (is_test, should_fail) = parse_test_attribute(&attr);
+        assert!(is_test);
+        assert!(should_fail);
+    }
+
+    #[test]
+    fn test_case_sensitivity() {
+        let attr = String::from("#[TEST]");
+        let (is_test, should_fail) = parse_test_attribute(&attr);
+        assert!(!is_test);
+        assert!(!should_fail);
+    }
+
+    #[test]
+    fn test_should_fail_case_sensitivity() {
+        let attr = String::from("#[test(SHOULD_FAIL)]");
+        let (is_test, should_fail) = parse_test_attribute(&attr);
+        assert!(is_test);
+        assert!(!should_fail);
+    }
+}
+
+#[cfg(test)]
+mod find_modules_tests {
+    use super::*;
+
+    #[test]
+    fn test_find_single_module() {
+        let source = r#"
+                mod test_module {
+                    #[test]
+                    fn test_something() {
+                        assert(true);
+                    }
+                }
+            "#;
+
+        let parsed = ParsedNoirFile::parse(source).unwrap();
+        let modules = parsed.find_modules();
+
+        assert_eq!(modules.len(), 1);
+        assert_eq!(modules[0].name, "test_module");
+        assert_eq!(modules[0].functions.len(), 1);
+
+        if let Function::TestFunction(test_fn) = &modules[0].functions[0] {
+            assert_eq!(test_fn.name, "test_something");
+            assert!(!test_fn.expect_fail);
+        } else {
+            panic!("Expected TestFunction");
         }
+    }
 
-        #[test]
-        fn test_should_fail_attribute() {
-            let attr = String::from("#[test(should_fail)]");
-            let (is_test, should_fail) = parse_test_attribute(&attr);
-            assert!(is_test);
-            assert!(should_fail);
-        }
+    #[test]
+    fn test_find_multiple_modules() {
+        let source = r#"
+                mod first_module {
+                    #[test]
+                    fn test_first() {
+                        assert(true);
+                    }
+                }
 
-        #[test]
-        fn test_should_fail_with_message() {
-            let attr =
-                String::from("#[test(should_fail_with = \"error message\")]");
-            let (is_test, should_fail) = parse_test_attribute(&attr);
-            assert!(is_test);
-            assert!(should_fail);
-        }
+                mod second_module {
+                    #[test]
+                    fn test_second() {
+                        assert(true);
+                    }
+                }
+            "#;
 
-        #[test]
-        fn test_should_fail_with_empty_message() {
-            let attr = String::from("#[test(should_fail_with = \"\")]");
-            let (is_test, should_fail) = parse_test_attribute(&attr);
-            assert!(is_test);
-            assert!(should_fail);
-        }
+        let parsed = ParsedNoirFile::parse(source).unwrap();
+        let modules = parsed.find_modules();
 
-        #[test]
-        fn test_non_test_attribute() {
-            let attr = String::from("#[derive(Debug)]");
-            let (is_test, should_fail) = parse_test_attribute(&attr);
-            assert!(!is_test);
-            assert!(!should_fail);
-        }
+        assert_eq!(modules.len(), 2);
+        assert_eq!(modules[0].name, "first_module");
+        assert_eq!(modules[1].name, "second_module");
 
-        #[test]
-        fn test_similar_but_not_test_attribute() {
-            let attr = String::from("#[gen_test]");
-            let (is_test, should_fail) = parse_test_attribute(&attr);
-            assert!(!is_test);
-            assert!(!should_fail);
-        }
+        assert_eq!(modules[0].functions.len(), 1);
+        assert_eq!(modules[1].functions.len(), 1);
+    }
 
-        #[test]
-        fn test_test_prefix_but_not_test() {
-            let attr = String::from("#[test_fail]");
-            let (is_test, should_fail) = parse_test_attribute(&attr);
-            assert!(!is_test);
-            assert!(!should_fail);
-        }
+    #[test]
+    fn test_nested_modules_are_flattened() {
+        let source = r#"
+                mod outer {
+                    #[test]
+                    fn test_outer() {
+                        assert(true);
+                    }
 
-        #[test]
-        fn test_test_suffix_but_not_test() {
-            let attr = String::from("#[unit_test]");
-            let (is_test, should_fail) = parse_test_attribute(&attr);
-            assert!(!is_test);
-            assert!(!should_fail);
-        }
+                    mod inner {
+                        #[test]
+                        fn test_inner() {
+                            assert(true);
+                        }
+                    }
+                }
+            "#;
 
-        /// probably not even picked up by the parser
-        #[test]
-        fn test_empty_string() {
-            let attr = String::from("");
-            let (is_test, should_fail) = parse_test_attribute(&attr);
-            assert!(!is_test);
-            assert!(!should_fail);
-        }
+        let parsed = ParsedNoirFile::parse(source).unwrap();
+        let modules = parsed.find_modules();
 
-        #[test]
-        fn test_whitespace_before_attribute() {
-            let attr = String::from("#[ test]");
-            let (is_test, should_fail) = parse_test_attribute(&attr);
-            assert!(is_test);
-            assert!(!should_fail);
-        }
+        // Both outer and inner modules should be found (flattened)
+        assert_eq!(modules.len(), 2);
+        assert_eq!(modules[0].name, "outer");
+        assert_eq!(modules[1].name, "inner");
+    }
 
-        #[test]
-        fn test_whitespace_before_hash() {
-            let attr = String::from(" #[test]");
-            let (is_test, should_fail) = parse_test_attribute(&attr);
-            assert!(is_test);
-            assert!(!should_fail);
-        }
+    #[test]
+    fn test_find_modules_returns_empty_without_modules() {
+        let source = r#"
+                #[test]
+                fn test_root_level() {
+                    assert(true);
+                }
 
-        #[test]
-        fn test_whitespace_after_attribute() {
-            let attr = String::from("#[test ]");
-            let (is_test, should_fail) = parse_test_attribute(&attr);
-            assert!(is_test);
-            assert!(!should_fail);
-        }
+                fn helper() {
+                    // helper
+                }
+            "#;
 
-        #[test]
-        fn test_whitespace_after_bracket() {
-            let attr = String::from("#[test] ");
-            let (is_test, should_fail) = parse_test_attribute(&attr);
-            assert!(is_test);
-            assert!(!should_fail);
-        }
+        let parsed = ParsedNoirFile::parse(source).unwrap();
+        let modules = parsed.find_modules();
 
-        #[test]
-        fn test_whitespace_in_attribute() {
-            let attr = String::from("#[test( should_fail )]");
-            let (is_test, should_fail) = parse_test_attribute(&attr);
-            assert!(is_test);
-            assert!(should_fail);
-        }
+        assert_eq!(modules.len(), 0);
+    }
 
-        /// probably not even picked up by the parser
-        #[test]
-        fn test_no_brackets() {
-            let attr = String::from("test");
-            let (is_test, should_fail) = parse_test_attribute(&attr);
-            assert!(!is_test);
-            assert!(!should_fail);
-        }
+    #[test]
+    fn test_module_with_pub_modifier() {
+        let source = r#"
+                pub mod public_module {
+                    #[test]
+                    pub fn test_public() {
+                        assert(true);
+                    }
+                }
+            "#;
 
-        /// probably not even picked up by the parser
-        #[test]
-        fn test_missing_hash() {
-            let attr = String::from("[test]");
-            let (is_test, should_fail) = parse_test_attribute(&attr);
-            assert!(!is_test);
-            assert!(!should_fail);
-        }
+        let parsed = ParsedNoirFile::parse(source).unwrap();
+        let modules = parsed.find_modules();
 
-        /// probably not even picked up by the parser
-        #[test]
-        fn test_unclosed_bracket() {
-            let attr = String::from("#[test");
-            let (is_test, should_fail) = parse_test_attribute(&attr);
-            assert!(!is_test);
-            assert!(!should_fail);
-        }
+        assert_eq!(modules.len(), 1);
+        assert_eq!(modules[0].name, "public_module");
+        assert_eq!(modules[0].functions.len(), 1);
+    }
 
-        #[test]
-        fn test_should_fail_with_special_chars_in_message() {
-            let attr = String::from(
-                "#[test(should_fail_with = \"error: [1] (foo)\")]",
-            );
-            let (is_test, should_fail) = parse_test_attribute(&attr);
-            assert!(is_test);
-            assert!(should_fail);
-        }
+    #[test]
+    fn test_empty_module() {
+        let source = r#"
+                mod empty_module {
+                }
+            "#;
 
-        #[test]
-        fn test_case_sensitivity() {
-            let attr = String::from("#[TEST]");
-            let (is_test, should_fail) = parse_test_attribute(&attr);
-            assert!(!is_test);
-            assert!(!should_fail);
-        }
+        let parsed = ParsedNoirFile::parse(source).unwrap();
+        let modules = parsed.find_modules();
 
-        #[test]
-        fn test_should_fail_case_sensitivity() {
-            let attr = String::from("#[test(SHOULD_FAIL)]");
-            let (is_test, should_fail) = parse_test_attribute(&attr);
-            assert!(is_test);
-            assert!(!should_fail);
-        }
+        assert_eq!(modules.len(), 1);
+        assert_eq!(modules[0].name, "empty_module");
+        assert_eq!(modules[0].functions.len(), 0);
     }
 }
