@@ -7,7 +7,7 @@ use std::{
 };
 
 use crate::{
-    test_structure::{Function, Root},
+    test_structure::{Function, Module, Root},
     utils::get_module_name,
 };
 use anyhow::Result;
@@ -109,7 +109,7 @@ ViolationKind::TreeFileInvalid(format!(
             return Ok(violations);
         }
     };
-    let parsed = Root { functions: parsed.find_functions(), modules: vec![] };
+    let parsed = Root { functions: parsed.find_functions(), modules: parsed.find_modules() };
 
     // An AST may be valid syntactically but not semantically,
     // in which case we cannot produce a testfile structure from it
@@ -281,13 +281,71 @@ fn compare_trees(
     test_file: String,
     skip_setup_hooks: bool,
 ) -> Vec<Violation> {
-    compare_function_array(
+    let mut violations = Vec::new();
+
+    let expected_modules: BTreeSet<String> =
+        expected.modules.iter().map(|m| m.name.clone()).collect();
+    // name -> (full obj, index)
+    let found_modules: BTreeMap<String, (&Module, usize)> = actual
+        .modules
+        .iter()
+        .filter(|m| expected_modules.contains(&m.name))
+        .enumerate()
+        .map(|(i, m)| (m.name.clone(), (m, i)))
+        .collect();
+
+    violations.extend(compare_function_array(
         actual.functions,
         expected.functions,
         test_file.clone(),
-        test_file, // test file matches module name, it's better than passing 'root'
+        test_file.clone(), // test file matches module name, it's better than passing 'root'
         skip_setup_hooks,
-    )
+    ));
+
+    for expected_module in &expected.modules {
+        if let Some((found_module, _)) =
+            found_modules.get(&expected_module.name)
+        {
+            // Module exists, compare its functions recursively
+            let module_violations = compare_function_array(
+                found_module.functions.clone(),
+                expected_module.functions.clone(),
+                test_file.clone(),
+                expected_module.name.clone(),
+                skip_setup_hooks,
+            );
+            violations.extend(module_violations);
+        } else {
+            // Module is missing
+            violations.push(Violation::new(
+                ViolationKind::ModuleMissing(expected_module.name.clone()),
+                test_file.clone(),
+            ));
+        }
+    }
+
+    // Check module ordering for modules that are present
+    let present_expected_modules: BTreeMap<String, (&Module, usize)> = expected
+        .modules
+        .iter()
+        .filter(|m| found_modules.contains_key(&m.name))
+        .enumerate()
+        .map(|(i, m)| (m.name.clone(), (m, i)))
+        .collect();
+
+    for (name, (_, expected_index)) in present_expected_modules {
+        let (_, found_index) = found_modules
+            .get(&name)
+            .unwrap_or_else(|| panic!("just filtered for this!"));
+
+        if *found_index != expected_index {
+            violations.push(Violation::new(
+                ViolationKind::ModuleWrongPosition(name),
+                test_file.clone(),
+            ));
+        }
+    }
+    violations
 }
 
 #[cfg(test)]

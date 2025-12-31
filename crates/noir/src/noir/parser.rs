@@ -1,11 +1,11 @@
 //! Noir code parser using tree-sitter.
 
 use anyhow::{Context, Result};
-use std::sync::LazyLock;
 use regex::Regex;
+use std::sync::LazyLock;
 use tree_sitter::{Node, Parser};
 
-use crate::test_structure::{SetupHook, TestFunction, Function};
+use crate::test_structure::{Function, Module, SetupHook, TestFunction};
 
 /// Parsed Noir test file.
 pub struct ParsedNoirFile {
@@ -41,20 +41,54 @@ impl ParsedNoirFile {
         functions
     }
 
-    /// Recursively find test functions in a node and its children.
+    pub(crate) fn find_modules(&self) -> Vec<Module> {
+        let mut modules = Vec::new();
+        let root_node = self.tree.root_node();
+
+        self.find_modules_recursive(root_node, &mut modules);
+        modules
+    }
+
+    /// Recursively find module definitions
+    /// TODO: will flatten them, which is not fully idiomatic, but the alternative is to ignore
+    /// nested submodules of a level greater than 1 (or a more general-purpose parsing)
+    fn find_modules_recursive<'a>(
+        &self,
+        node: Node<'a>,
+        modules: &mut Vec<Module>,
+    ) {
+        if node.kind() == "module" {
+            let mut functions = Vec::new();
+            self.find_functions_recursive(node, &mut functions);
+            modules.push(Module {
+                name: self.extract_module_name(node),
+                functions,
+            });
+        }
+
+        let mut cursor = node.walk();
+        for child in node.children(&mut cursor) {
+            self.find_modules_recursive(child, modules);
+        }
+    }
+
+    /// Recursively find test functions in a node and its children, without navigating into
+    /// sub-modules
     fn find_functions_recursive<'a>(
         &self,
         node: Node<'a>,
         functions: &mut Vec<Function>,
     ) {
-        // Check if this node is a function with #[test] attribute
         if node.kind() == "function_definition" {
             functions.push(self.extract_function(node));
         }
 
-        // Recursively check children
+        // Recursively check children without going into nested modules
         let mut cursor = node.walk();
         for child in node.children(&mut cursor) {
+            if child.kind() == "module" {
+                continue;
+            }
             self.find_functions_recursive(child, functions);
         }
     }
@@ -122,6 +156,16 @@ impl ParsedNoirFile {
     /// Get text content of a node.
     fn node_text<'a>(&self, node: Node<'a>) -> String {
         node.utf8_text(self.source.as_bytes()).unwrap_or("").to_string()
+    }
+
+    fn extract_module_name<'a>(&self, node: Node<'a>) -> String {
+        let mut cursor = node.walk();
+        for child in node.children(&mut cursor) {
+            if child.kind() == "identifier" {
+                return self.node_text(child);
+            }
+        }
+        panic!("could not determine name of module when called on node {} (which should be a module with a child of type identifier containing its name)", self.node_text(node))
     }
 }
 
