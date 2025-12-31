@@ -68,6 +68,10 @@ impl ParsedNoirFile {
 
         let mut cursor = node.walk();
         for child in node.children(&mut cursor) {
+            // don't go into nested modules, unless we are at the first level of nesting
+            if child.kind() == "module" && node.kind() != "source_file"{
+                continue;
+            }
             self.find_modules_recursive(child, modules);
         }
     }
@@ -661,7 +665,7 @@ mod find_modules_tests {
     }
 
     #[test]
-    fn test_nested_modules_are_flattened() {
+    fn test_nested_modules_are_ignored() {
         let source = r#"
                 mod outer {
                     #[test]
@@ -681,10 +685,8 @@ mod find_modules_tests {
         let parsed = ParsedNoirFile::parse(source).unwrap();
         let modules = parsed.find_modules();
 
-        // Both outer and inner modules should be found (flattened)
-        assert_eq!(modules.len(), 2);
+        assert_eq!(modules.len(), 1);
         assert_eq!(modules[0].name, "outer");
-        assert_eq!(modules[1].name, "inner");
     }
 
     #[test]
