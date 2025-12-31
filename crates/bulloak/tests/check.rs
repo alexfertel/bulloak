@@ -69,6 +69,51 @@ fn checks_valid_structural_match() {
 }
 
 #[test]
+fn checks_hoisted_setup_hooks_happy_path() {
+    let cwd = env::current_dir().unwrap();
+    let binary_path = get_binary_path();
+    let tree_path =
+        cwd.join("tests").join("check").join("hoisted_setup_hooks.tree");
+
+    let output = cmd(&binary_path, "check", &tree_path, &[]);
+    let stderr = String::from_utf8(output.stderr).unwrap();
+    let stdout = String::from_utf8(output.stdout).unwrap();
+
+    assert_eq!("", stderr);
+    assert!(
+        stdout.contains("All checks completed successfully! No issues found.")
+    );
+
+    let output = cmd(&binary_path, "check", &tree_path, &["-l", "noir"]);
+    let stderr = String::from_utf8(output.stderr).unwrap();
+    let stdout = String::from_utf8(output.stdout).unwrap();
+
+    assert_eq!("", stderr);
+    assert!(
+        stdout.contains("All checks completed successfully! No issues found.")
+    );
+}
+
+#[test]
+fn checks_hoisted_setup_hooks_wrong_modularization() {
+    let cwd = env::current_dir().unwrap();
+    let binary_path = get_binary_path();
+    let tree_path = cwd
+        .join("tests")
+        .join("check")
+        .join("hoisted_setup_hooks_wrong_modularization.tree");
+
+    let output = cmd(&binary_path, "check", &tree_path, &["-l", "noir"]);
+    let stderr = String::from_utf8(output.stderr).unwrap();
+    let stdout = String::from_utf8(output.stdout).unwrap();
+
+    assert_eq!(stdout, "");
+    assert!(stderr.contains(r#"Module "bar" is in wrong position in"#));
+    assert!(stderr.contains(r#"Module "foo" is in wrong position in"#));
+    assert!(stderr.contains(r#"Test function "test_when_b" is missing in module foo in file"#));
+}
+
+#[test]
 fn checks_modifiers_skipped() {
     let cwd = env::current_dir().unwrap();
     let binary_path = get_binary_path();

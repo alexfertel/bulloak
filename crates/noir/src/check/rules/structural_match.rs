@@ -412,7 +412,7 @@ mod compare_trees_test {
         assert_eq!(violations.len(), 1);
         assert!(matches!(
             violations[0].kind,
-            ViolationKind::TestFunctionMissing(_,_)
+            ViolationKind::TestFunctionMissing(_, _)
         ));
         if let ViolationKind::TestFunctionMissing(name, _) = &violations[0].kind
         {
@@ -443,9 +443,10 @@ mod compare_trees_test {
         let violations =
             compare_trees(actual, expected, "test.nr".to_string(), false);
         assert_eq!(violations.len(), 2);
-        assert!(violations
-            .iter()
-            .all(|v| matches!(v.kind, ViolationKind::TestFunctionMissing(_,_))));
+        assert!(violations.iter().all(|v| matches!(
+            v.kind,
+            ViolationKind::TestFunctionMissing(_, _)
+        )));
     }
 
     #[test]
@@ -473,9 +474,9 @@ mod compare_trees_test {
         assert_eq!(violations.len(), 1);
         assert!(matches!(
             violations[0].kind,
-            ViolationKind::ShouldFailMissing(_,_)
+            ViolationKind::ShouldFailMissing(_, _)
         ));
-        if let ViolationKind::ShouldFailMissing(name,_) = &violations[0].kind {
+        if let ViolationKind::ShouldFailMissing(name, _) = &violations[0].kind {
             assert_eq!(name, "test_foo");
         }
     }
@@ -505,9 +506,11 @@ mod compare_trees_test {
         assert_eq!(violations.len(), 1);
         assert!(matches!(
             violations[0].kind,
-            ViolationKind::ShouldFailUnexpected(_,_)
+            ViolationKind::ShouldFailUnexpected(_, _)
         ));
-        if let ViolationKind::ShouldFailUnexpected(name,_) = &violations[0].kind {
+        if let ViolationKind::ShouldFailUnexpected(name, _) =
+            &violations[0].kind
+        {
             assert_eq!(name, "test_foo");
         }
     }
@@ -545,9 +548,9 @@ mod compare_trees_test {
         assert_eq!(violations.len(), 1);
         assert!(matches!(
             violations[0].kind,
-            ViolationKind::SetupHookMissing(_,_)
+            ViolationKind::SetupHookMissing(_, _)
         ));
-        if let ViolationKind::SetupHookMissing(name,_) = &violations[0].kind {
+        if let ViolationKind::SetupHookMissing(name, _) = &violations[0].kind {
             assert_eq!(name, "helper_foo");
         }
     }
@@ -590,7 +593,7 @@ mod compare_trees_test {
         assert_eq!(violations.len(), 1);
         assert!(matches!(
             violations[0].kind,
-            ViolationKind::TestFunctionMissing(_,_)
+            ViolationKind::TestFunctionMissing(_, _)
         ));
     }
 
@@ -836,5 +839,190 @@ mod compare_trees_test {
         let violations =
             compare_trees(actual, expected, "test.nr".to_string(), false);
         assert_eq!(violations.len(), 0);
+    }
+
+    #[test]
+    fn setup_hook_in_submodule_but_expected_in_global() {
+        // Expected: setup hook in global scope
+        // Actual: setup hook only exists in a submodule
+        let actual = Root {
+            functions: vec![],
+            modules: vec![Module {
+                name: "module1".to_string(),
+                functions: vec![Function::SetupHook(SetupHook {
+                    name: "when_something".to_string(),
+                })],
+            }],
+        };
+        let expected = Root {
+            functions: vec![Function::SetupHook(SetupHook {
+                name: "when_something".to_string(),
+            })],
+            modules: vec![],
+        };
+        let violations =
+            compare_trees(actual, expected, "test.nr".to_string(), false);
+        assert_eq!(violations.len(), 1);
+        assert!(matches!(
+            violations[0].kind,
+            ViolationKind::SetupHookMissing(_, _)
+        ));
+        if let ViolationKind::SetupHookMissing(name, module_name) =
+            &violations[0].kind
+        {
+            assert_eq!(name, "when_something");
+            assert_eq!(module_name, "test.nr");
+        }
+    }
+
+    #[test]
+    fn module_wrong_name() {
+        let actual = Root {
+            functions: vec![],
+            modules: vec![Module {
+                name: "wrong_name".to_string(),
+                functions: vec![Function::TestFunction(TestFunction {
+                    name: "test_something".to_string(),
+                    expect_fail: false,
+                    setup_hooks: vec![],
+                    actions: vec![],
+                })],
+            }],
+        };
+        let expected = Root {
+            functions: vec![],
+            modules: vec![Module {
+                name: "correct_name".to_string(),
+                functions: vec![Function::TestFunction(TestFunction {
+                    name: "test_something".to_string(),
+                    expect_fail: false,
+                    setup_hooks: vec![],
+                    actions: vec![],
+                })],
+            }],
+        };
+        let violations =
+            compare_trees(actual, expected, "test.nr".to_string(), false);
+        assert_eq!(violations.len(), 1);
+        assert!(matches!(violations[0].kind, ViolationKind::ModuleMissing(_)));
+        if let ViolationKind::ModuleMissing(name) = &violations[0].kind {
+            assert_eq!(name, "correct_name");
+        }
+    }
+
+    #[test]
+    fn modules_out_of_order() {
+        let actual = Root {
+            functions: vec![],
+            modules: vec![
+                Module {
+                    name: "module_b".to_string(),
+                    functions: vec![Function::TestFunction(TestFunction {
+                        name: "test_b".to_string(),
+                        expect_fail: false,
+                        setup_hooks: vec![],
+                        actions: vec![],
+                    })],
+                },
+                Module {
+                    name: "module_a".to_string(),
+                    functions: vec![Function::TestFunction(TestFunction {
+                        name: "test_a".to_string(),
+                        expect_fail: false,
+                        setup_hooks: vec![],
+                        actions: vec![],
+                    })],
+                },
+            ],
+        };
+        let expected = Root {
+            functions: vec![],
+            modules: vec![
+                Module {
+                    name: "module_a".to_string(),
+                    functions: vec![Function::TestFunction(TestFunction {
+                        name: "test_a".to_string(),
+                        expect_fail: false,
+                        setup_hooks: vec![],
+                        actions: vec![],
+                    })],
+                },
+                Module {
+                    name: "module_b".to_string(),
+                    functions: vec![Function::TestFunction(TestFunction {
+                        name: "test_b".to_string(),
+                        expect_fail: false,
+                        setup_hooks: vec![],
+                        actions: vec![],
+                    })],
+                },
+            ],
+        };
+        let violations =
+            compare_trees(actual, expected, "test.nr".to_string(), false);
+        assert_eq!(violations.len(), 2);
+        assert!(matches!(
+            violations[0].kind,
+            ViolationKind::ModuleWrongPosition(_)
+        ));
+        assert!(matches!(
+            violations[1].kind,
+            ViolationKind::ModuleWrongPosition(_)
+        ));
+        if let ViolationKind::ModuleWrongPosition(name) = &violations[0].kind {
+            assert_eq!(name, "module_a");
+        }
+        if let ViolationKind::ModuleWrongPosition(name) = &violations[1].kind {
+            assert_eq!(name, "module_b");
+        }
+    }
+
+    #[test]
+    fn function_in_wrong_module() {
+        // test_foo should be in module_a, but is in module_b
+        let actual = Root {
+            functions: vec![],
+            modules: vec![
+                Module { name: "module_a".to_string(), functions: vec![] },
+                Module {
+                    name: "module_b".to_string(),
+                    functions: vec![Function::TestFunction(TestFunction {
+                        name: "test_foo".to_string(),
+                        expect_fail: false,
+                        setup_hooks: vec![],
+                        actions: vec![],
+                    })],
+                },
+            ],
+        };
+        let expected = Root {
+            functions: vec![],
+            modules: vec![
+                Module {
+                    name: "module_a".to_string(),
+                    functions: vec![Function::TestFunction(TestFunction {
+                        name: "test_foo".to_string(),
+                        expect_fail: false,
+                        setup_hooks: vec![],
+                        actions: vec![],
+                    })],
+                },
+                Module { name: "module_b".to_string(), functions: vec![] },
+            ],
+        };
+        let violations =
+            compare_trees(actual, expected, "test.nr".to_string(), false);
+        // Should report test_foo as missing from module_a
+        assert_eq!(violations.len(), 1);
+        assert!(matches!(
+            violations[0].kind,
+            ViolationKind::TestFunctionMissing(_, _)
+        ));
+        if let ViolationKind::TestFunctionMissing(name, module_name) =
+            &violations[0].kind
+        {
+            assert_eq!(name, "test_foo");
+            assert_eq!(module_name, "module_a");
+        }
     }
 }
