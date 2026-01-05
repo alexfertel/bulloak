@@ -2,6 +2,8 @@
 
 use std::fmt;
 
+use owo_colors::OwoColorize;
+
 /// A violation found when checking a Noir test file.
 #[derive(Debug, Clone)]
 pub struct Violation {
@@ -22,6 +24,9 @@ pub enum ViolationKind {
     NoirFileMissing(),
     /// The Noir file could not be parsed.
     NoirFileInvalid(String),
+    /// This error is produced when processing the Noir file although it could be detected when
+    /// processing the tree file, since this is specific to Noir's constraints
+    TreeFileWrongRoot(String, String),
     /// A test function is missing.
     TestFunctionMissing(String),
     /// A setup hook is missing.
@@ -52,10 +57,15 @@ impl fmt::Display for Violation {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match &self.kind {
             ViolationKind::TreeFileMissing(err) => {
-                write!(f, "bulloak couldn't read the file {}: {}", self.file, err)
+                write!(
+                    f,
+                    "bulloak couldn't read the file {}: {}",
+                    self.file, err
+                )
             }
             ViolationKind::TreeFileInvalid(err) => {
-                write!(f, "Failed to parse tree file {}: {}", self.file, err)
+                writeln!(f, "{}: {}", "warn".yellow(), err)?;
+                write!(f, "   {} {}", "-->".blue(), self.file)
             }
             ViolationKind::NoirFileMissing() => {
                 write!(
@@ -67,6 +77,13 @@ impl fmt::Display for Violation {
             ViolationKind::NoirFileInvalid(err) => {
                 write!(f, "Failed to parse Noir file {}: {}", self.file, err)
             }
+            ViolationKind::TreeFileWrongRoot(actual, expected) => {
+                write!(
+                    f,
+                    r#"Tree root "{}" should match treefile name: "{}""#,
+                    actual, expected
+                )
+            }
             ViolationKind::TestFunctionWrongPosition(name) => {
                 write!(
                     f,
@@ -75,7 +92,11 @@ impl fmt::Display for Violation {
                 )
             }
             ViolationKind::SetupHookWrongPosition(name) => {
-                write!(f, r#"Setup hook "{}" is in wrong position in {}"#, name, self.file)
+                write!(
+                    f,
+                    r#"Setup hook "{}" is in wrong position in {}"#,
+                    name, self.file
+                )
             }
             ViolationKind::TestFunctionMissing(name) => {
                 write!(
@@ -95,7 +116,11 @@ impl fmt::Display for Violation {
                 )
             }
             ViolationKind::SetupHookWrongType(name) => {
-                write!(f, r#"Setup hook "{}" has unexpected #[test] directive in {}"#, name, self.file)
+                write!(
+                    f,
+                    r#"Setup hook "{}" has unexpected #[test] directive in {}"#,
+                    name, self.file
+                )
             }
             ViolationKind::ShouldFailMissing(name) => {
                 write!(

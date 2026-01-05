@@ -33,7 +33,8 @@ warn: incorrect position for function "test_WhenThereIsReentrancy""#
     let output = cmd(&binary_path, "check", &tree_path, &["-l", "noir"]);
     let stderr = String::from_utf8(output.stderr).unwrap();
     assert!(stderr.contains(r#"Missing setup hook "given_the_stream_is_cold""#));
-    assert!(stderr.contains(r#"Missing setup hook "when_the_sender_does_not_revert""#));
+    assert!(stderr
+        .contains(r#"Missing setup hook "when_the_sender_does_not_revert""#));
     assert!(stderr.contains(r#"Test function "test_when_there_is_reentrancy" is in wrong position in"#));
     assert!(stderr.contains(r#"Test function "test_when_the_sender_reverts" is in wrong position in"#));
     assert!(stderr.contains(r#"Test function "test_given_the_streams_status_is_canceled" is in wrong position in"#));
@@ -137,9 +138,8 @@ fn checks_empty_contract() {
 
     assert!(stderr
         .contains(r#"Test function "test_should_never_revert" is missing"#));
-    assert!(stderr.contains(
-        r#"Test function "test_should_never_revert" is missing"#
-    ));
+    assert!(stderr
+        .contains(r#"Test function "test_should_never_revert" is missing"#));
 }
 
 #[test]
@@ -200,6 +200,67 @@ fn checks_contract_name_mismatch() {
 
 #[cfg(not(target_os = "windows"))]
 #[test]
+fn checks_noir_testfile_and_root_match() {
+    let cwd = env::current_dir().unwrap();
+    let binary_path = get_binary_path();
+    let tree_path =
+        cwd.join("tests").join("check").join("testfile_and_root_match.tree");
+
+    let output = cmd(&binary_path, "check", &tree_path, &["-l", "noir"]);
+    let stderr = String::from_utf8(output.stderr).unwrap();
+
+    assert_eq!(stderr, "");
+    assert_eq!(output.status.code().unwrap(), 0);
+}
+
+#[cfg(not(target_os = "windows"))]
+#[test]
+fn checks_noir_testfile_and_root_match_multiple_roots() {
+    let cwd = env::current_dir().unwrap();
+    let binary_path = get_binary_path();
+    let tree_path =
+        cwd.join("tests").join("check").join("testfile_and_root_match_multiple_roots.tree");
+
+    let output = cmd(&binary_path, "check", &tree_path, &["-l", "noir"]);
+    let stderr = String::from_utf8(output.stderr).unwrap();
+
+    assert_eq!(stderr, "");
+    assert_eq!(output.status.code().unwrap(), 0);
+}
+
+#[test]
+fn checks_noir_testfile_and_root_mismatch_multiple_roots() {
+    let cwd = env::current_dir().unwrap();
+    let binary_path = get_binary_path();
+    let tree_path =
+        cwd.join("tests").join("check").join("testfile_and_root_mismatch_multiple_roots.tree");
+
+    let output = cmd(&binary_path, "check", &tree_path, &["-l", "noir"]);
+    let stderr = String::from_utf8(output.stderr).unwrap();
+
+    assert!(stderr.contains(
+        r#"Tree root "Mismatch" should match treefile name: "testfile_and_root_mismatch_multiple_roots""#
+    ));
+}
+
+#[test]
+fn checks_noir_testfile_and_root_mismatch() {
+    let cwd = env::current_dir().unwrap();
+    let binary_path = get_binary_path();
+    let tree_path =
+        cwd.join("tests").join("check").join("testfile_and_root_mismatch.tree");
+
+    let output = cmd(&binary_path, "check", &tree_path, &["-l", "noir"]);
+    let stderr = String::from_utf8(output.stderr).unwrap();
+
+    assert!(stderr.contains(
+        r#"Tree root "Mismatch" should match treefile name: "testfile_and_root_mismatch""#
+    ));
+}
+
+
+#[cfg(not(target_os = "windows"))]
+#[test]
 fn checks_contract_name_mismatch_multiple_roots() {
     let cwd = env::current_dir().unwrap();
     let binary_path = get_binary_path();
@@ -213,6 +274,18 @@ fn checks_contract_name_mismatch_multiple_roots() {
 
     let formatted_message = format!(
         "{}: an error occurred while parsing the tree: contract name mismatch: expected 'ContractName', found 'MismatchedContractName'\n   {} {}",
+        "warn".yellow(),
+        "-->".blue(),
+        tree_path.display()
+    );
+
+    assert!(stderr.contains(&formatted_message));
+
+    let output = cmd(&binary_path, "check", &tree_path, &["-l", "noir"]);
+    let stderr = String::from_utf8(output.stderr).unwrap();
+
+    let formatted_message = format!(
+        "{}: an error occurred while parsing the tree: module name mismatch: expected 'ContractName', found 'MismatchedContractName'\n   {} {}",
         "warn".yellow(),
         "-->".blue(),
         tree_path.display()
@@ -239,7 +312,7 @@ fn checks_invalid_tree() {
 
     // it's okay to be less specific with error messages for now
     assert!(stderr.contains(r#"bulloak error: unexpected token '├'"#));
-    assert!(stderr.contains(r#"Failed to parse tree file"#));
+    assert!(stderr.contains(r#"an error occurred while parsing the tree"#));
 }
 
 #[test]

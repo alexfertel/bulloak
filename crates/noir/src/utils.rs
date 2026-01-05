@@ -1,5 +1,7 @@
 //! Utility functions for Noir code generation.
 
+use bulloak_syntax::Ast;
+
 /// Convert a title to snake_case, stripping BDD prefixes.
 /// "When user is logged in" ->  "when_user_is_logged_in"
 /// "It should return true" -> "it_should_return_true"
@@ -21,6 +23,42 @@ pub(crate) fn to_snake_case(title: &str) -> String {
         .filter(|s| !s.is_empty())
         .collect::<Vec<_>>()
         .join("_")
+}
+
+/// Extracts the module name from a contract_name (the part before "::" if present).
+fn split_module_name(contract_name: &str) -> &str {
+    contract_name.split("::").next().unwrap_or(contract_name)
+
+}
+/// Checks that all roots in a multi-root tree have consistent module names.
+/// Returns a violation if module names are inconsistent.
+/// TODO: move to syntax crate?
+pub(crate) fn get_module_name(
+    forest: &[Ast],
+) -> Option<Result<String, (String, String)>> {
+    let mut expected_module: Option<String> = None;
+
+    for ast in forest {
+        let Ast::Root(root) = ast else {
+            panic!("tree does not start with a root");
+        };
+        let module_name = split_module_name(&root.contract_name).to_string();
+
+        match expected_module {
+            None => {
+                expected_module = Some(module_name);
+            }
+            Some(expected) if module_name != expected => {
+                return Some(Err((expected, module_name)));
+            }
+            _ => {}
+        }
+    }
+
+    match expected_module {
+        None => None,
+        Some(i) => Some(Ok(i)),
+    }
 }
 
 #[cfg(test)]
