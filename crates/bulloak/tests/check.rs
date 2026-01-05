@@ -736,3 +736,24 @@ fn checks_no_submodule_multi_root_error() {
 
     assert!(stderr.contains(r#"an error occurred while parsing the tree: separator missing at tree root #1 "no_submodule_multi_root". Expected to find `::` between the contract name and the function name when multiple roots exist"#));
 }
+
+/// Regression test for https://github.com/defi-wonderland/bulloak/pull/9#issuecomment-3710452952
+/// When multiple roots share the same condition, check should report the missing hoisted setup hook.
+#[test]
+fn checks_missing_hoisted_setup_hook_for_shared_condition() {
+    let cwd = env::current_dir().unwrap();
+    let binary_path = get_binary_path();
+    let tree_path = cwd
+        .join("tests")
+        .join("check")
+        .join("hoisted_hook_regression.tree");
+
+    let output = cmd(&binary_path, "check", &tree_path, &["-l", "noir"]);
+    let stderr = String::from_utf8(output.stderr).unwrap();
+
+    assert!(
+        stderr.contains(r#"Missing setup hook "when_passing_valid_parameters""#),
+        "Expected check to report missing setup hook 'when_passing_valid_parameters', but it did not.\nStderr:\n{}",
+        stderr
+    );
+}

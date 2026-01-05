@@ -456,4 +456,66 @@ Contract::bar
         assert_eq!(bar_module.functions[2].name(), "test_when_c");
         assert!(matches!(bar_module.functions[2], Function::TestFunction(_)));
     }
+
+    /// Regression test for https://github.com/defi-wonderland/bulloak/pull/9#issuecomment-3710452952
+    /// When multiple roots share the same leaf condition (a condition with only action children),
+    /// the shared setup hook should be hoisted to root.functions.
+    #[test]
+    fn test_hoist_shared_leaf_condition_setup() {
+        let tree = r"
+hoisted_hook_regression::constructor_with_minter
+└── when passing valid parameters
+    ├── it sets name
+    └── it sets symbol
+
+hoisted_hook_regression::constructor_with_initial_supply
+└── when passing valid parameters
+    ├── it sets name
+    └── it sets symbol
+";
+        let forest = parse(tree).unwrap();
+        let root = Root::new(&forest).unwrap();
+
+        // The shared condition should be hoisted to root.functions as a SetupHook
+        assert_eq!(
+            root.functions.len(),
+            1,
+            "Expected 1 hoisted setup hook, found {}. Root functions: {:?}",
+            root.functions.len(),
+            root.functions
+        );
+        assert_eq!(root.functions[0].name(), "when_passing_valid_parameters");
+        assert!(
+            matches!(root.functions[0], Function::SetupHook(_)),
+            "Expected SetupHook, got {:?}",
+            root.functions[0]
+        );
+
+        // Verify modules are created correctly
+        assert_eq!(root.modules.len(), 2);
+
+        let minter_module = &root.modules[0];
+        assert_eq!(minter_module.name, "constructor_with_minter");
+        assert_eq!(minter_module.functions.len(), 1);
+        assert_eq!(
+            minter_module.functions[0].name(),
+            "test_when_passing_valid_parameters"
+        );
+        assert!(matches!(
+            minter_module.functions[0],
+            Function::TestFunction(_)
+        ));
+
+        let supply_module = &root.modules[1];
+        assert_eq!(supply_module.name, "constructor_with_initial_supply");
+        assert_eq!(supply_module.functions.len(), 1);
+        assert_eq!(
+            supply_module.functions[0].name(),
+            "test_when_passing_valid_parameters"
+        );
+        assert!(matches!(
+            supply_module.functions[0],
+            Function::TestFunction(_)
+        ));
+    }
 }
