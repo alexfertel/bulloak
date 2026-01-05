@@ -2,7 +2,7 @@ pub(crate) mod generator;
 pub(crate) mod scaffoldable;
 use std::path::PathBuf;
 
-use crate::utils::get_module_name;
+use crate::utils::{get_module_name, ModuleName};
 
 use super::config::Config;
 use anyhow::{bail, Result};
@@ -20,9 +20,8 @@ pub fn scaffold(
     let forest = parse(text)?;
 
     match get_module_name(&forest) {
-        None => {} // empty tree
-        // tree has only one root module
-        Some(Ok(actual)) => {
+        ModuleName::Empty => {}
+        ModuleName::Consistent(actual) => {
             let expected = treefile
                 .file_stem()
                 .and_then(|s| s.to_str())
@@ -36,7 +35,7 @@ pub fn scaffold(
                 );
             }
         }
-        Some(Err((expected, second))) => {
+        ModuleName::Mismatch(expected, second) => {
             bail!(
                 "module name mismatch: expected '{}', found '{}'",
                 expected,

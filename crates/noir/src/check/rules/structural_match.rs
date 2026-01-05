@@ -8,7 +8,7 @@ use std::{
 
 use crate::{
     test_structure::{Function, Module, Root},
-    utils::get_module_name,
+    utils::{get_module_name, ModuleName},
 };
 use anyhow::Result;
 
@@ -59,9 +59,8 @@ pub fn check(tree_path: &Path, cfg: &Config) -> Result<Vec<Violation>> {
         .unwrap_or_else(|| panic!("this condition should be unreachable, as the file was successfully read once already."));
 
     match get_module_name(&forest) {
-        None => {} // empty tree
-        // tree has only one root, check if it matches the filename
-        Some(Ok(module)) => {
+        ModuleName::Empty => {}
+        ModuleName::Consistent(module) => {
             if module != file_stem {
                 violations.push(Violation::new(
                     ViolationKind::TreeFileWrongRoot(
@@ -72,7 +71,7 @@ pub fn check(tree_path: &Path, cfg: &Config) -> Result<Vec<Violation>> {
                 ));
             }
         }
-        Some(Err((expected, second))) => {
+        ModuleName::Mismatch(expected, second) => {
             violations.push(
                 Violation::new(
 ViolationKind::TreeFileInvalid(format!(

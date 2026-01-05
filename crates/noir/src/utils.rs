@@ -60,35 +60,37 @@ pub(crate) fn parse_root_name(contract_name: &str) -> (String, Option<String>) {
         contract_name.split("::").nth(1).and_then(|x| Some(sanitize_module_name(x))),
     )
 }
+pub(crate) enum ModuleName {
+    Empty,
+    Consistent(String),
+    Mismatch(String, String),
+}
 /// Checks that all roots in a multi-root tree have consistent module names.
 /// Returns a violation if module names are inconsistent.
 /// TODO: move to syntax crate?
 pub(crate) fn get_module_name(
     forest: &[Ast],
-) -> Option<Result<String, (String, String)>> {
-    let mut expected_module: Option<String> = None;
+) -> ModuleName {
+    let mut expected_module = ModuleName::Empty;
 
     for ast in forest {
         let Ast::Root(root) = ast else {
-            panic!("tree does not start with a root");
+            panic!("expected tree to start with roots, found {:?}", ast);
         };
         let (module_name, _) = parse_root_name(&root.contract_name);
 
         match expected_module {
-            None => {
-                expected_module = Some(module_name);
+            ModuleName::Empty => {
+                expected_module = ModuleName::Consistent(module_name);
             }
-            Some(expected) if module_name != expected => {
-                return Some(Err((expected, module_name)));
+            ModuleName::Consistent(expected) if module_name != expected => {
+                return ModuleName::Mismatch(expected, module_name);
             }
             _ => {}
         }
     }
 
-    match expected_module {
-        None => None,
-        Some(i) => Some(Ok(i)),
-    }
+    expected_module
 }
 
 #[cfg(test)]
