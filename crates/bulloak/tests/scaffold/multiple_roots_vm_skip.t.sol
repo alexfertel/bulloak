@@ -3,7 +3,7 @@ pragma solidity 0.8.0;
 
 import {Test} from "forge-std/Test.sol";
 
-contract MultipleRootsTreeTest is Test {
+contract multiple_roots is Test {
     function test_Function1_ShouldNeverRevert() external {
         // It should never revert.
         vm.skip(true);
