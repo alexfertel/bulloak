@@ -518,4 +518,42 @@ hoisted_hook_regression::constructor_with_initial_supply
             Function::TestFunction(_)
         ));
     }
+
+    /// Related to https://github.com/defi-wonderland/bulloak/pull/9#issuecomment-3710452952
+    /// check the modifier would be generated in the case of a single-root testfile
+    #[test]
+    fn test_single_root_setup_hook_generation() {
+        let tree = r"
+hoisted_hook_regression::constructor_with_minter
+└── when passing valid parameters
+    ├── it sets name
+    └── it sets symbol
+";
+        let forest = parse(tree).unwrap();
+        let root = Root::new(&forest).unwrap();
+        dbg!(&root);
+
+        assert_eq!(
+            root.functions.len(),
+            2,
+            "Expected 1 setup hook and 1 test function, found {}. Root functions: {:?}",
+            root.functions.len(),
+            root.functions
+        );
+        assert_eq!(root.functions[0].name(), "when_passing_valid_parameters");
+        assert!(
+            matches!(root.functions[0], Function::SetupHook(_)),
+            "Expected SetupHook, got {:?}",
+            root.functions[0]
+        );
+
+        // Verify no modules are defined
+        assert_eq!(root.modules.len(), 0);
+
+        assert_eq!(
+            root.functions[1].name(),
+            "test_when_passing_valid_parameters"
+        );
+        assert!(matches!(root.functions[1], Function::TestFunction(_)));
+    }
 }
