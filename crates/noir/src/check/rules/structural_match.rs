@@ -906,6 +906,7 @@ mod compare_trees_test {
             functions: vec![],
             modules: vec![Module {
                 name: "module1".to_string(),
+                imported_hooks: Vec::new(),
                 functions: vec![Function::SetupHook(SetupHook {
                     name: "when_something".to_string(),
                 })],
@@ -938,6 +939,7 @@ mod compare_trees_test {
             functions: vec![],
             modules: vec![Module {
                 name: "wrong_name".to_string(),
+                imported_hooks: Vec::new(),
                 functions: vec![Function::TestFunction(TestFunction {
                     name: "test_something".to_string(),
                     expect_fail: false,
@@ -950,6 +952,7 @@ mod compare_trees_test {
             functions: vec![],
             modules: vec![Module {
                 name: "correct_name".to_string(),
+                imported_hooks: Vec::new(),
                 functions: vec![Function::TestFunction(TestFunction {
                     name: "test_something".to_string(),
                     expect_fail: false,
@@ -974,6 +977,7 @@ mod compare_trees_test {
             modules: vec![
                 Module {
                     name: "module_b".to_string(),
+                    imported_hooks: Vec::new(),
                     functions: vec![Function::TestFunction(TestFunction {
                         name: "test_b".to_string(),
                         expect_fail: false,
@@ -983,6 +987,7 @@ mod compare_trees_test {
                 },
                 Module {
                     name: "module_a".to_string(),
+                    imported_hooks: Vec::new(),
                     functions: vec![Function::TestFunction(TestFunction {
                         name: "test_a".to_string(),
                         expect_fail: false,
@@ -997,6 +1002,7 @@ mod compare_trees_test {
             modules: vec![
                 Module {
                     name: "module_a".to_string(),
+                    imported_hooks: Vec::new(),
                     functions: vec![Function::TestFunction(TestFunction {
                         name: "test_a".to_string(),
                         expect_fail: false,
@@ -1006,6 +1012,7 @@ mod compare_trees_test {
                 },
                 Module {
                     name: "module_b".to_string(),
+                    imported_hooks: Vec::new(),
                     functions: vec![Function::TestFunction(TestFunction {
                         name: "test_b".to_string(),
                         expect_fail: false,
@@ -1040,9 +1047,14 @@ mod compare_trees_test {
         let actual = Root {
             functions: vec![],
             modules: vec![
-                Module { name: "module_a".to_string(), functions: vec![] },
+                Module {
+                    name: "module_a".to_string(),
+                    imported_hooks: Vec::new(),
+                    functions: vec![],
+                },
                 Module {
                     name: "module_b".to_string(),
+                    imported_hooks: Vec::new(),
                     functions: vec![Function::TestFunction(TestFunction {
                         name: "test_foo".to_string(),
                         expect_fail: false,
@@ -1057,6 +1069,7 @@ mod compare_trees_test {
             modules: vec![
                 Module {
                     name: "module_a".to_string(),
+                    imported_hooks: Vec::new(),
                     functions: vec![Function::TestFunction(TestFunction {
                         name: "test_foo".to_string(),
                         expect_fail: false,
@@ -1064,7 +1077,11 @@ mod compare_trees_test {
                         actions: vec![],
                     })],
                 },
-                Module { name: "module_b".to_string(), functions: vec![] },
+                Module {
+                    name: "module_b".to_string(),
+                    imported_hooks: Vec::new(),
+                    functions: vec![],
+                },
             ],
         };
         let violations =

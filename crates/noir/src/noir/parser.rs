@@ -62,6 +62,7 @@ impl ParsedNoirFile {
             self.find_functions_recursive(node, &mut functions);
             modules.push(Module {
                 name: self.extract_module_name(node),
+                imported_hooks: Vec::new(),
                 functions,
             });
         }

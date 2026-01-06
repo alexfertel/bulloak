@@ -74,7 +74,8 @@ impl Root {
                     }
 
                     let mut local_functions = Vec::new();
-                    local_functions.extend(helpers
+                    local_functions.extend(
+                        helpers
                             .into_iter()
                             .map(|x| Function::SetupHook(x))
                             .collect::<Vec<_>>(),
@@ -85,23 +86,15 @@ impl Root {
                             .map(|x| Function::TestFunction(x))
                             .collect::<Vec<_>>(),
                     );
-                    modules.push(Module { name, functions: local_functions });
+                    modules.push(Module {
+                        name,
+                        functions: local_functions,
+                        imported_hooks: Vec::new(),
+                    });
                 }
 
-                modules = modules
-                    .into_iter()
-                    .map(|module| Module {
-                        name: module.name.clone(),
-                        functions: module
-                            .functions
-                            .into_iter()
-                            .filter(|fun| !repeated_hooks.contains(&fun.name()))
-                            .collect(),
-                    })
-                    .collect();
-
                 Ok(Root {
-                    modules,
+                    modules: hoist_setup_hooks(modules, &repeated_hooks),
                     functions: repeated_hooks
                         .into_iter()
                         .map(|name| Function::SetupHook(SetupHook { name }))
@@ -110,6 +103,48 @@ impl Root {
             }
         }
     }
+}
+
+fn hoist_setup_hooks(
+    modules: Vec<Module>,
+    repeated_hooks: &HashSet<String>,
+) -> Vec<Module> {
+    modules
+        .into_iter()
+        .map(|module| Module {
+            name: module.name.clone(),
+            imported_hooks: module
+                .functions
+                .iter()
+                .filter_map(|fun| {
+                    if let Function::SetupHook(f) = fun {
+                        if repeated_hooks.contains(&f.name) {
+                            Some(f.clone())
+                        } else {
+                            None
+                        }
+                    } else {
+                        None
+                    }
+                })
+                .collect(),
+            functions: module
+                .functions
+                .into_iter()
+                .filter(|fun| {
+                    if let Function::SetupHook(f) = fun {
+                        if repeated_hooks.contains(&f.name) {
+                            return false;
+                        } else {
+                            return true;
+                        }
+                    } else {
+                        return true;
+                    }
+                })
+                .collect(),
+        })
+        .collect()
 }
 
 fn collect_helpers(test_functions: &Vec<TestFunction>) -> Vec<SetupHook> {
@@ -135,6 +170,7 @@ pub(crate) struct SetupHook {
 #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Debug)]
 pub(crate) struct Module {
     pub name: String,
+    pub imported_hooks: Vec<SetupHook>,
     pub functions: Vec<Function>,
 }
 
@@ -553,5 +589,277 @@ hoisted_hook_regression::constructor_with_minter
             "test_when_passing_valid_parameters"
         );
         assert!(matches!(root.functions[1], Function::TestFunction(_)));
+    }
+}
+
+#[cfg(test)]
+mod tests_hoist_setup_hooks {
+    use super::*;
+
+    #[test]
+    fn test_hoist_setup_hooks_empty_modules() {
+        let modules: Vec<Module> = vec![];
+        let repeated_hooks: HashSet<String> = HashSet::new();
+
+        let result = hoist_setup_hooks(modules, &repeated_hooks);
+
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn test_hoist_setup_hooks_empty_repeated_hooks() {
+        let modules = vec![Module {
+            name: "module_a".to_string(),
+            imported_hooks: Vec::new(),
+            functions: vec![
+                Function::SetupHook(SetupHook { name: "when_a".to_string() }),
+                Function::TestFunction(TestFunction {
+                    name: "test_when_a".to_string(),
+                    expect_fail: false,
+                    setup_hooks: vec![],
+                    actions: vec![],
+                }),
+            ],
+        }];
+        let repeated_hooks: HashSet<String> = HashSet::new();
+
+        let result = hoist_setup_hooks(modules, &repeated_hooks);
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].name, "module_a");
+        assert!(result[0].imported_hooks.is_empty());
+        assert_eq!(result[0].functions.len(), 2);
+        assert_eq!(result[0].functions[0].name(), "when_a");
+        assert_eq!(result[0].functions[1].name(), "test_when_a");
+    }
+
+    #[test]
+    fn test_hoist_setup_hooks_single_module_no_repeated_hooks() {
+        let modules = vec![Module {
+            name: "my_module".to_string(),
+            imported_hooks: Vec::new(),
+            functions: vec![
+                Function::SetupHook(SetupHook {
+                    name: "when_something".to_string(),
+                }),
+                Function::TestFunction(TestFunction {
+                    name: "test_when_something".to_string(),
+                    expect_fail: false,
+                    setup_hooks: vec![SetupHook {
+                        name: "when_something".to_string(),
+                    }],
+                    actions: vec!["it does something".to_string()],
+                }),
+            ],
+        }];
+        let repeated_hooks: HashSet<String> = HashSet::new();
+
+        let result = hoist_setup_hooks(modules, &repeated_hooks);
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].name, "my_module");
+        assert!(result[0].imported_hooks.is_empty());
+        assert_eq!(result[0].functions.len(), 2);
+        assert_eq!(result[0].functions[0].name(), "when_something");
+        assert_eq!(result[0].functions[1].name(), "test_when_something");
+    }
+
+    // this borders on testing a bug, since there should be no repeated hooks
+    // if there is only one module
+    #[test]
+    fn test_hoist_setup_hooks_single_module_with_one_repeated_hook() {
+        let modules = vec![Module {
+            name: "my_module".to_string(),
+            imported_hooks: Vec::new(),
+            functions: vec![
+                Function::SetupHook(SetupHook {
+                    name: "when_shared".to_string(),
+                }),
+                Function::SetupHook(SetupHook {
+                    name: "when_local".to_string(),
+                }),
+                Function::TestFunction(TestFunction {
+                    name: "test_when_shared".to_string(),
+                    expect_fail: false,
+                    setup_hooks: vec![],
+                    actions: vec![],
+                }),
+            ],
+        }];
+        let mut repeated_hooks: HashSet<String> = HashSet::new();
+        repeated_hooks.insert("when_shared".to_string());
+
+        let result = hoist_setup_hooks(modules, &repeated_hooks);
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].name, "my_module");
+
+        // The repeated hook should be in imported_hooks
+        assert_eq!(result[0].imported_hooks.len(), 1);
+        assert_eq!(result[0].imported_hooks[0].name, "when_shared");
+
+        // The repeated hook should be removed from functions, but local hook and test remain
+        assert_eq!(result[0].functions.len(), 2);
+        assert_eq!(result[0].functions[0].name(), "when_local");
+        assert_eq!(result[0].functions[1].name(), "test_when_shared");
+    }
+
+    #[test]
+    fn test_hoist_setup_hooks_multiple_modules_with_shared_hooks() {
+        let modules = vec![
+            Module {
+                name: "foo".to_string(),
+                imported_hooks: Vec::new(),
+                functions: vec![
+                    Function::SetupHook(SetupHook {
+                        name: "when_shared".to_string(),
+                    }),
+                    Function::TestFunction(TestFunction {
+                        name: "test_foo".to_string(),
+                        expect_fail: false,
+                        setup_hooks: vec![],
+                        actions: vec![],
+                    }),
+                ],
+            },
+            Module {
+                name: "bar".to_string(),
+                imported_hooks: Vec::new(),
+                functions: vec![
+                    Function::SetupHook(SetupHook {
+                        name: "when_shared".to_string(),
+                    }),
+                    Function::SetupHook(SetupHook {
+                        name: "when_bar_only".to_string(),
+                    }),
+                    Function::TestFunction(TestFunction {
+                        name: "test_bar".to_string(),
+                        expect_fail: false,
+                        setup_hooks: vec![],
+                        actions: vec![],
+                    }),
+                ],
+            },
+        ];
+        let mut repeated_hooks: HashSet<String> = HashSet::new();
+        repeated_hooks.insert("when_shared".to_string());
+
+        let result = hoist_setup_hooks(modules, &repeated_hooks);
+
+        assert_eq!(result.len(), 2);
+
+        // First module (foo)
+        assert_eq!(result[0].name, "foo");
+        assert_eq!(result[0].imported_hooks.len(), 1);
+        assert_eq!(result[0].imported_hooks[0].name, "when_shared");
+        assert_eq!(result[0].functions.len(), 1);
+        assert_eq!(result[0].functions[0].name(), "test_foo");
+
+        // Second module (bar)
+        assert_eq!(result[1].name, "bar");
+        assert_eq!(result[1].imported_hooks.len(), 1);
+        assert_eq!(result[1].imported_hooks[0].name, "when_shared");
+        assert_eq!(result[1].functions.len(), 2);
+        assert_eq!(result[1].functions[0].name(), "when_bar_only");
+        assert_eq!(result[1].functions[1].name(), "test_bar");
+    }
+
+    #[test]
+    fn test_hoist_setup_hooks_module_with_only_test_functions() {
+        let modules = vec![Module {
+            name: "tests_only".to_string(),
+            imported_hooks: Vec::new(),
+            functions: vec![
+                Function::TestFunction(TestFunction {
+                    name: "test_one".to_string(),
+                    expect_fail: false,
+                    setup_hooks: vec![],
+                    actions: vec!["action one".to_string()],
+                }),
+                Function::TestFunction(TestFunction {
+                    name: "test_two".to_string(),
+                    expect_fail: true,
+                    setup_hooks: vec![],
+                    actions: vec!["action two".to_string()],
+                }),
+            ],
+        }];
+        let mut repeated_hooks: HashSet<String> = HashSet::new();
+        repeated_hooks.insert("when_something".to_string()); // Not present in module
+
+        let result = hoist_setup_hooks(modules, &repeated_hooks);
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].name, "tests_only");
+        assert!(result[0].imported_hooks.is_empty());
+        assert_eq!(result[0].functions.len(), 2);
+        assert_eq!(result[0].functions[0].name(), "test_one");
+        assert_eq!(result[0].functions[1].name(), "test_two");
+    }
+
+    #[test]
+    fn test_hoist_setup_hooks_test_function_with_repeated_hook_name_not_removed(
+    ) {
+        // Edge case: a TestFunction has the same name as a repeated hook
+        // The function should NOT be removed because only SetupHooks are hoisted
+        let modules = vec![
+            Module {
+                name: "edge".to_string(),
+                imported_hooks: Vec::new(),
+                functions: vec![
+                    Function::SetupHook(SetupHook {
+                        name: "when_shared".to_string(),
+                    }),
+                    Function::TestFunction(TestFunction {
+                        name: "when_shared".to_string(), // Same name as hook
+                        expect_fail: false,
+                        setup_hooks: vec![],
+                        actions: vec![],
+                    }),
+                ],
+            },
+            Module {
+                name: "case".to_string(),
+                imported_hooks: Vec::new(),
+                functions: vec![
+                    Function::SetupHook(SetupHook {
+                        name: "when_shared".to_string(),
+                    }),
+                    Function::TestFunction(TestFunction {
+                        name: "when_shared".to_string(), // Same name as hook
+                        expect_fail: false,
+                        setup_hooks: vec![],
+                        actions: vec![],
+                    }),
+                ],
+            },
+        ];
+        let mut repeated_hooks: HashSet<String> = HashSet::new();
+        repeated_hooks.insert("when_shared".to_string());
+
+        let result = hoist_setup_hooks(modules, &repeated_hooks);
+
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[0].name, "edge");
+
+        // The SetupHook should be in imported_hooks
+        assert_eq!(result[0].imported_hooks.len(), 1);
+        assert_eq!(result[0].imported_hooks[0].name, "when_shared");
+
+        // the setup hook was removed but the test function remains in the module
+        assert_eq!(result[0].functions.len(), 1);
+        assert!(matches!(result[0].functions[0], Function::TestFunction(_)));
+        assert_eq!(result[0].functions[0].name(), "when_shared");
+
+        assert_eq!(result[1].name, "case");
+
+        // The SetupHook should be in imported_hooks
+        assert_eq!(result[1].imported_hooks.len(), 1);
+        assert_eq!(result[1].imported_hooks[0].name, "when_shared");
+
+        // the setup hook was removed but the test function remains in the module
+        assert_eq!(result[0].functions.len(), 1);
+        assert!(matches!(result[0].functions[0], Function::TestFunction(_)));
+        assert_eq!(result[0].functions[0].name(), "when_shared");
     }
 }
