@@ -23,15 +23,19 @@ impl Root {
         match forest.iter().len() {
             0 => Ok(Root { functions, modules }),
             1 => {
+                let test_functions = collect_tests(forest, &[]);
+
                 functions.extend(
-                    collect_helpers(forest)
+                    collect_helpers(&test_functions)
                         .into_iter()
-                        .map(|x| Function::SetupHook(x)),
+                        .map(|x| Function::SetupHook(x))
+                        .collect::<Vec<_>>(),
                 );
                 functions.extend(
-                    collect_tests(forest, &[])
+                    test_functions
                         .into_iter()
-                        .map(|x| Function::TestFunction(x)),
+                        .map(|x| Function::TestFunction(x))
+                        .collect::<Vec<_>>(),
                 );
                 Ok(Root { functions, modules })
             }
@@ -57,38 +61,69 @@ impl Root {
                         );
                     }
 
-                    let tree_slice = std::slice::from_ref(ast);
-                    let helpers = collect_helpers(tree_slice);
+                    let local_tests =
+                        collect_tests(std::slice::from_ref(ast), &[]);
 
-                    for helper in &helpers {
+                    let helpers = collect_helpers(&local_tests);
+                    for hook in &helpers {
                         // returns false if the key is already present
-                        if !all_hooks.insert(helper.name.clone()) {
+                        if !all_hooks.insert(hook.name.clone()) {
                             // we don't care if it's repeated one or multiple times
-                            repeated_hooks.insert(helper.name.clone());
+                            repeated_hooks.insert(hook.name.clone());
                         }
                     }
 
                     let mut local_functions = Vec::new();
-                    local_functions.extend(
-                        helpers.into_iter().map(|x| Function::SetupHook(x)),
+                    local_functions.extend(helpers
+                            .into_iter()
+                            .map(|x| Function::SetupHook(x))
+                            .collect::<Vec<_>>(),
                     );
                     local_functions.extend(
-                        collect_tests(tree_slice, &[])
+                        local_tests
                             .into_iter()
-                            .map(|x| Function::TestFunction(x)),
+                            .map(|x| Function::TestFunction(x))
+                            .collect::<Vec<_>>(),
                     );
                     modules.push(Module { name, functions: local_functions });
                 }
 
-                modules = modules.into_iter().map(|module| Module{
-                    name: module.name.clone(),
-                    functions: module.functions.into_iter().filter(|fun| !repeated_hooks.contains(&fun.name())).collect()
-                }).collect();
+                modules = modules
+                    .into_iter()
+                    .map(|module| Module {
+                        name: module.name.clone(),
+                        functions: module
+                            .functions
+                            .into_iter()
+                            .filter(|fun| !repeated_hooks.contains(&fun.name()))
+                            .collect(),
+                    })
+                    .collect();
 
-                Ok(Root { modules, functions: repeated_hooks.into_iter().map(|name| Function::SetupHook(SetupHook{name})).collect() })
+                Ok(Root {
+                    modules,
+                    functions: repeated_hooks
+                        .into_iter()
+                        .map(|name| Function::SetupHook(SetupHook { name }))
+                        .collect(),
+                })
             }
         }
     }
+}
+
+fn collect_helpers(test_functions: &Vec<TestFunction>) -> Vec<SetupHook> {
+    let mut hooks = Vec::new();
+    let mut all_hooks: HashSet<String> = HashSet::new();
+    for func in test_functions {
+        for hook in &func.setup_hooks {
+            // skip repeated hooks
+            if all_hooks.insert(hook.name.clone()) {
+                hooks.push(hook.clone());
+            }
+        }
+    }
+    hooks
 }
 
 /// Used for both definition and invocation
@@ -122,43 +157,6 @@ impl Function {
         match self {
             Function::TestFunction(f) => f.name.clone(),
             Function::SetupHook(h) => h.name.clone(),
-        }
-    }
-}
-
-/// Collect all unique helper names from conditions.
-fn collect_helpers(children: &[Ast]) -> Vec<SetupHook> {
-    let mut helpers = HashSet::new();
-    collect_helpers_recursive(children, &mut helpers);
-    let mut sorted: Vec<SetupHook> = helpers.into_iter().collect();
-    sorted.sort();
-    sorted
-}
-
-/// Recursively collect helper names.
-fn collect_helpers_recursive(
-    children: &[Ast],
-    helpers: &mut HashSet<SetupHook>,
-) {
-    for child in children {
-        match child {
-            Ast::Condition(condition) => {
-                // only produce helpers for a branch if any of its children is also a branch, meaning
-                // there's a potential need to reuse them
-                if condition.children.iter().any(|c| match c {
-                    Ast::Condition(_) => true,
-                    _ => false,
-                }) {
-                    helpers.insert(SetupHook {
-                        name: to_snake_case(&condition.title),
-                    });
-                }
-                collect_helpers_recursive(&condition.children, helpers);
-            }
-            Ast::Root(root) => {
-                collect_helpers_recursive(&root.children, helpers);
-            }
-            _ => {}
         }
     }
 }
