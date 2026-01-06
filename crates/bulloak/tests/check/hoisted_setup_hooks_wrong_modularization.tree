@@ -1,0 +1,11 @@
+hoisted_setup_hooks_wrong_modularization::foo
+└── When B
+    ├── It should work.
+    └── When C
+        └── It should also work.
+
+hoisted_setup_hooks_wrong_modularization::bar
+└── When B
+    ├── It should produce a special side effect
+    └── When C
+        └── It should revert.

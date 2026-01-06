@@ -1,0 +1,7 @@
+repeated_submodule::Function
+└── When thing exists
+    └── it should work
+
+repeated_submodule::Function
+└── When thing exists
+    └── it should work

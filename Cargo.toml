@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/bulloak", "crates/foundry", "crates/syntax"]
+members = ["crates/bulloak", "crates/foundry", "crates/noir", "crates/syntax"]
 
 [workspace.package]
 authors = ["Alexander Gonzalez <alexfertel97@gmail.com>"]
@@ -35,6 +35,7 @@ all = "warn"
 [workspace.dependencies]
 bulloak-syntax = { path = "crates/syntax", version = "0.9.0" }
 bulloak-foundry = { path = "crates/foundry", version = "0.9.0" }
+bulloak-noir = { path = "crates/noir", version = "0.9.0" }
 
 anyhow = "1.0.75"
 clap = { version = "4.3.19", features = ["derive"] }

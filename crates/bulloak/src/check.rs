@@ -18,7 +18,11 @@ use clap::Parser;
 use owo_colors::OwoColorize;
 use serde::{Deserialize, Serialize};
 
-use crate::{cli::Cli, glob::expand_glob};
+use crate::{
+    backend::{BackendKind, NoirBackend},
+    cli::Cli,
+    glob::expand_glob,
+};
 
 /// Check that the tests match the spec.
 #[doc(hidden)]
@@ -41,6 +45,9 @@ pub struct Check {
     /// Whether to capitalize and punctuate branch descriptions.
     #[arg(long = "format-descriptions", default_value_t = false)]
     pub format_descriptions: bool,
+    /// The target language for checking.
+    #[arg(short = 'l', long = "lang", value_enum, default_value_t = BackendKind::Solidity)]
+    pub backend_kind: BackendKind,
 }
 
 impl Default for Check {
@@ -65,6 +72,10 @@ impl Check {
                     e
                 ),
             }
+        }
+
+        if let BackendKind::Noir = self.backend_kind {
+            return self.run_noir_check(specs, cfg);
         }
 
         let mut violations = Vec::new();
@@ -161,6 +172,62 @@ impl Check {
             println!("{}", "<--".blue());
         } else if let Err(e) = fs::write(sol, output) {
             eprintln!("{}: {e}", "warn".yellow());
+        }
+    }
+
+    fn run_noir_check(&self, specs: Vec<PathBuf>, cfg: &Cli) {
+        let backend = NoirBackend { config: cfg.into() };
+
+        let violations =
+            self.collect_violations(&specs, |path| backend.check(path));
+
+        self.report_violations(&violations);
+    }
+
+    /// Collect violations from checking multiple tree files.
+    fn collect_violations<F, V>(&self, specs: &[PathBuf], check_fn: F) -> Vec<V>
+    where
+        F: Fn(&PathBuf) -> anyhow::Result<Vec<V>>,
+        V: std::fmt::Display,
+    {
+        let mut all_violations = Vec::new();
+        for tree_path in specs {
+            match check_fn(tree_path) {
+                Ok(violations) => {
+                    for violation in &violations {
+                        eprintln!("{}", violation);
+                    }
+                    all_violations.extend(violations);
+                }
+                Err(e) => {
+                    eprintln!(
+                        "{}: Failed to check {}: {}",
+                        "error".red(),
+                        tree_path.display(),
+                        e
+                    );
+                }
+            }
+        }
+        all_violations
+    }
+
+    /// Report violations and exit if necessary.
+    fn report_violations<V: std::fmt::Display>(&self, violations: &[V]) {
+        if violations.is_empty() {
+            println!(
+                "{}",
+                "All checks completed successfully! No issues found.".green()
+            );
+        } else {
+            let check_literal = pluralize(violations.len(), "check", "checks");
+            eprintln!(
+                "\n{}: {} {} failed",
+                "warn".bold().yellow(),
+                violations.len(),
+                check_literal
+            );
+            std::process::exit(1);
         }
     }
 }

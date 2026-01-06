@@ -1,0 +1,7 @@
+no_submodule_multi_root
+└── When thing exists
+    └── it should work
+
+no_submodule_multi_root
+└── When second thing exists
+    └── it should work

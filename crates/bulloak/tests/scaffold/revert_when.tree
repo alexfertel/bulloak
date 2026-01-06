@@ -1,4 +1,4 @@
-FooTest
+revert_when
 └── When stuff is called // Comments are supported.
     └── When a condition is met
         └── It should revert.

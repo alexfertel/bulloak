@@ -50,6 +50,25 @@ impl From<&Cli> for bulloak_foundry::config::Config {
     }
 }
 
+impl From<&Cli> for bulloak_noir::Config {
+    fn from(cli: &Cli) -> Self {
+        match &cli.command {
+            Commands::Scaffold(cmd) => Self {
+                files: cmd.files.clone(),
+                skip_setup_hooks: cmd.skip_modifiers,
+                format_descriptions: cmd.format_descriptions,
+                ..Self::default()
+            },
+            Commands::Check(cmd) => Self {
+                files: cmd.files.clone(),
+                skip_setup_hooks: cmd.skip_modifiers,
+                format_descriptions: cmd.format_descriptions,
+                ..Self::default()
+            }
+        }
+    }
+}
+
 /// Main entrypoint of `bulloak`'s execution.
 pub(crate) fn run() -> anyhow::Result<()> {
     let config: Cli =

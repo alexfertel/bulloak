@@ -1,0 +1,28 @@
+[package]
+name = "bulloak-noir"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+edition.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+description.workspace = true
+keywords.workspace = true
+categories.workspace = true
+
+[dependencies]
+bulloak-syntax.workspace = true
+anyhow.workspace = true
+regex.workspace = true
+owo-colors.workspace = true
+tree-sitter = "0.20"
+tree-sitter-noir = "0.0.1"
+
+[dev-dependencies]
+pretty_assertions.workspace = true
+indoc = "2.0.5"
+tempfile = "3.8"
+
+[lints]
+workspace = true

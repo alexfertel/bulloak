@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.0;
 
-contract HashPairTestSanitize {
+contract basic {
     function test_ShouldNeverRevert() external {
         // It should never revert.
     }
