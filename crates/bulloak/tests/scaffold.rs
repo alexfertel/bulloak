@@ -374,3 +374,19 @@ fn scaffold_noir_generates_hoisted_setup_hook_for_shared_condition() {
     let expected = fs::read_to_string(noir_filename).unwrap();
     assert_eq!(expected.trim(), actual.trim());
 }
+
+#[test]
+fn scaffold_noir_generates_skips_modifiers_on_imported_hoks() {
+    let cwd = env::current_dir().unwrap();
+    let binary_path = get_binary_path();
+    let tests_path = cwd.join("tests").join("scaffold");
+    let tree_path = tests_path.join("hoisted_hook_skip_modifiers.tree");
+
+    let output = cmd(&binary_path, "scaffold", &tree_path, &["-l", "noir", "-m"]);
+    let actual = String::from_utf8(output.stdout).unwrap();
+
+    // Verify the full expected output matches
+    let noir_filename = tests_path.join("hoisted_hook_skip_modifiers_test.nr");
+    let expected = fs::read_to_string(noir_filename).unwrap();
+    assert_eq!(expected.trim(), actual.trim());
+}

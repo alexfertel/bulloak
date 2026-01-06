@@ -6,6 +6,7 @@ unconstrained fn when_b() {
 
 
 mod foo {
+    use super::when_b;
     #[test]
     unconstrained fn test_when_b() {
         when_b();
@@ -21,6 +22,7 @@ mod foo {
 }
 
 mod bar {
+    // import is not present in this module. `check` ignores imports.
     #[test]
     unconstrained fn test_when_b() {
         when_b();
