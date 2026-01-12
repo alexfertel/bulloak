@@ -9,9 +9,9 @@ use std::{
 
 use bulloak_foundry::{constants::DEFAULT_SOL_VERSION, scaffold::scaffold};
 use clap::Parser;
-use solang_forge_fmt::format;
 use owo_colors::OwoColorize;
 use serde::{Deserialize, Serialize};
+use solang_forge_fmt::format;
 
 use crate::{cli::Cli, glob::expand_glob};
 
