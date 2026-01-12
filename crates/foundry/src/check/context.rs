@@ -7,10 +7,10 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use forge_fmt::{
+use solang_forge_fmt::{
     format, parse,
     solang_ext::{CodeLocationExt, SafeUnwrap},
-    Comments, FormatterConfig, FormatterError, InlineConfig, Parsed,
+    Comments, FormatterError, Parsed,
 };
 use solang_parser::pt::{self, ContractDefinition, ContractPart, SourceUnit};
 
@@ -66,7 +66,7 @@ impl Context {
 
         let sol = get_path_with_ext(&tree, "t.sol")?;
         let src = try_read_to_string(&sol)?;
-        let parsed = forge_fmt::parse(&src).map_err(|_| {
+        let parsed = solang_forge_fmt::parse(&src).map_err(|_| {
             let sol_filename = sol.to_string_lossy().into_owned();
             Violation::new(
                 ViolationKind::ParsingFailed(anyhow::anyhow!(
@@ -93,20 +93,7 @@ impl Context {
     /// Updates the context with a formatted representation of the Solidity
     /// file.
     pub fn fmt(self) -> anyhow::Result<String, FormatterError> {
-        let mut formatted = String::new();
-        format(
-            &mut formatted,
-            forge_fmt::Parsed {
-                src: &self.src,
-                pt: self.pt,
-                comments: self.comments,
-                inline_config: InlineConfig::default(),
-                invalid_inline_config_items: Vec::default(),
-            },
-            FormatterConfig::default(),
-        )?;
-
-        Ok(formatted)
+        format(&self.src)
     }
 
     /// Inserts a function definition into the source string at a specified

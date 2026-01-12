@@ -9,9 +9,9 @@ use std::{
 
 use bulloak_foundry::{constants::DEFAULT_SOL_VERSION, scaffold::scaffold};
 use clap::Parser;
-use forge_fmt::fmt;
 use owo_colors::OwoColorize;
 use serde::{Deserialize, Serialize};
+use solang_forge_fmt::format;
 
 use crate::{cli::Cli, glob::expand_glob};
 
@@ -106,7 +106,7 @@ impl Scaffold {
     fn process_file(&self, file: &Path, cfg: &Cli) -> anyhow::Result<()> {
         let text = fs::read_to_string(file)?;
         let emitted = scaffold(&text, &cfg.into())?;
-        let formatted = fmt(&emitted).unwrap_or_else(|err| {
+        let formatted = format(&emitted).unwrap_or_else(|err| {
             eprintln!("{}: {}", "WARN".yellow(), err);
             emitted
         });
