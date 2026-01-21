@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.9.2] - 2026-01-14
+
+### Miscellaneous Tasks
+
+- Migrate forge-fmt to solang-forge-fmt (#115)
+
+
 ## [0.9.1] - 2025-10-15
 
 ### Features

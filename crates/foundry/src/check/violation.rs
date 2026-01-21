@@ -2,8 +2,8 @@
 use std::{borrow::Cow, fmt};
 
 use bulloak_syntax::FrontendError;
-use forge_fmt::solang_ext::SafeUnwrap;
 use owo_colors::OwoColorize;
+use solang_forge_fmt::solang_ext::SafeUnwrap;
 use solang_parser::pt;
 use thiserror::Error;
 
