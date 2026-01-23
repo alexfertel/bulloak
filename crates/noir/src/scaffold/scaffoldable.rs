@@ -69,6 +69,11 @@ impl Scaffoldable for Module {
     fn scaffold(&self, generate_setup_hooks: bool) -> String {
         let mut output = format!("\nmod {} {{\n", self.name);
 
+        if generate_setup_hooks {
+            for import in &self.imported_hooks {
+                output.push_str(format!("    use super::{};\n", import.name).as_str());
+            }
+        }
         // indent the definitions inside the module
         for func in &self.functions {
             for line in func.scaffold(generate_setup_hooks).lines() {

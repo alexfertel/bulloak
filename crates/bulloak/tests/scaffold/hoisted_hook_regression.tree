@@ -1,0 +1,9 @@
+hoisted_hook_regression::constructor_with_minter
+└── when passing valid parameters
+    ├── it sets name
+    └── it sets symbol
+
+hoisted_hook_regression::constructor_with_initial_supply
+└── when passing valid parameters
+    ├── it sets name
+    └── it sets symbol
