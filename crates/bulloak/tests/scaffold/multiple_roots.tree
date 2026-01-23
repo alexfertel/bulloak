@@ -1,9 +1,9 @@
-MultipleRootsTreeTest::function1
+multiple_roots::function1
 ├── It should never revert.
 └── When first arg is bigger than second arg
     └── It is all good
 
-MultipleRootsTreeTest::function2
+multiple_roots::function2
 ├── when stuff does not happen
 │   └── it should revert
 └── when stuff happens

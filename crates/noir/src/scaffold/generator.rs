@@ -13,7 +13,7 @@ use crate::scaffold::scaffoldable::Scaffoldable;
 ///
 /// Returns an error if code generation fails.
 pub(super) fn generate(forest: &Vec<Ast>, cfg: &Config) -> Result<String> {
-    let root = Root::new(forest);
+    let root = Root::new(forest)?;
 
     Ok(root.scaffold(!cfg.skip_setup_hooks))
 }

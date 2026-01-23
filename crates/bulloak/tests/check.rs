@@ -29,6 +29,17 @@ warn: incorrect position for function "test_WhenThereIsReentrancy""#
     for (expected, actual) in expected.zip(actual) {
         assert_eq!(expected, actual);
     }
+
+    let output = cmd(&binary_path, "check", &tree_path, &["-l", "noir"]);
+    let stderr = String::from_utf8(output.stderr).unwrap();
+    assert!(stderr.contains(r#"Missing setup hook "given_the_stream_is_cold""#));
+    assert!(stderr
+        .contains(r#"Missing setup hook "when_the_sender_does_not_revert""#));
+    assert!(stderr.contains(r#"Test function "test_when_there_is_reentrancy" is in wrong position in"#));
+    assert!(stderr.contains(r#"Test function "test_when_the_sender_reverts" is in wrong position in"#));
+    assert!(stderr.contains(r#"Test function "test_given_the_streams_status_is_canceled" is in wrong position in"#));
+    assert!(stderr.contains(r#"Test function "test_given_the_streams_status_is_settled" is in wrong position in"#));
+    assert!(stderr.contains(r#"invalid_sol_structure_test.nr"#));
 }
 
 #[test]
@@ -55,6 +66,51 @@ fn checks_valid_structural_match() {
     assert!(
         stdout.contains("All checks completed successfully! No issues found.")
     );
+}
+
+#[test]
+fn checks_hoisted_setup_hooks_happy_path() {
+    let cwd = env::current_dir().unwrap();
+    let binary_path = get_binary_path();
+    let tree_path =
+        cwd.join("tests").join("check").join("hoisted_setup_hooks.tree");
+
+    let output = cmd(&binary_path, "check", &tree_path, &[]);
+    let stderr = String::from_utf8(output.stderr).unwrap();
+    let stdout = String::from_utf8(output.stdout).unwrap();
+
+    assert_eq!("", stderr);
+    assert!(
+        stdout.contains("All checks completed successfully! No issues found.")
+    );
+
+    let output = cmd(&binary_path, "check", &tree_path, &["-l", "noir"]);
+    let stderr = String::from_utf8(output.stderr).unwrap();
+    let stdout = String::from_utf8(output.stdout).unwrap();
+
+    assert_eq!("", stderr);
+    assert!(
+        stdout.contains("All checks completed successfully! No issues found.")
+    );
+}
+
+#[test]
+fn checks_hoisted_setup_hooks_wrong_modularization() {
+    let cwd = env::current_dir().unwrap();
+    let binary_path = get_binary_path();
+    let tree_path = cwd
+        .join("tests")
+        .join("check")
+        .join("hoisted_setup_hooks_wrong_modularization.tree");
+
+    let output = cmd(&binary_path, "check", &tree_path, &["-l", "noir"]);
+    let stderr = String::from_utf8(output.stderr).unwrap();
+    let stdout = String::from_utf8(output.stdout).unwrap();
+
+    assert_eq!(stdout, "");
+    assert!(stderr.contains(r#"Module "bar" is in wrong position in"#));
+    assert!(stderr.contains(r#"Module "foo" is in wrong position in"#));
+    assert!(stderr.contains(r#"Test function "test_when_b" is missing in module foo in file"#));
 }
 
 #[test]
@@ -126,10 +182,9 @@ fn checks_empty_contract() {
     let stderr = String::from_utf8(output.stderr).unwrap();
 
     assert!(stderr
-        .contains(r#"unconstrained fn "test_should_never_revert" is missing"#));
-    assert!(stderr.contains(
-        r#"unconstrained fn "test_should_never_revert" is missing"#
-    ));
+        .contains(r#"Test function "test_should_never_revert" is missing"#));
+    assert!(stderr
+        .contains(r#"Test function "test_should_never_revert" is missing"#));
 }
 
 #[test]
@@ -190,6 +245,70 @@ fn checks_contract_name_mismatch() {
 
 #[cfg(not(target_os = "windows"))]
 #[test]
+fn checks_noir_testfile_and_root_match() {
+    let cwd = env::current_dir().unwrap();
+    let binary_path = get_binary_path();
+    let tree_path =
+        cwd.join("tests").join("check").join("testfile_and_root_match.tree");
+
+    let output = cmd(&binary_path, "check", &tree_path, &["-l", "noir"]);
+    let stderr = String::from_utf8(output.stderr).unwrap();
+
+    assert_eq!(stderr, "");
+    assert_eq!(output.status.code().unwrap(), 0);
+}
+
+#[cfg(not(target_os = "windows"))]
+#[test]
+fn checks_noir_testfile_and_root_match_multiple_roots() {
+    let cwd = env::current_dir().unwrap();
+    let binary_path = get_binary_path();
+    let tree_path = cwd
+        .join("tests")
+        .join("check")
+        .join("testfile_and_root_match_multiple_roots.tree");
+
+    let output = cmd(&binary_path, "check", &tree_path, &["-l", "noir"]);
+    let stderr = String::from_utf8(output.stderr).unwrap();
+
+    assert_eq!(stderr, "");
+    assert_eq!(output.status.code().unwrap(), 0);
+}
+
+#[test]
+fn checks_noir_testfile_and_root_mismatch_multiple_roots() {
+    let cwd = env::current_dir().unwrap();
+    let binary_path = get_binary_path();
+    let tree_path = cwd
+        .join("tests")
+        .join("check")
+        .join("testfile_and_root_mismatch_multiple_roots.tree");
+
+    let output = cmd(&binary_path, "check", &tree_path, &["-l", "noir"]);
+    let stderr = String::from_utf8(output.stderr).unwrap();
+
+    assert!(stderr.contains(
+        r#"Tree root "Mismatch" should match treefile name: "testfile_and_root_mismatch_multiple_roots""#
+    ));
+}
+
+#[test]
+fn checks_noir_testfile_and_root_mismatch() {
+    let cwd = env::current_dir().unwrap();
+    let binary_path = get_binary_path();
+    let tree_path =
+        cwd.join("tests").join("check").join("testfile_and_root_mismatch.tree");
+
+    let output = cmd(&binary_path, "check", &tree_path, &["-l", "noir"]);
+    let stderr = String::from_utf8(output.stderr).unwrap();
+
+    assert!(stderr.contains(
+        r#"Tree root "Mismatch" should match treefile name: "testfile_and_root_mismatch""#
+    ));
+}
+
+#[cfg(not(target_os = "windows"))]
+#[test]
 fn checks_contract_name_mismatch_multiple_roots() {
     let cwd = env::current_dir().unwrap();
     let binary_path = get_binary_path();
@@ -203,6 +322,18 @@ fn checks_contract_name_mismatch_multiple_roots() {
 
     let formatted_message = format!(
         "{}: an error occurred while parsing the tree: contract name mismatch: expected 'ContractName', found 'MismatchedContractName'\n   {} {}",
+        "warn".yellow(),
+        "-->".blue(),
+        tree_path.display()
+    );
+
+    assert!(stderr.contains(&formatted_message));
+
+    let output = cmd(&binary_path, "check", &tree_path, &["-l", "noir"]);
+    let stderr = String::from_utf8(output.stderr).unwrap();
+
+    let formatted_message = format!(
+        "{}: an error occurred while parsing the tree: module name mismatch: expected 'ContractName', found 'MismatchedContractName'\n   {} {}",
         "warn".yellow(),
         "-->".blue(),
         tree_path.display()
@@ -229,7 +360,7 @@ fn checks_invalid_tree() {
 
     // it's okay to be less specific with error messages for now
     assert!(stderr.contains(r#"bulloak error: unexpected token '├'"#));
-    assert!(stderr.contains(r#"Failed to parse tree file"#));
+    assert!(stderr.contains(r#"an error occurred while parsing the tree"#));
 }
 
 #[test]
@@ -551,5 +682,78 @@ fn check_invalid_glob_warns_but_reports_success() {
         stdout.contains("All checks completed successfully"),
         "expected success message, got: {}",
         stdout
+    );
+}
+
+// ignored until we fix https://github.com/alexfertel/bulloak/issues/114
+#[test]
+#[ignore]
+fn checks_repeated_submodule_error_solidity() {
+    let cwd = env::current_dir().unwrap();
+    let binary_path = get_binary_path();
+    let tree_path =
+        cwd.join("tests").join("check").join("repeated_submodule.tree");
+
+    let output = cmd(&binary_path, "check", &tree_path, &[]);
+    let stderr = String::from_utf8(output.stderr).unwrap();
+
+    assert!(stderr.contains(
+        r#"an error occurred while parsing the tree: submodule Function has more than one definition"#
+    ));
+}
+
+#[test]
+fn checks_repeated_submodule_error_noir() {
+    let cwd = env::current_dir().unwrap();
+    let binary_path = get_binary_path();
+    let tree_path =
+        cwd.join("tests").join("check").join("repeated_submodule.tree");
+
+    let output = cmd(&binary_path, "check", &tree_path, &["-l", "noir"]);
+    let stderr = String::from_utf8(output.stderr).unwrap();
+
+    assert!(
+        stderr.contains(r#"submodule Function has more than one definition"#)
+    );
+}
+
+#[test]
+fn checks_no_submodule_multi_root_error() {
+    let cwd = env::current_dir().unwrap();
+    let binary_path = get_binary_path();
+    let tree_path =
+        cwd.join("tests").join("check").join("no_submodule_multi_root.tree");
+
+    let output = cmd(&binary_path, "check", &tree_path, &[]);
+    let stderr = String::from_utf8(output.stderr).unwrap();
+
+    assert!(stderr.contains(
+        r#"an error occurred while parsing the tree: separator missing at tree root #1. Expected to find `::` between the contract name and the function name when multiple roots exist"#
+    ));
+
+    let output = cmd(&binary_path, "check", &tree_path, &["-l", "noir"]);
+    let stderr = String::from_utf8(output.stderr).unwrap();
+
+    assert!(stderr.contains(r#"an error occurred while parsing the tree: separator missing at tree root #1 "no_submodule_multi_root". Expected to find `::` between the contract name and the function name when multiple roots exist"#));
+}
+
+/// Regression test for https://github.com/defi-wonderland/bulloak/pull/9#issuecomment-3710452952
+/// When multiple roots share the same condition, check should report the missing hoisted setup hook.
+#[test]
+fn checks_missing_hoisted_setup_hook_for_shared_condition() {
+    let cwd = env::current_dir().unwrap();
+    let binary_path = get_binary_path();
+    let tree_path = cwd
+        .join("tests")
+        .join("check")
+        .join("hoisted_hook_regression.tree");
+
+    let output = cmd(&binary_path, "check", &tree_path, &["-l", "noir"]);
+    let stderr = String::from_utf8(output.stderr).unwrap();
+
+    assert!(
+        stderr.contains(r#"Missing setup hook "when_passing_valid_parameters""#),
+        "Expected check to report missing setup hook 'when_passing_valid_parameters', but it did not.\nStderr:\n{}",
+        stderr
     );
 }

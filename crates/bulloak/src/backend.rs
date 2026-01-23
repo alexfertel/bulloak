@@ -19,7 +19,7 @@ use crate::cli::Cli;
 pub trait Backend: Send + Sync {
     /// Scaffolds test code from a tree specification.
     /// Must output it already formatted, as it won't be processed further
-    fn scaffold(&self, text: &str) -> Result<String>;
+    fn scaffold(&self, text: &str, treefile: &PathBuf) -> Result<String>;
 
     /// Returns the output test file path for a given tree file path.
     fn test_filename(&self, tree_file: &PathBuf) -> Result<PathBuf>;
@@ -80,7 +80,7 @@ fn validate_extension(input: &PathBuf) -> Result<(), BackendError> {
 }
 
 impl Backend for SolidityBackend {
-    fn scaffold(&self, text: &str) -> Result<String> {
+    fn scaffold(&self, text: &str, _treefile: &PathBuf) -> Result<String> {
         let emitted = bulloak_foundry::scaffold::scaffold(text, &self.config)?;
         Ok(solang_forge_fmt::format(&emitted).unwrap_or(emitted))
     }
@@ -92,8 +92,8 @@ impl Backend for SolidityBackend {
 }
 
 impl Backend for NoirBackend {
-    fn scaffold(&self, text: &str) -> Result<String> {
-        bulloak_noir::scaffold(&text, &self.config)
+    fn scaffold(&self, text: &str, treefile: &PathBuf) -> Result<String> {
+        bulloak_noir::scaffold(&text, treefile, &self.config)
     }
 
     fn test_filename(&self, tree_file: &PathBuf) -> Result<PathBuf> {
