@@ -21,8 +21,9 @@ use bulloak_syntax::utils::sanitize;
 use solang_parser::pt::{
     Base, ContractDefinition, ContractPart, ContractTy, Expression,
     FunctionAttribute, FunctionDefinition, FunctionTy, Identifier,
-    IdentifierPath, Import, ImportPath, Loc, SourceUnit, SourceUnitPart,
-    Statement, StringLiteral, Type, VariableDeclaration, Visibility,
+    IdentifierPath, Import, ImportPath, Loc, PragmaDirective, SourceUnit,
+    SourceUnitPart, Statement, StringLiteral, Type, VariableDeclaration,
+    Visibility,
 };
 
 use crate::{
@@ -366,16 +367,17 @@ impl Visitor for TranslatorI {
             name: "solidity".to_owned(),
         });
         self.bump(" ");
-        let pragma_identifier = Some(StringLiteral {
+        let pragma_version = Some(Identifier {
             loc: self.bump(&self.translator.sol_version),
-            unicode: false,
-            string: self.translator.sol_version.clone(),
+            name: self.translator.sol_version.clone(),
         });
-        source_unit.push(SourceUnitPart::PragmaDirective(
-            Loc::File(0, pragma_start, self.offset.get()),
-            pragma_ty,
-            pragma_identifier,
-        ));
+        source_unit.push(SourceUnitPart::PragmaDirective(Box::new(
+            PragmaDirective::Identifier(
+                Loc::File(0, pragma_start, self.offset.get()),
+                pragma_ty,
+                pragma_version,
+            ),
+        )));
         self.bump(";\n");
 
         // Add the forge-std's Test import, if needed.
@@ -546,7 +548,8 @@ impl Visitor for TranslatorI {
         let statements = self.gen_function_body(function)?;
 
         let func_def = FunctionDefinition {
-            loc: Loc::File(0, start_offset, body_start - 1),
+            loc_prototype: Loc::File(0, start_offset, body_start - 1),
+            loc: Loc::File(0, start_offset, self.offset.get()),
             ty: function_ty,
             name: function_name,
             name_loc: function_id_loc,

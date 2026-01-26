@@ -102,6 +102,7 @@ mod tests {
         pt::FunctionDefinition {
             name: Some(pt::Identifier::new(name)),
             ty,
+            loc_prototype: Default::default(),
             loc: Default::default(),
             name_loc: Default::default(),
             params: Default::default(),

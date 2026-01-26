@@ -57,7 +57,7 @@ impl Visitor for Formatter {
         part: &mut SourceUnitPart,
     ) -> Result<Self::Output, Self::Error> {
         match part {
-            SourceUnitPart::PragmaDirective(_, _, _) => {
+            SourceUnitPart::PragmaDirective(_) => {
                 let header = "// SPDX-License-Identifier: UNLICENSED\n";
                 let header = format!("{header}{part}");
 

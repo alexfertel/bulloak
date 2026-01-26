@@ -82,7 +82,7 @@ fn validate_extension(input: &PathBuf) -> Result<(), BackendError> {
 impl Backend for SolidityBackend {
     fn scaffold(&self, text: &str, _treefile: &PathBuf) -> Result<String> {
         let emitted = bulloak_foundry::scaffold::scaffold(text, &self.config)?;
-        Ok(forge_fmt::fmt(&emitted).unwrap_or(emitted))
+        Ok(solang_forge_fmt::format(&emitted).unwrap_or(emitted))
     }
 
     fn test_filename(&self, tree_file: &PathBuf) -> Result<PathBuf> {
