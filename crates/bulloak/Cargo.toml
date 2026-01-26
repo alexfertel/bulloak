@@ -15,6 +15,7 @@ categories.workspace = true
 [dependencies]
 bulloak-syntax.workspace = true
 bulloak-foundry.workspace = true
+bulloak-noir.workspace = true
 
 anyhow.workspace = true
 clap.workspace = true
@@ -22,6 +23,8 @@ figment.workspace = true
 solang-forge-fmt.workspace = true
 owo-colors.workspace = true
 serde.workspace = true
+regex.workspace = true
+thiserror.workspace = true
 glob = "0.3.2"
 
 [dev-dependencies]

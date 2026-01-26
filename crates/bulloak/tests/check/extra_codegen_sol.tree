@@ -1,4 +1,4 @@
-HashPairTest
+extra_codegen_sol
 ├── It should never revert.
 ├── When first arg is smaller than second arg
 │       └── It should match the result of `keccak256(abi.encodePacked(a,b))`.
