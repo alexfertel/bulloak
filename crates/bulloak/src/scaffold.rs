@@ -11,7 +11,6 @@ use bulloak_foundry::constants::DEFAULT_SOL_VERSION;
 use clap::Parser;
 use owo_colors::OwoColorize;
 use serde::{Deserialize, Serialize};
-use solang_forge_fmt::format;
 
 use crate::{
     backend::BackendKind,
