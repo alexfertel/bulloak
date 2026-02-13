@@ -35,6 +35,14 @@ pub struct Check {
     /// to standard output instead of writing to files.
     #[arg(long, requires = "fix-violations", default_value_t = false)]
     pub stdout: bool,
+    /// Whether to add vm.skip(true) at the beginning of each test.
+    #[arg(
+        short = 'S',
+        long = "vm-skip",
+        requires = "fix-violations",
+        default_value_t = false
+    )]
+    pub with_vm_skip: bool,
     /// Whether to emit modifiers.
     #[arg(short = 'm', long, default_value_t = false)]
     pub skip_modifiers: bool,
