@@ -469,8 +469,70 @@ contract CancelTest {
     assert!(actual.contains("4 issues fixed."));
 }
 
+#[test]
+fn fixes_contract_missing_with_vm_skip() {
+    let cwd = env::current_dir().unwrap();
+    let binary_path = get_binary_path();
+    let tree_path =
+        cwd.join("tests").join("check").join("missing_contract.tree");
+
+    let output =
+        cmd(&binary_path, "check", &tree_path, &["--fix", "--stdout", "-S"]);
+    let actual = String::from_utf8(output.stdout).unwrap();
+    assert!(
+        actual.contains("vm.skip(true);"),
+        "expected vm.skip(true); in output, got:\n{actual}"
+    );
+    assert!(
+        actual.contains("import {Test} from \"forge-std/Test.sol\";"),
+        "expected forge-std import in output, got:\n{actual}"
+    );
+    assert!(
+        actual.contains("is Test"),
+        "expected `is Test` inheritance in output, got:\n{actual}"
+    );
+    assert!(actual.contains("1 issue fixed."));
+}
+
+#[test]
+fn fixes_missing_fns_with_vm_skip() {
+    let cwd = env::current_dir().unwrap();
+    let binary_path = get_binary_path();
+    let tree_path =
+        cwd.join("tests").join("check").join("extra_codegen_tree.tree");
+
+    let output =
+        cmd(&binary_path, "check", &tree_path, &["--fix", "--stdout", "-S"]);
+    let actual = String::from_utf8(output.stdout).unwrap();
+    assert!(
+        actual.contains("vm.skip(true);"),
+        "expected vm.skip(true); in inserted functions, got:\n{actual}"
+    );
+    assert!(actual.contains("test_ShouldNeverRevert"));
+    assert!(actual.contains("2 issues fixed."));
+}
+
+#[test]
+fn vm_skip_requires_fix_flag() {
+    let cwd = env::current_dir().unwrap();
+    let binary_path = get_binary_path();
+    let tree_path =
+        cwd.join("tests").join("check").join("missing_contract.tree");
+
+    let output = cmd(&binary_path, "check", &tree_path, &["-S"]);
+    assert!(
+        !output.status.success(),
+        "expected failure when -S is used without --fix"
+    );
+    let stderr = String::from_utf8(output.stderr).unwrap();
+    assert!(
+        stderr.contains("--fix"),
+        "expected error mentioning --fix, got:\n{stderr}"
+    );
+}
+
 /// If you pass an invalid glob to `bulloak check`,
-/// it should warn but still exit code = 0 and report “no issues found.”
+/// it should warn but still exit code = 0 and report "no issues found."
 #[test]
 fn check_invalid_glob_warns_but_reports_success() {
     let cwd = env::current_dir().unwrap();
