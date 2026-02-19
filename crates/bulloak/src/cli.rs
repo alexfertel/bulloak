@@ -52,6 +52,14 @@ impl From<&Cli> for bulloak_foundry::config::Config {
 
 impl From<&Cli> for bulloak_noir::Config {
     fn from(cli: &Cli) -> Self {
+        if match &cli.command {
+            Commands::Check(x) => x.format_descriptions,
+            Commands::Scaffold(x) => x.format_descriptions,
+        } {
+            unimplemented!(
+                "description formatting is not yet implemented in noir backend"
+            )
+        }
         match &cli.command {
             Commands::Scaffold(cmd) => Self {
                 files: cmd.files.clone(),
@@ -64,7 +72,7 @@ impl From<&Cli> for bulloak_noir::Config {
                 skip_setup_hooks: cmd.skip_modifiers,
                 format_descriptions: cmd.format_descriptions,
                 ..Self::default()
-            }
+            },
         }
     }
 }
