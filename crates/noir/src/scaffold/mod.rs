@@ -25,7 +25,7 @@ pub fn scaffold(
             let expected = treefile
                 .file_stem()
                 .and_then(|s| s.to_str())
-                .unwrap_or_else(|| panic!("this condition should be unreachable, as the file was successfully read once already."));
+                .unwrap_or_else(|| unreachable!("this condition should be unreachable, as the file was successfully read once already."));
 
             if actual != expected {
                 bail!(
