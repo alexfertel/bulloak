@@ -60,6 +60,10 @@ impl From<&Cli> for bulloak_noir::Config {
                 "description formatting is not yet implemented in noir backend"
             )
         }
+        if matches!(&cli.command, Commands::Check(x) if x.fix) {
+            unimplemented!("--fix is not yet implemented in noir backend")
+        }
+
         match &cli.command {
             Commands::Scaffold(cmd) => Self {
                 files: cmd.files.clone(),
