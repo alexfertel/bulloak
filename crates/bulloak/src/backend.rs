@@ -53,8 +53,11 @@ pub(crate) struct NoirBackend {
     pub config: bulloak_noir::Config,
 }
 
-impl NoirBackend{
-    pub(crate) fn check(&self, path: &PathBuf ) -> Result<Vec<bulloak_noir::check::Violation>>{
+impl NoirBackend {
+    pub(crate) fn check(
+        &self,
+        path: &PathBuf,
+    ) -> Result<Vec<bulloak_noir::check::Violation>> {
         bulloak_noir::check(path, &self.config)
     }
 }

@@ -110,7 +110,9 @@ fn checks_hoisted_setup_hooks_wrong_modularization() {
     assert_eq!(stdout, "");
     assert!(stderr.contains(r#"Module "bar" is in wrong position in"#));
     assert!(stderr.contains(r#"Module "foo" is in wrong position in"#));
-    assert!(stderr.contains(r#"Test function "test_when_b" is missing in module foo in file"#));
+    assert!(stderr.contains(
+        r#"Test function "test_when_b" is missing in module foo in file"#
+    ));
 }
 
 #[test]
@@ -743,10 +745,8 @@ fn checks_no_submodule_multi_root_error() {
 fn checks_missing_hoisted_setup_hook_for_shared_condition() {
     let cwd = env::current_dir().unwrap();
     let binary_path = get_binary_path();
-    let tree_path = cwd
-        .join("tests")
-        .join("check")
-        .join("hoisted_hook_regression.tree");
+    let tree_path =
+        cwd.join("tests").join("check").join("hoisted_hook_regression.tree");
 
     let output = cmd(&binary_path, "check", &tree_path, &["-l", "noir"]);
     let stderr = String::from_utf8(output.stderr).unwrap();

@@ -161,7 +161,7 @@ fn skips_trees_when_file_exists() {
         "basic.tree",
         // TODO: when we get to multiple roots
         // "complex.tree",
-        "multiple_roots.tree"
+        "multiple_roots.tree",
     ];
 
     for tree_name in trees {
@@ -382,7 +382,8 @@ fn scaffold_noir_generates_skips_modifiers_on_imported_hoks() {
     let tests_path = cwd.join("tests").join("scaffold");
     let tree_path = tests_path.join("hoisted_hook_skip_modifiers.tree");
 
-    let output = cmd(&binary_path, "scaffold", &tree_path, &["-l", "noir", "-m"]);
+    let output =
+        cmd(&binary_path, "scaffold", &tree_path, &["-l", "noir", "-m"]);
     let actual = String::from_utf8(output.stdout).unwrap();
 
     // Verify the full expected output matches

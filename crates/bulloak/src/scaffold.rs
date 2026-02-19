@@ -12,11 +12,7 @@ use clap::Parser;
 use owo_colors::OwoColorize;
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    backend::BackendKind,
-    cli::Cli,
-    glob::expand_glob,
-};
+use crate::{backend::BackendKind, cli::Cli, glob::expand_glob};
 
 /// Generate test files based on your spec.
 #[doc(hidden)]

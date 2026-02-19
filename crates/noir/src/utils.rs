@@ -57,7 +57,10 @@ pub(crate) fn parse_root_name(contract_name: &str) -> (String, Option<String>) {
         sanitize_module_name(
             contract_name.split("::").next().unwrap_or(contract_name),
         ),
-        contract_name.split("::").nth(1).and_then(|x| Some(sanitize_module_name(x))),
+        contract_name
+            .split("::")
+            .nth(1)
+            .and_then(|x| Some(sanitize_module_name(x))),
     )
 }
 pub(crate) enum ModuleName {
@@ -68,9 +71,7 @@ pub(crate) enum ModuleName {
 /// Checks that all roots in a multi-root tree have consistent module names.
 /// Returns a violation if module names are inconsistent.
 /// TODO: move to syntax crate?
-pub(crate) fn get_module_name(
-    forest: &[Ast],
-) -> ModuleName {
+pub(crate) fn get_module_name(forest: &[Ast]) -> ModuleName {
     let mut expected_module = ModuleName::Empty;
 
     for ast in forest {

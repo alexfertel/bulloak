@@ -71,7 +71,9 @@ impl Scaffoldable for Module {
 
         if generate_setup_hooks {
             for import in &self.imported_hooks {
-                output.push_str(format!("    use super::{};\n", import.name).as_str());
+                output.push_str(
+                    format!("    use super::{};\n", import.name).as_str(),
+                );
             }
         }
         // indent the definitions inside the module

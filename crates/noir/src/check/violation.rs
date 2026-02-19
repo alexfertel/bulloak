@@ -117,12 +117,14 @@ impl fmt::Display for Violation {
                 )
             }
             ViolationKind::SetupHookMissing(name, module) => {
-                write!(f, r#"Missing setup hook "{}" in module {} in file {}"#,
-                    name, module, self.file)
+                write!(
+                    f,
+                    r#"Missing setup hook "{}" in module {} in file {}"#,
+                    name, module, self.file
+                )
             }
             ViolationKind::ModuleMissing(name) => {
-                write!(f, r#"Module "{}" is missing in {}"#,
-                    name, self.file)
+                write!(f, r#"Module "{}" is missing in {}"#, name, self.file)
             }
             ViolationKind::TestFunctionWrongType(name, module) => {
                 write!(

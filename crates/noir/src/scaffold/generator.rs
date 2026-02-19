@@ -4,8 +4,8 @@ use anyhow::Result;
 use bulloak_syntax::Ast;
 
 use crate::config::Config;
-use crate::test_structure::Root;
 use crate::scaffold::scaffoldable::Scaffoldable;
+use crate::test_structure::Root;
 
 /// Generate Noir test code from an AST.
 ///

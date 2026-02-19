@@ -108,7 +108,10 @@ ViolationKind::TreeFileInvalid(format!(
             return Ok(violations);
         }
     };
-    let parsed = Root { functions: parsed.find_functions(), modules: parsed.find_modules() };
+    let parsed = Root {
+        functions: parsed.find_functions(),
+        modules: parsed.find_modules(),
+    };
 
     // An AST may be valid syntactically but not semantically,
     // in which case we cannot produce a testfile structure from it

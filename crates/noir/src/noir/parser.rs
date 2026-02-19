@@ -70,7 +70,7 @@ impl ParsedNoirFile {
         let mut cursor = node.walk();
         for child in node.children(&mut cursor) {
             // don't go into nested modules, unless we are at the first level of nesting
-            if child.kind() == "module" && node.kind() != "source_file"{
+            if child.kind() == "module" && node.kind() != "source_file" {
                 continue;
             }
             self.find_modules_recursive(child, modules);
