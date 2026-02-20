@@ -667,6 +667,48 @@ mod compare_trees_test {
     }
 
     #[test]
+    fn skip_setup_hooks_ignores_wrong_position() {
+        // Setup hook is present but in wrong position.
+        // With skip_setup_hooks=true, no setup-hook violation should be reported.
+        let actual = Root {
+            functions: vec![
+                Function::TestFunction(TestFunction {
+                    name: "test_b".to_string(),
+                    expect_fail: false,
+                    setup_hooks: vec![],
+                    actions: vec![],
+                }),
+                Function::SetupHook(SetupHook { name: "helper_a".to_string() }),
+            ],
+            modules: vec![],
+        };
+        let expected = Root {
+            functions: vec![
+                Function::SetupHook(SetupHook { name: "helper_a".to_string() }),
+                Function::TestFunction(TestFunction {
+                    name: "test_b".to_string(),
+                    expect_fail: false,
+                    setup_hooks: vec![],
+                    actions: vec![],
+                }),
+            ],
+            modules: vec![],
+        };
+        let violations =
+            compare_trees(actual, expected, "test.nr".to_string(), true);
+        // With skip_setup_hooks=true, SetupHookWrongPosition should NOT be reported.
+        // Currently this FAILS — exposing the bug where skip_setup_hooks
+        // doesn't gate SetupHookWrongPosition.
+        assert!(
+            !violations.iter().any(|v| matches!(
+                v.kind,
+                ViolationKind::SetupHookWrongPosition(_, _)
+            )),
+            "SetupHookWrongPosition should not be reported when skip_setup_hooks is true"
+        );
+    }
+
+    #[test]
     fn mixed_functions() {
         let actual = Root {
             functions: vec![
