@@ -152,6 +152,13 @@ fn compare_function_array(
     module_name: String,
     skip_setup_hooks: bool,
 ) -> Vec<Violation> {
+    let expected: Vec<Function> = expected
+        .into_iter()
+        .filter(|x| match x {
+            Function::SetupHook(_) => !skip_setup_hooks,
+            Function::TestFunction(_) => true,
+        })
+        .collect();
     let mut violations = Vec::new();
     let expected_set: BTreeSet<String> =
         expected.iter().map(|x| x.name()).collect();
@@ -161,6 +168,10 @@ fn compare_function_array(
         .into_iter()
         // should I define a custom Hash implementation that hashes the name only?
         .filter(|x| expected_set.contains(&x.name()))
+        .filter(|x| match x {
+            Function::SetupHook(_) => !skip_setup_hooks,
+            Function::TestFunction(_) => true,
+        })
         .enumerate() // indices within the set of functions that we care about, not within all functions
         .map(|(k, v)| (v.name(), (v, k)))
         .collect();
@@ -172,15 +183,13 @@ fn compare_function_array(
         } else {
             match expected {
                 Function::SetupHook(_) => {
-                    if !skip_setup_hooks {
-                        violations.push(Violation::new(
-                            ViolationKind::SetupHookMissing(
-                                expected.name(),
-                                module_name.clone(),
-                            ),
-                            test_file.clone(),
-                        ));
-                    }
+                    violations.push(Violation::new(
+                        ViolationKind::SetupHookMissing(
+                            expected.name(),
+                            module_name.clone(),
+                        ),
+                        test_file.clone(),
+                    ));
                 }
                 Function::TestFunction(_) => {
                     violations.push(Violation::new(
