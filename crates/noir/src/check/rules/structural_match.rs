@@ -10,7 +10,6 @@ use crate::{
     test_structure::{Function, Module, Root},
     utils::{get_module_name, ModuleName},
 };
-use anyhow::Result;
 
 use crate::{
     check::violation::{Violation, ViolationKind},
@@ -23,7 +22,7 @@ use crate::{
 /// # Errors
 ///
 /// Returns an error if checking fails.
-pub fn check(tree_path: &Path, cfg: &Config) -> Result<Vec<Violation>> {
+pub fn check(tree_path: &Path, cfg: &Config) -> Vec<Violation> {
     let mut violations = Vec::new();
 
     let tree_text = match fs::read_to_string(tree_path) {
@@ -32,7 +31,7 @@ pub fn check(tree_path: &Path, cfg: &Config) -> Result<Vec<Violation>> {
                 ViolationKind::TreeFileMissing(e.to_string()),
                 tree_path.display().to_string(),
             ));
-            return Ok(violations);
+            return violations;
         }
         Ok(a) => a,
     };
@@ -45,7 +44,7 @@ pub fn check(tree_path: &Path, cfg: &Config) -> Result<Vec<Violation>> {
                 )),
                 tree_path.display().to_string(),
             ));
-            return Ok(violations);
+            return violations;
         }
         Ok(a) => a,
     };
@@ -81,7 +80,7 @@ ViolationKind::TreeFileInvalid(format!(
                 tree_path.display().to_string(),
             )
             );
-            return Ok(violations);
+            return violations;
         }
     }
 
@@ -92,25 +91,35 @@ ViolationKind::TreeFileInvalid(format!(
             ViolationKind::NoirFileMissing(),
             tree_path.display().to_string(),
         ));
-        return Ok(violations);
+        return violations;
     }
 
-    let noir_source = fs::read_to_string(&test_file)?;
+    let noir_source = match fs::read_to_string(&test_file) {
+        Err(e) => {
+            violations.push(Violation::new(
+                ViolationKind::NoirFileInvalid(e.to_string()),
+                test_file.display().to_string(),
+            ));
+            return violations;
+        }
+        Ok(a) => a,
+    };
 
-    // Parse the Noir file
-    let parsed = match ParsedNoirFile::parse(&noir_source) {
+    // can't easily .and_then with the above. While they produce the same
+    // error, they use anyhow::Error and std::io::Error
+    let parsed_file = match ParsedNoirFile::parse(&noir_source) {
         Ok(p) => p,
         Err(e) => {
             violations.push(Violation::new(
                 ViolationKind::NoirFileInvalid(e.to_string()),
                 test_file.display().to_string(),
             ));
-            return Ok(violations);
+            return violations;
         }
     };
     let parsed = Root {
-        functions: parsed.find_functions(),
-        modules: parsed.find_modules(),
+        functions: parsed_file.find_functions(),
+        modules: parsed_file.find_modules(),
     };
 
     // An AST may be valid syntactically but not semantically,
@@ -122,7 +131,7 @@ ViolationKind::TreeFileInvalid(format!(
                 ViolationKind::TreeFileInvalid(e.to_string()),
                 tree_path.display().to_string(),
             ));
-            return Ok(violations);
+            return violations;
         }
     };
     let comparison_violations = compare_trees(
@@ -132,7 +141,7 @@ ViolationKind::TreeFileInvalid(format!(
         cfg.skip_setup_hooks,
     );
     violations.extend(comparison_violations);
-    Ok(violations)
+    violations
 }
 
 /// compare two lists of functions, and return
@@ -379,7 +388,7 @@ mod check_test {
         fs::write(&test_path, noir_content).unwrap();
 
         let cfg = Config::default();
-        let violations = check(tree_file.path(), &cfg).unwrap();
+        let violations = check(tree_file.path(), &cfg);
 
         assert!(violations.len() > 0);
         assert!(violations.iter().any(|v| matches!(
@@ -394,7 +403,7 @@ mod check_test {
     #[test]
     fn test_check_fails_when_missing_spec() {
         let cfg = Config::default();
-        let violations = check(Path::new("not_there.tree"), &cfg).unwrap();
+        let violations = check(Path::new("not_there.tree"), &cfg);
 
         assert!(violations.len() == 1);
         assert!(matches!(
@@ -406,7 +415,7 @@ mod check_test {
     #[test]
     fn test_check_fails_when_empty_spec_filename() {
         let cfg = Config::default();
-        let violations = check(Path::new(""), &cfg).unwrap();
+        let violations = check(Path::new(""), &cfg);
 
         assert!(violations.len() == 1);
         assert!(matches!(

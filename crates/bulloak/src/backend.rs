@@ -57,7 +57,7 @@ impl NoirBackend {
     pub(crate) fn check(
         &self,
         path: &PathBuf,
-    ) -> Result<Vec<bulloak_noir::check::Violation>> {
+    ) -> Vec<bulloak_noir::check::Violation> {
         bulloak_noir::check(path, &self.config)
     }
 }

@@ -93,7 +93,9 @@ impl Check {
                 violations.append(&mut rules::StructuralMatcher::check(&ctx));
             }
 
-            return exit(&violations);
+            let fixable_count =
+                violations.iter().filter(|v| v.is_fixable()).count();
+            return exit(&violations, fixable_count);
         }
 
         let mut fixed_count = 0;
@@ -178,61 +180,17 @@ impl Check {
     fn run_noir_check(&self, specs: Vec<PathBuf>, cfg: &Cli) {
         let backend = NoirBackend { config: cfg.into() };
 
-        let violations =
-            self.collect_violations(&specs, |path| backend.check(path));
-
-        self.report_violations(&violations);
-    }
-
-    /// Collect violations from checking multiple tree files.
-    fn collect_violations<F, V>(&self, specs: &[PathBuf], check_fn: F) -> Vec<V>
-    where
-        F: Fn(&PathBuf) -> anyhow::Result<Vec<V>>,
-        V: std::fmt::Display,
-    {
-        let mut all_violations = Vec::new();
-        for tree_path in specs {
-            match check_fn(tree_path) {
-                Ok(violations) => {
-                    for violation in &violations {
-                        eprintln!("{}", violation);
-                    }
-                    all_violations.extend(violations);
-                }
-                Err(e) => {
-                    eprintln!(
-                        "{}: Failed to check {}: {}",
-                        "error".red(),
-                        tree_path.display(),
-                        e
-                    );
-                }
-            }
+        let mut violations = Vec::new();
+        for spec in &specs {
+            violations.extend(backend.check(spec));
         }
-        all_violations
-    }
-
-    /// Report violations and exit if necessary.
-    fn report_violations<V: std::fmt::Display>(&self, violations: &[V]) {
-        if violations.is_empty() {
-            println!(
-                "{}",
-                "All checks completed successfully! No issues found.".green()
-            );
-        } else {
-            let check_literal = pluralize(violations.len(), "check", "checks");
-            eprintln!(
-                "\n{}: {} {} failed",
-                "warn".bold().yellow(),
-                violations.len(),
-                check_literal
-            );
-            std::process::exit(1);
-        }
+        // TODO: it's currently hard-coded to zero because fixing is
+        // not yet implemented in the noir backend
+        exit(&violations, 0);
     }
 }
 
-fn exit(violations: &[Violation]) {
+fn exit<V: std::fmt::Display>(violations: &[V], fixable_count: usize) {
     if violations.is_empty() {
         println!(
             "{}",
@@ -250,8 +208,6 @@ fn exit(violations: &[Violation]) {
             violations.len(),
             check_literal
         );
-        let fixable_count =
-            violations.iter().filter(|v| v.is_fixable()).count();
         if fixable_count > 0 {
             let fix_literal = pluralize(fixable_count, "fix", "fixes");
             eprintln!(
