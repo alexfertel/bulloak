@@ -39,7 +39,6 @@ fn assert_on_all_parsers(
     assertor(noir_output, expected_noir);
 }
 
-#[cfg(not(target_os = "windows"))]
 #[test]
 fn scaffolds_trees() {
     let trees = [
@@ -67,7 +66,6 @@ fn scaffolds_trees() {
     }
 }
 
-#[cfg(not(target_os = "windows"))]
 #[test]
 fn scaffolds_trees_with_vm_skip() {
     let cwd = env::current_dir().unwrap();
@@ -102,7 +100,6 @@ fn scaffolds_trees_with_vm_skip() {
     }
 }
 
-#[cfg(not(target_os = "windows"))]
 #[test]
 fn scaffolds_trees_with_format_descriptions() {
     let cwd = env::current_dir().unwrap();
@@ -132,7 +129,6 @@ fn scaffolds_trees_with_format_descriptions() {
     }
 }
 
-#[cfg(not(target_os = "windows"))]
 #[test]
 fn scaffolds_trees_with_skip_modifiers() {
     let cwd = env::current_dir().unwrap();
@@ -154,7 +150,6 @@ fn scaffolds_trees_with_skip_modifiers() {
     }
 }
 
-#[cfg(not(target_os = "windows"))]
 #[test]
 fn skips_trees_when_file_exists() {
     let trees = [
@@ -173,7 +168,6 @@ fn skips_trees_when_file_exists() {
     }
 }
 
-#[cfg(not(target_os = "windows"))]
 #[test]
 fn errors_when_tree_is_empty() {
     assert_on_all_parsers("empty.tree", &[], |output, _| {
@@ -200,7 +194,6 @@ fn errors_when_condition_appears_multiple_times() {
     }
 }
 
-#[cfg(not(target_os = "windows"))]
 #[test]
 fn errors_when_root_contract_identifier_is_missing_multiple_roots() {
     let cwd = env::current_dir().unwrap();
@@ -217,7 +210,6 @@ fn errors_when_root_contract_identifier_is_missing_multiple_roots() {
     }
 }
 
-#[cfg(not(target_os = "windows"))]
 #[test]
 fn errors_when_root_contract_identifier_is_inconsistent_multiple_roots() {
     let cwd = env::current_dir().unwrap();
@@ -238,7 +230,6 @@ fn errors_when_root_contract_identifier_is_inconsistent_multiple_roots() {
     assert!(actual.contains("module name mismatch: expected 'ContractName', found 'OtherContractName'"));
 }
 
-#[cfg(not(target_os = "windows"))]
 #[test]
 fn errors_when_root_has_too_many_separators() {
     let cwd = env::current_dir().unwrap();
@@ -257,7 +248,6 @@ fn errors_when_root_has_too_many_separators() {
     ));
 }
 
-#[cfg(not(target_os = "windows"))]
 #[test]
 fn errors_when_only_one_file_errors_others_are_still_scaffolded() {
     let cwd = env::current_dir().unwrap();
@@ -348,7 +338,6 @@ fn scaffold_invalid_glob_warns_but_no_output() {
     );
 }
 
-#[cfg(not(target_os = "windows"))]
 #[test]
 fn scaffold_dissambiguates_function_name_collisions() {
     let cwd = env::current_dir().unwrap();

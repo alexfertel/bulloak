@@ -69,7 +69,6 @@ fn checks_valid_structural_match() {
 }
 
 #[test]
-#[cfg(not(target_os = "windows"))]
 fn checks_hoisted_setup_hooks_happy_path() {
     let cwd = env::current_dir().unwrap();
     let binary_path = get_binary_path();
@@ -96,7 +95,6 @@ fn checks_hoisted_setup_hooks_happy_path() {
 }
 
 #[test]
-#[cfg(not(target_os = "windows"))]
 fn checks_hoisted_setup_hooks_wrong_modularization() {
     let cwd = env::current_dir().unwrap();
     let binary_path = get_binary_path();
@@ -204,7 +202,6 @@ fn checks_missing_contract() {
     assert!(stderr.contains(r#"contract "MissingContract" is missing in .sol"#));
 }
 
-#[cfg(not(target_os = "windows"))]
 #[test]
 fn checks_missing_contract_identifier() {
     let cwd = env::current_dir().unwrap();
@@ -247,7 +244,6 @@ fn checks_contract_name_mismatch() {
     ));
 }
 
-#[cfg(not(target_os = "windows"))]
 #[test]
 fn checks_noir_testfile_and_root_match() {
     let cwd = env::current_dir().unwrap();
@@ -262,7 +258,6 @@ fn checks_noir_testfile_and_root_match() {
     assert_eq!(output.status.code().unwrap(), 0);
 }
 
-#[cfg(not(target_os = "windows"))]
 #[test]
 fn checks_noir_testfile_and_root_match_multiple_roots() {
     let cwd = env::current_dir().unwrap();
@@ -280,7 +275,6 @@ fn checks_noir_testfile_and_root_match_multiple_roots() {
 }
 
 #[test]
-#[cfg(not(target_os = "windows"))]
 fn checks_noir_testfile_and_root_mismatch_multiple_roots() {
     let cwd = env::current_dir().unwrap();
     let binary_path = get_binary_path();
@@ -312,7 +306,6 @@ fn checks_noir_testfile_and_root_mismatch() {
     ));
 }
 
-#[cfg(not(target_os = "windows"))]
 #[test]
 fn checks_contract_name_mismatch_multiple_roots() {
     let cwd = env::current_dir().unwrap();
@@ -347,7 +340,6 @@ fn checks_contract_name_mismatch_multiple_roots() {
     assert!(stderr.contains(&formatted_message));
 }
 
-#[cfg(not(target_os = "windows"))]
 #[test]
 fn checks_too_many_separators_in_root() {
     let cwd = env::current_dir().unwrap();
@@ -791,7 +783,6 @@ fn checks_repeated_submodule_error_solidity() {
 }
 
 #[test]
-#[cfg(not(target_os = "windows"))]
 fn checks_repeated_submodule_error_noir() {
     let cwd = env::current_dir().unwrap();
     let binary_path = get_binary_path();
@@ -807,7 +798,6 @@ fn checks_repeated_submodule_error_noir() {
 }
 
 #[test]
-#[cfg(not(target_os = "windows"))]
 fn checks_no_submodule_multi_root_error() {
     let cwd = env::current_dir().unwrap();
     let binary_path = get_binary_path();
@@ -830,7 +820,6 @@ fn checks_no_submodule_multi_root_error() {
 /// Regression test for https://github.com/defi-wonderland/bulloak/pull/9#issuecomment-3710452952
 /// When multiple roots share the same condition, check should report the missing hoisted setup hook.
 #[test]
-#[cfg(not(target_os = "windows"))]
 fn checks_missing_hoisted_setup_hook_for_shared_condition() {
     let cwd = env::current_dir().unwrap();
     let binary_path = get_binary_path();
