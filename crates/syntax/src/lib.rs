@@ -23,7 +23,8 @@ pub use visitor::Visitor;
 
 /// Parses a string containing trees into ASTs.
 pub fn parse(text: &str) -> anyhow::Result<Vec<ast::Ast>> {
-    splitter::split_trees(text).map(parse_one).collect()
+    let normalized = text.replace("\r\n", "\n").replace('\r', "\n");
+    splitter::split_trees(&normalized).map(parse_one).collect()
 }
 
 /// Parses a string containing a single tree into an AST.
@@ -34,4 +35,16 @@ pub fn parse_one(text: &str) -> anyhow::Result<ast::Ast> {
     analyzer.analyze(&ast)?;
 
     Ok(ast)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::parse;
+
+    #[test]
+    fn parse_supports_crlf_multi_root_trees() {
+        let input = "Contract::one\r\n└── it should pass\r\n\r\nContract::two\r\n└── it should pass";
+        let forest = parse(input).unwrap();
+        assert_eq!(forest.len(), 2);
+    }
 }
