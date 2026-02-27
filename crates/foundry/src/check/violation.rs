@@ -212,6 +212,11 @@ fn format_frontend_error(error: &anyhow::Error) -> String {
     {
         "at least one semantic error occurred while parsing the tree".to_owned()
     } else {
-        "an error occurred while parsing the solidity file".to_owned()
+        let message = error.to_string();
+        if message.starts_with("an error occurred while parsing the tree:") {
+            message
+        } else {
+            "an error occurred while parsing the solidity file".to_owned()
+        }
     }
 }

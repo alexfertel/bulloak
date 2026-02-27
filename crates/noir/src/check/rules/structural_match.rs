@@ -58,8 +58,18 @@ pub fn check(tree_path: &Path, cfg: &Config) -> Vec<Violation> {
         .unwrap_or_else(|| panic!("this condition should be unreachable, as the file was successfully read once already."));
 
     match get_module_name(&forest) {
-        ModuleName::Empty => {}
-        ModuleName::Consistent(module) => {
+        Err(e) => {
+            violations.push(Violation::new(
+                ViolationKind::TreeFileInvalid(format!(
+                    "an error occurred while parsing the tree: {}",
+                    e
+                )),
+                tree_path.display().to_string(),
+            ));
+            return violations;
+        }
+        Ok(ModuleName::Empty) => {}
+        Ok(ModuleName::Consistent(module)) => {
             if module != file_stem {
                 violations.push(Violation::new(
                     ViolationKind::TreeFileWrongRoot(
@@ -70,7 +80,7 @@ pub fn check(tree_path: &Path, cfg: &Config) -> Vec<Violation> {
                 ));
             }
         }
-        ModuleName::Mismatch(expected, second) => {
+        Ok(ModuleName::Mismatch(expected, second)) => {
             violations.push(
                 Violation::new(
 ViolationKind::TreeFileInvalid(format!(

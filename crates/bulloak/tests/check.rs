@@ -347,6 +347,27 @@ fn checks_contract_name_mismatch_multiple_roots() {
     assert!(stderr.contains(&formatted_message));
 }
 
+#[cfg(not(target_os = "windows"))]
+#[test]
+fn checks_too_many_separators_in_root() {
+    let cwd = env::current_dir().unwrap();
+    let binary_path = get_binary_path();
+    let tree_path =
+        cwd.join("tests").join("check").join("too_many_separators.tree");
+
+    let output = cmd(&binary_path, "check", &tree_path, &[]);
+    let stderr = String::from_utf8(output.stderr).unwrap();
+
+    assert!(stderr.contains("too many separators at tree root #1"));
+
+    let output = cmd(&binary_path, "check", &tree_path, &["-l", "noir"]);
+    let stderr = String::from_utf8(output.stderr).unwrap();
+
+    assert!(stderr.contains(
+        "invalid root \"ContractName::func1::extra\": expected at most one '::' separator"
+    ));
+}
+
 #[test]
 fn checks_invalid_tree() {
     let cwd = env::current_dir().unwrap();

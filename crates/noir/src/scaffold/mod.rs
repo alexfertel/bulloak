@@ -19,7 +19,9 @@ pub fn scaffold(
 ) -> Result<String> {
     let forest = parse(text)?;
 
-    match get_module_name(&forest) {
+    match get_module_name(&forest).map_err(|e| {
+        anyhow::anyhow!("an error occurred while parsing the tree: {e}")
+    })? {
         ModuleName::Empty => {}
         ModuleName::Consistent(actual) => {
             let expected = treefile
@@ -148,5 +150,23 @@ Module
             &Config::default(),
         );
         assert!(output.is_err_and(|err| err.to_string().contains(r#"an error occurred while parsing the tree: separator missing at tree root #1 "Module". Expected to find `::` between the contract name and the function name when multiple roots exist"#)));
+    }
+
+    #[test]
+    fn rejects_root_with_too_many_separators() {
+        let file_contents = r"
+Module::Function::Extra
+└── When thing exists
+    └── it should work";
+
+        let output = scaffold(
+            &file_contents.to_string(),
+            &PathBuf::from("Module.tree"),
+            &Config::default(),
+        );
+
+        assert!(output.is_err_and(|err| err
+            .to_string()
+            .contains("expected at most one '::' separator")));
     }
 }

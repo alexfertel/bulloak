@@ -1,0 +1,5 @@
+ContractName::func1::extra
+└── It should fail because there are too many separators.
+
+ContractName::func2
+└── It should not matter.

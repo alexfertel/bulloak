@@ -71,6 +71,11 @@ pub enum ErrorKind {
     /// one of the tree roots.
     #[error("separator missing at tree root #{0}. Expected to find `::` between the contract name and the function name when multiple roots exist")]
     SeparatorMissing(Index),
+
+    /// More than one [`crate::constants::CONTRACT_IDENTIFIER_SEPARATOR`] was
+    /// found in one of the tree roots.
+    #[error("too many separators at tree root #{0}. Expected to find at most one `::` between the contract name and the function name")]
+    TooManySeparators(Index),
 }
 
 /// A high-level intermediate representation (HIR) combiner.
@@ -148,6 +153,13 @@ impl<'t> CombinerI<'t> {
                         Span::default(),
                         ErrorKind::SeparatorMissing(idx + 1),
                     ))?;
+
+                if function_name.contains(CONTRACT_IDENTIFIER_SEPARATOR) {
+                    return Err(self.error(
+                        Span::default(),
+                        ErrorKind::TooManySeparators(idx + 1),
+                    ));
+                }
 
                 if contract_name.trim().is_empty() {
                     return Err(self.error(
@@ -343,6 +355,21 @@ bulloak error: contract name missing at tree root #2";
             Err(e) => assert_eq!(e.to_string(), expected),
             _ => unreachable!("expected an error"),
         }
+    }
+
+    #[test]
+    fn errors_when_root_has_too_many_separators() {
+        let trees = vec![
+            "Contract::function::extra\n└── when something bad happens\n   └── it should revert",
+            "Contract::function2\n└── when something bad happens\n   └── it should revert",
+        ];
+        let hirs = trees.iter().map(|tree| translate(tree).unwrap());
+        let text = trees.join("\n\n");
+
+        let result = combine(&text, hirs);
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("too many separators at tree root #1"));
     }
 
     #[test]
