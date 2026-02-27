@@ -46,7 +46,12 @@ impl Root {
                         panic!("AST forest should start with roots")
                     };
                     let (module_name, name) =
-                        parse_root_name(&root.contract_name);
+                        parse_root_name(&root.contract_name).map_err(|e| {
+                            anyhow::anyhow!(
+                                "an error occurred while parsing the tree: {}",
+                                e
+                            )
+                        })?;
                     let Some(name) = name else {
                         bail!(
                             r#"an error occurred while parsing the tree: separator missing at tree root #{} "{}". Expected to find `::` between the contract name and the function name when multiple roots exist"#,

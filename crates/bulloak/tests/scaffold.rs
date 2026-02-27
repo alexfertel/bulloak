@@ -240,6 +240,25 @@ fn errors_when_root_contract_identifier_is_inconsistent_multiple_roots() {
 
 #[cfg(not(target_os = "windows"))]
 #[test]
+fn errors_when_root_has_too_many_separators() {
+    let cwd = env::current_dir().unwrap();
+    let binary_path = get_binary_path();
+    let tree_path =
+        cwd.join("tests").join("scaffold").join("too_many_separators.tree");
+
+    let output = cmd(&binary_path, "scaffold", &tree_path, &[]);
+    let actual = String::from_utf8(output.stderr).unwrap();
+    assert!(actual.contains("too many separators at tree root #1"));
+
+    let output = cmd(&binary_path, "scaffold", &tree_path, &["-l", "noir"]);
+    let actual = String::from_utf8(output.stderr).unwrap();
+    assert!(actual.contains(
+        "invalid root \"ContractName::func1::extra\": expected at most one '::' separator"
+    ));
+}
+
+#[cfg(not(target_os = "windows"))]
+#[test]
 fn errors_when_only_one_file_errors_others_are_still_scaffolded() {
     let cwd = env::current_dir().unwrap();
     let tree_path = cwd
