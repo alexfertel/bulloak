@@ -7,6 +7,10 @@ use pretty_assertions::assert_eq;
 
 mod common;
 
+fn normalize_newlines(input: &str) -> String {
+    input.replace("\r\n", "\n").replace('\r', "\n")
+}
+
 /// Ensures behaviour is kept consistent across all the different backends, by
 /// running the same assertion closure on the result of both. The closure's
 /// second parameter is filled with the contents of the corresponding expected
@@ -59,8 +63,10 @@ fn scaffolds_trees() {
     for tree_name in trees {
         assert_on_all_parsers(tree_name, &[], |output, expected| {
             let actual = String::from_utf8(output.stdout).unwrap();
+            let actual = normalize_newlines(&actual);
+            let expected = normalize_newlines(&expected.unwrap());
             // We trim here because we don't care about ending newlines.
-            assert_eq!(expected.unwrap().trim(), actual.trim());
+            assert_eq!(expected.trim(), actual.trim());
             assert_eq!(output.status.code().unwrap(), 0);
             assert!(output.stderr.is_empty());
         });
@@ -83,7 +89,8 @@ fn scaffolds_trees_with_vm_skip() {
     for tree_name in trees {
         let tree_path = tests_path.join(tree_name);
         let output = cmd(&binary_path, "scaffold", &tree_path, &args);
-        let actual = String::from_utf8(output.stdout).unwrap();
+        let actual =
+            normalize_newlines(&String::from_utf8(output.stdout).unwrap());
 
         let mut trimmed_extension = tree_path.clone();
         trimmed_extension.set_extension("");
@@ -94,7 +101,8 @@ fn scaffolds_trees_with_vm_skip() {
         let mut output_file: std::path::PathBuf = output_file_str.into();
         output_file.set_extension("t.sol");
 
-        let expected = fs::read_to_string(output_file).unwrap();
+        let expected =
+            normalize_newlines(&fs::read_to_string(output_file).unwrap());
 
         // We trim here because we don't care about ending newlines.
         assert_eq!(expected.trim(), actual.trim());
@@ -112,7 +120,8 @@ fn scaffolds_trees_with_format_descriptions() {
     for tree_name in trees {
         let tree_path = tests_path.join(tree_name);
         let output = cmd(&binary_path, "scaffold", &tree_path, &args);
-        let actual = String::from_utf8(output.stdout).unwrap();
+        let actual =
+            normalize_newlines(&String::from_utf8(output.stdout).unwrap());
 
         let mut trimmed_extension = tree_path.clone();
         trimmed_extension.set_extension("");
@@ -123,7 +132,8 @@ fn scaffolds_trees_with_format_descriptions() {
         let mut output_file: std::path::PathBuf = output_file_str.into();
         output_file.set_extension("t.sol");
 
-        let expected = fs::read_to_string(output_file).unwrap();
+        let expected =
+            normalize_newlines(&fs::read_to_string(output_file).unwrap());
 
         // We trim here because we don't care about ending newlines.
         assert_eq!(expected.trim(), actual.trim());
@@ -140,11 +150,13 @@ fn scaffolds_trees_with_skip_modifiers() {
     for tree_name in trees {
         let tree_path = tests_path.join(tree_name);
         let output = cmd(&binary_path, "scaffold", &tree_path, &["-m"]);
-        let actual = String::from_utf8(output.stdout).unwrap();
+        let actual =
+            normalize_newlines(&String::from_utf8(output.stdout).unwrap());
 
         let mut output_file = tree_path.clone();
         output_file.set_extension("t.sol");
-        let expected = fs::read_to_string(output_file).unwrap();
+        let expected =
+            normalize_newlines(&fs::read_to_string(output_file).unwrap());
 
         // We trim here because we don't care about ending newlines.
         assert_eq!(expected.trim(), actual.trim());
@@ -349,11 +361,13 @@ fn scaffold_dissambiguates_function_name_collisions() {
     for tree_name in trees {
         let tree_path = tests_path.join(tree_name);
         let output = cmd(&binary_path, "scaffold", &tree_path, &[]);
-        let actual = String::from_utf8(output.stdout).unwrap();
+        let actual =
+            normalize_newlines(&String::from_utf8(output.stdout).unwrap());
 
         let mut output_file = tree_path.clone();
         output_file.set_extension("t.sol");
-        let expected = fs::read_to_string(output_file).unwrap();
+        let expected =
+            normalize_newlines(&fs::read_to_string(output_file).unwrap());
 
         // We trim here because we don't care about ending newlines.
         assert_eq!(expected.trim(), actual.trim());
@@ -371,7 +385,7 @@ fn scaffold_noir_generates_hoisted_setup_hook_for_shared_condition() {
     let tree_path = tests_path.join("hoisted_hook_regression.tree");
 
     let output = cmd(&binary_path, "scaffold", &tree_path, &["-l", "noir"]);
-    let actual = String::from_utf8(output.stdout).unwrap();
+    let actual = normalize_newlines(&String::from_utf8(output.stdout).unwrap());
 
     assert!(
         actual.contains("unconstrained fn when_passing_valid_parameters()"),
@@ -381,7 +395,8 @@ fn scaffold_noir_generates_hoisted_setup_hook_for_shared_condition() {
 
     // Also verify the full expected output matches
     let noir_filename = tests_path.join("hoisted_hook_regression_test.nr");
-    let expected = fs::read_to_string(noir_filename).unwrap();
+    let expected =
+        normalize_newlines(&fs::read_to_string(noir_filename).unwrap());
     assert_eq!(expected.trim(), actual.trim());
 }
 
@@ -394,10 +409,11 @@ fn scaffold_noir_generates_skips_modifiers_on_imported_hoks() {
 
     let output =
         cmd(&binary_path, "scaffold", &tree_path, &["-l", "noir", "-m"]);
-    let actual = String::from_utf8(output.stdout).unwrap();
+    let actual = normalize_newlines(&String::from_utf8(output.stdout).unwrap());
 
     // Verify the full expected output matches
     let noir_filename = tests_path.join("hoisted_hook_skip_modifiers_test.nr");
-    let expected = fs::read_to_string(noir_filename).unwrap();
+    let expected =
+        normalize_newlines(&fs::read_to_string(noir_filename).unwrap());
     assert_eq!(expected.trim(), actual.trim());
 }
