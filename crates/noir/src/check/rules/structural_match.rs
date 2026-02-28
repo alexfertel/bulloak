@@ -7,13 +7,10 @@ use std::{
 };
 
 use crate::{
-    test_structure::{Function, Module, Root},
-    utils::{get_module_name, ModuleName},
-};
-
-use crate::{
     check::violation::{Violation, ViolationKind},
     noir::ParsedNoirFile,
+    test_structure::{Function, Module, Root},
+    utils::{get_module_name, ModuleName},
     Config,
 };
 
@@ -50,8 +47,8 @@ pub fn check(tree_path: &Path, cfg: &Config) -> Vec<Violation> {
     };
 
     // Find corresponding Noir test file
-    // TODO don't bother reusing the test_filename function here since after the Big Backend
-    // Refactor this module won't know about filenames
+    // TODO don't bother reusing the test_filename function here since after the
+    // Big Backend Refactor this module won't know about filenames
     let file_stem = tree_path
         .file_stem()
         .and_then(|s| s.to_str())
@@ -176,13 +173,15 @@ fn compare_function_array(
     // name -> (full obj, index)
     let found_fns: BTreeMap<String, (Function, usize)> = actual
         .into_iter()
-        // should I define a custom Hash implementation that hashes the name only?
+        // should I define a custom Hash implementation that hashes the name
+        // only?
         .filter(|x| expected_set.contains(&x.name()))
         .filter(|x| match x {
             Function::SetupHook(_) => !skip_setup_hooks,
             Function::TestFunction(_) => true,
         })
-        .enumerate() // indices within the set of functions that we care about, not within all functions
+        .enumerate() // indices within the set of functions that we care about, not within
+        // all functions
         .map(|(k, v)| (v.name(), (v, k)))
         .collect();
 
@@ -231,14 +230,16 @@ fn compare_function_array(
                     ),
                     test_file.clone(),
                 )),
-            // setup hooks dont really have any attributes and we are not comparing order yet
+            // setup hooks dont really have any attributes and we are not
+            // comparing order yet
             (Function::SetupHook(_), Function::SetupHook(_)) => {}
             (
                 Function::TestFunction(expected),
                 Function::TestFunction(found),
             ) => {
-                // TODO: compare invocation of setup hooks and inclusion of action comments
-                // (not present in foundry backend but would be cool)
+                // TODO: compare invocation of setup hooks and inclusion of
+                // action comments (not present in foundry
+                // backend but would be cool)
                 let violation_kind =
                     match (expected.expect_fail, found.expect_fail) {
                         (true, false) => {
@@ -297,7 +298,8 @@ fn compare_function_array(
                 }
             }
             // Already handled when searching for wrong type/missing fns above
-            // we can't really comment on the ordering of a function that is of a wrong type
+            // we can't really comment on the ordering of a function that is of
+            // a wrong type
             _ => {}
         };
     }
@@ -328,7 +330,8 @@ fn compare_trees(
         actual.functions,
         expected.functions,
         test_file.clone(),
-        test_file.clone(), // test file matches module name, it's better than passing 'root'
+        test_file.clone(), /* test file matches module name, it's better
+                            * than passing 'root' */
         skip_setup_hooks,
     ));
 
@@ -688,7 +691,8 @@ mod compare_trees_test {
     #[test]
     fn skip_setup_hooks_ignores_wrong_position() {
         // Setup hook is present but in wrong position.
-        // With skip_setup_hooks=true, no setup-hook violation should be reported.
+        // With skip_setup_hooks=true, no setup-hook violation should be
+        // reported.
         let actual = Root {
             functions: vec![
                 Function::TestFunction(TestFunction {
@@ -715,9 +719,9 @@ mod compare_trees_test {
         };
         let violations =
             compare_trees(actual, expected, "test.nr".to_string(), true);
-        // With skip_setup_hooks=true, SetupHookWrongPosition should NOT be reported.
-        // Currently this FAILS — exposing the bug where skip_setup_hooks
-        // doesn't gate SetupHookWrongPosition.
+        // With skip_setup_hooks=true, SetupHookWrongPosition should NOT be
+        // reported. Currently this FAILS — exposing the bug where
+        // skip_setup_hooks doesn't gate SetupHookWrongPosition.
         assert!(
             !violations.iter().any(|v| matches!(
                 v.kind,

@@ -2,13 +2,13 @@
 //!
 //! This module defines the core trait that all bulloak backends must implement,
 //! along with their concrete implementations
-use regex::Regex;
 use std::path::PathBuf;
-use thiserror::Error;
 
 use anyhow::Result;
 use clap::ValueEnum;
+use regex::Regex;
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
 
 use crate::cli::Cli;
 

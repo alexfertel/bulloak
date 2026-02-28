@@ -1,7 +1,8 @@
 //! Noir testfile representation
+use std::collections::HashSet;
+
 use anyhow::{bail, Result};
 use bulloak_syntax::{Action, Ast};
-use std::collections::HashSet;
 
 use crate::{
     constants::{PANIC_KEYWORDS, TEST_PREFIX},
@@ -73,7 +74,8 @@ impl Root {
                     for hook in &helpers {
                         // returns false if the key is already present
                         if !all_hooks.insert(hook.name.clone()) {
-                            // we don't care if it's repeated one or multiple times
+                            // we don't care if it's repeated one or multiple
+                            // times
                             repeated_hooks.insert(hook.name.clone());
                         }
                     }
@@ -279,8 +281,8 @@ fn generate_test_function(
     // Determine test name
     let name = if helpers.is_empty() {
         let title = &actions[0].title;
-        // trim 'it' from first-level assertions (not very frequent, but necessary for consistency
-        // with foundry backend)
+        // trim 'it' from first-level assertions (not very frequent, but
+        // necessary for consistency with foundry backend)
         let title = title
             .strip_prefix("it ")
             .or_else(|| title.strip_prefix("It "))
@@ -318,8 +320,9 @@ fn has_panic_keyword(title: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use bulloak_syntax::parse;
+
+    use super::*;
 
     #[test]
     fn test_root_new_empty() {
@@ -397,8 +400,9 @@ test_root
         assert!(matches!(root.functions[3], Function::TestFunction(_)));
     }
 
-    /// this borders on testing a bug, since this is always checked by the calling function, since
-    /// it knows the filenames and can report if the root doesn't match
+    /// this borders on testing a bug, since this is always checked by the
+    /// calling function, since it knows the filenames and can report if the
+    /// root doesn't match
     #[test]
     fn test_multiple_roots_missing_separator() {
         let tree = r"
@@ -497,8 +501,9 @@ Contract::bar
     }
 
     /// Regression test for https://github.com/defi-wonderland/bulloak/pull/9#issuecomment-3710452952
-    /// When multiple roots share the same leaf condition (a condition with only action children),
-    /// the shared setup hook should be hoisted to root.functions.
+    /// When multiple roots share the same leaf condition (a condition with only
+    /// action children), the shared setup hook should be hoisted to
+    /// root.functions.
     #[test]
     fn test_hoist_shared_leaf_condition_setup() {
         let tree = r"
@@ -515,7 +520,8 @@ hoisted_hook_regression::constructor_with_initial_supply
         let forest = parse(tree).unwrap();
         let root = Root::new(&forest).unwrap();
 
-        // The shared condition should be hoisted to root.functions as a SetupHook
+        // The shared condition should be hoisted to root.functions as a
+        // SetupHook
         assert_eq!(
             root.functions.len(),
             1,
@@ -559,7 +565,8 @@ hoisted_hook_regression::constructor_with_initial_supply
     }
 
     /// Related to https://github.com/defi-wonderland/bulloak/pull/9#issuecomment-3710452952
-    /// check the modifier would be generated in the case of a single-root testfile
+    /// check the modifier would be generated in the case of a single-root
+    /// testfile
     #[test]
     fn test_single_root_setup_hook_generation() {
         let tree = r"
@@ -703,7 +710,8 @@ mod tests_hoist_setup_hooks {
         assert_eq!(result[0].imported_hooks.len(), 1);
         assert_eq!(result[0].imported_hooks[0].name, "when_shared");
 
-        // The repeated hook should be removed from functions, but local hook and test remain
+        // The repeated hook should be removed from functions, but local hook
+        // and test remain
         assert_eq!(result[0].functions.len(), 2);
         assert_eq!(result[0].functions[0].name(), "when_local");
         assert_eq!(result[0].functions[1].name(), "test_when_shared");
@@ -806,7 +814,8 @@ mod tests_hoist_setup_hooks {
     fn test_hoist_setup_hooks_test_function_with_repeated_hook_name_not_removed(
     ) {
         // Edge case: a TestFunction has the same name as a repeated hook
-        // The function should NOT be removed because only SetupHooks are hoisted
+        // The function should NOT be removed because only SetupHooks are
+        // hoisted
         let modules = vec![
             Module {
                 name: "edge".to_string(),
@@ -851,7 +860,8 @@ mod tests_hoist_setup_hooks {
         assert_eq!(result[0].imported_hooks.len(), 1);
         assert_eq!(result[0].imported_hooks[0].name, "when_shared");
 
-        // the setup hook was removed but the test function remains in the module
+        // the setup hook was removed but the test function remains in the
+        // module
         assert_eq!(result[0].functions.len(), 1);
         assert!(matches!(result[0].functions[0], Function::TestFunction(_)));
         assert_eq!(result[0].functions[0].name(), "when_shared");
@@ -862,7 +872,8 @@ mod tests_hoist_setup_hooks {
         assert_eq!(result[1].imported_hooks.len(), 1);
         assert_eq!(result[1].imported_hooks[0].name, "when_shared");
 
-        // the setup hook was removed but the test function remains in the module
+        // the setup hook was removed but the test function remains in the
+        // module
         assert_eq!(result[0].functions.len(), 1);
         assert!(matches!(result[0].functions[0], Function::TestFunction(_)));
         assert_eq!(result[0].functions[0].name(), "when_shared");

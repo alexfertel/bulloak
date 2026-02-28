@@ -7,10 +7,11 @@ use pretty_assertions::assert_eq;
 
 mod common;
 
-/// Ensures behaviour is kept consistent across all the different backends, by running the same
-/// assertion closure on the result of both. The closure's second parameter is filled with the
-/// contents of the corresponding expected output file(if available), to account for the
-/// differences in output of every backend
+/// Ensures behaviour is kept consistent across all the different backends, by
+/// running the same assertion closure on the result of both. The closure's
+/// second parameter is filled with the contents of the corresponding expected
+/// output file(if available), to account for the differences in output of every
+/// backend
 fn assert_on_all_parsers(
     treefile: &str,
     extra_args: &[&str],
@@ -360,7 +361,8 @@ fn scaffold_dissambiguates_function_name_collisions() {
 }
 
 /// Regression test for https://github.com/defi-wonderland/bulloak/pull/9#issuecomment-3710452952
-/// When multiple roots share the same condition, the hoisted setup hook should be generated.
+/// When multiple roots share the same condition, the hoisted setup hook should
+/// be generated.
 #[test]
 fn scaffold_noir_generates_hoisted_setup_hook_for_shared_condition() {
     let cwd = env::current_dir().unwrap();

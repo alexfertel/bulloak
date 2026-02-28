@@ -20,12 +20,14 @@ pub enum ViolationKind {
     TreeFileMissing(String),
     /// The Tree file could not be parsed.
     TreeFileInvalid(String),
-    /// The Noir file could not be read. violation.filename is enough to produce an error.
+    /// The Noir file could not be read. violation.filename is enough to
+    /// produce an error.
     NoirFileMissing(),
     /// The Noir file could not be parsed.
     NoirFileInvalid(String),
-    /// This error is produced when processing the Noir file although it could be detected when
-    /// processing the tree file, since this is specific to Noir's constraints
+    /// This error is produced when processing the Noir file although it could
+    /// be detected when processing the tree file, since this is specific
+    /// to Noir's constraints
     TreeFileWrongRoot(String, String),
     /// A test function is missing.
     TestFunctionMissing(String, String),
@@ -37,7 +39,8 @@ pub enum ViolationKind {
     TestFunctionWrongType(String, String),
     /// A setup hook name is present as a test function
     SetupHookWrongType(String, String),
-    /// A test function is present, but in the incorrect place in the noir file.
+    /// A test function is present, but in the incorrect place in the noir
+    /// file.
     TestFunctionWrongPosition(String, String),
     /// A setup hook is present, but in the incorrect place in the noir file.
     SetupHookWrongPosition(String, String),

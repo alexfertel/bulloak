@@ -29,8 +29,8 @@ pub(crate) fn to_snake_case(title: &str) -> String {
         .join("_")
 }
 
-/// Convert {,sub}modules to snake case, but keeping uppercase characters, which are allowable in
-/// module names
+/// Convert {,sub}modules to snake case, but keeping uppercase characters, which
+/// are allowable in module names
 fn sanitize_module_name(title: &str) -> String {
     title
         .trim()

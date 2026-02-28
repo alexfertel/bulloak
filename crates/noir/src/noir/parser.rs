@@ -1,8 +1,9 @@
 //! Noir code parser using tree-sitter.
 
+use std::sync::LazyLock;
+
 use anyhow::{Context, Result};
 use regex::Regex;
-use std::sync::LazyLock;
 use tree_sitter::{Node, Parser};
 
 use crate::test_structure::{Function, Module, SetupHook, TestFunction};
@@ -50,8 +51,9 @@ impl ParsedNoirFile {
     }
 
     /// Recursively find module definitions
-    /// TODO: will flatten them, which is not fully idiomatic, but the alternative is to ignore
-    /// nested submodules of a level greater than 1 (or a more general-purpose parsing)
+    /// TODO: will flatten them, which is not fully idiomatic, but the
+    /// alternative is to ignore nested submodules of a level greater than 1
+    /// (or a more general-purpose parsing)
     fn find_modules_recursive<'a>(
         &self,
         node: Node<'a>,
@@ -69,7 +71,8 @@ impl ParsedNoirFile {
 
         let mut cursor = node.walk();
         for child in node.children(&mut cursor) {
-            // don't go into nested modules, unless we are at the first level of nesting
+            // don't go into nested modules, unless we are at the first level of
+            // nesting
             if child.kind() == "module" && node.kind() != "source_file" {
                 continue;
             }
@@ -77,8 +80,8 @@ impl ParsedNoirFile {
         }
     }
 
-    /// Recursively find test functions in a node and its children, without navigating into
-    /// sub-modules
+    /// Recursively find test functions in a node and its children, without
+    /// navigating into sub-modules
     fn find_functions_recursive<'a>(
         &self,
         node: Node<'a>,
@@ -174,17 +177,18 @@ impl ParsedNoirFile {
     }
 }
 
-/// it doesn't yet supports stuff like `#[othermacro] #[test]` but that's not used afaik, and the
-/// treesitterparser may even produce different attributes for each
-/// matches beggining and end of string, so nothing else can be on that line
+/// it doesn't yet supports stuff like `#[othermacro] #[test]` but that's not
+/// used afaik, and the treesitterparser may even produce different attributes
+/// for each matches beggining and end of string, so nothing else can be on that
+/// line
 static TEST_ATTR_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
     // ^\s*#\[\s*test\s* -- #[test , with any whitespace
     // (?: non capturing group start
     //   \( literal (
     //   (?: non capturing group start
     //      [^")]|"[^"]*" any character but "), or any string literal.
-    //   )* non-capturing group end, zero or more of them.  This allows for should_fail
-    //      blocks but doesn't try to parse them.
+    //   )* non-capturing group end, zero or more of them.  This allows for
+    // should_fail      blocks but doesn't try to parse them.
     //   \) literal )
     // )? matching group end, zero or one of them
     // \s*\]\*$ whitespace, closing bracket, end of string.
@@ -192,15 +196,17 @@ static TEST_ATTR_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
         .unwrap()
 });
 
-/// does NOT match beggining and end of string, so it should be used after TEST_ATTR_PATTERN
+/// does NOT match beggining and end of string, so it should be used after
+/// TEST_ATTR_PATTERN
 static SHOULD_FAIL_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
     // branch 1: should_fail (matching group is optional)
-    // branch 2: should_fail_with <whitespace> = <whitespace> and quotes with *anything* in between
+    // branch 2: should_fail_with <whitespace> = <whitespace> and quotes with
+    // *anything* in between
     Regex::new(r#"should_fail(?:_with\s*=\s*"[^"]*")?"#).unwrap()
 });
 
-/// given a macro declaration like  #[test], return if it is a test definition and whether it
-/// should expect a revert
+/// given a macro declaration like  #[test], return if it is a test definition
+/// and whether it should expect a revert
 fn parse_test_attribute(attribute: &str) -> (bool, bool) {
     if !TEST_ATTR_PATTERN.is_match(attribute) {
         return (false, false);

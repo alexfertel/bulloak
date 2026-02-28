@@ -2,15 +2,15 @@ pub(crate) mod generator;
 pub(crate) mod scaffoldable;
 use std::path::PathBuf;
 
-use crate::utils::{get_module_name, ModuleName};
-
-use super::config::Config;
 use anyhow::{bail, Result};
 use bulloak_syntax::parse;
 use generator::generate;
 
-/// Generates aztec-noir code from a `.tree` file. Has a uniform interface with the default
-/// solidity backend.
+use super::config::Config;
+use crate::utils::{get_module_name, ModuleName};
+
+/// Generates aztec-noir code from a `.tree` file. Has a uniform interface with
+/// the default solidity backend.
 /// TODO: should we define a Backend trait?
 pub fn scaffold(
     text: &str,

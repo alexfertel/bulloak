@@ -818,7 +818,8 @@ fn checks_no_submodule_multi_root_error() {
 }
 
 /// Regression test for https://github.com/defi-wonderland/bulloak/pull/9#issuecomment-3710452952
-/// When multiple roots share the same condition, check should report the missing hoisted setup hook.
+/// When multiple roots share the same condition, check should report the
+/// missing hoisted setup hook.
 #[test]
 fn checks_missing_hoisted_setup_hook_for_shared_condition() {
     let cwd = env::current_dir().unwrap();
