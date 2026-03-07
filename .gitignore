@@ -57,6 +57,5 @@ docs/.vercel
 docs/*.tsbuildinfo
 docs/next-env.d.ts
 
-<<<<<<< HEAD
 # local planning artifacts
 tasks/
