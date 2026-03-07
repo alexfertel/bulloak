@@ -1,7 +1,7 @@
-repeated_submodule::Function
+repeated_function_definition::Function
 └── When thing exists
     └── it should work
 
-repeated_submodule::Function
+repeated_function_definition::Function
 └── When thing exists
     └── it should work
