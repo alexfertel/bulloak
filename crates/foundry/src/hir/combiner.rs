@@ -166,19 +166,32 @@ impl<'t> CombinerI<'t> {
                     ));
                 }
 
+                if contract_name.trim().is_empty() {
+                    return Err(self.error(
+                        Span::default(),
+                        ErrorKind::ContractNameMissing(idx + 1),
+                    ));
+                }
+
+                // If the current contract name doesn't match, we error.
+                if !acc_contract.identifier.is_empty()
+                    && contract_name != acc_contract.identifier
+                {
+                    return Err(self.error(
+                        Span::default(),
+                        ErrorKind::ContractNameMismatch {
+                            actual: contract_name.to_owned(),
+                            expected: acc_contract.identifier.clone(),
+                        },
+                    ));
+                }
+
                 if !unique_functions.insert(function_name.to_owned()) {
                     return Err(self.error(
                         Span::default(),
                         ErrorKind::DuplicateFunctionDefinition(
                             function_name.to_owned(),
                         ),
-                    ));
-                }
-
-                if contract_name.trim().is_empty() {
-                    return Err(self.error(
-                        Span::default(),
-                        ErrorKind::ContractNameMissing(idx + 1),
                     ));
                 }
 
@@ -201,17 +214,6 @@ impl<'t> CombinerI<'t> {
                     };
                     *acc_contract = first_contract;
                     continue;
-                }
-
-                // If the current contract name doesn't match, we error.
-                if contract_name != acc_contract.identifier {
-                    return Err(self.error(
-                        Span::default(),
-                        ErrorKind::ContractNameMismatch {
-                            actual: contract_name.to_owned(),
-                            expected: acc_contract.identifier.clone(),
-                        },
-                    ));
                 }
 
                 let children = update_children(
@@ -554,6 +556,31 @@ bulloak error: contract name missing at tree root #2";
 
         assert!(test_names.iter().any(|name| name == "test_Function1_Same"));
         assert!(test_names.iter().any(|name| name == "test_Function2_Same"));
+
+        Ok(())
+    }
+
+    #[test]
+    fn contract_name_mismatch_takes_precedence_over_duplicate_function_definition(
+    ) -> Result<()> {
+        let trees = vec![
+            "ContractA::Function\n└── It same.",
+            "ContractB::Function\n└── It same.",
+        ];
+
+        let hirs = trees.iter().map(|tree| translate(tree).unwrap());
+        let text = trees.join("\n\n");
+        let err = combine(&text, hirs).unwrap_err().to_string();
+        assert!(
+            err.contains(
+                "contract name mismatch: expected 'ContractA', found 'ContractB'"
+            ),
+            "unexpected error: {err}"
+        );
+        assert!(
+            !err.contains("function under test"),
+            "unexpected duplicate-function error: {err}"
+        );
 
         Ok(())
     }
