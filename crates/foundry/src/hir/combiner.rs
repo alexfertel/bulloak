@@ -76,6 +76,10 @@ pub enum ErrorKind {
     /// found in one of the tree roots.
     #[error("too many separators at tree root #{0}. Expected to find at most one `::` between the contract name and the function name")]
     TooManySeparators(Index),
+
+    /// A submodule/function suffix was defined more than once across roots.
+    #[error("submodule {0} has more than one definition")]
+    DuplicateSubmodule(Identifier),
 }
 
 /// A high-level intermediate representation (HIR) combiner.
@@ -131,6 +135,7 @@ impl<'t> CombinerI<'t> {
         // For `.tree` files with a single root, we don't need to do any work.
         let acc_contract = &mut ContractDefinition::default();
         let mut unique_modifiers = HashSet::new();
+        let mut unique_submodules = HashSet::new();
 
         for (idx, hir) in hirs.into_iter().enumerate() {
             let Hir::Root(r) = hir else {
@@ -158,6 +163,13 @@ impl<'t> CombinerI<'t> {
                     return Err(self.error(
                         Span::default(),
                         ErrorKind::TooManySeparators(idx + 1),
+                    ));
+                }
+
+                if !unique_submodules.insert(function_name.to_owned()) {
+                    return Err(self.error(
+                        Span::default(),
+                        ErrorKind::DuplicateSubmodule(function_name.to_owned()),
                     ));
                 }
 
@@ -496,10 +508,7 @@ bulloak error: contract name missing at tree root #2";
 
     #[test]
     fn does_not_deduplicate_tests_across_roots() -> Result<()> {
-        // Two separate roots with the same function identifier and same
-        // top‑level action. After combining, both test functions should
-        // remain, even though their identifiers are identical, i.e.,
-        // "test_Function_Same". Only modifiers should be deduplicated.
+        // Two roots with the same submodule should error.
         let trees = vec![
             "Contract::function\n└── It same.",
             "Contract::function\n└── It same.",
@@ -507,9 +516,23 @@ bulloak error: contract name missing at tree root #2";
 
         let hirs = trees.iter().map(|tree| translate(tree).unwrap());
         let text = trees.join("\n\n");
+        let err = combine(&text, hirs).unwrap_err().to_string();
+        assert!(err.contains("submodule function has more than one definition"));
+
+        Ok(())
+    }
+
+    #[test]
+    fn combines_unique_submodules_across_roots() -> Result<()> {
+        let trees = vec![
+            "Contract::function1\n└── It same.",
+            "Contract::function2\n└── It same.",
+        ];
+
+        let hirs = trees.iter().map(|tree| translate(tree).unwrap());
+        let text = trees.join("\n\n");
         let combined = combine(&text, hirs)?;
 
-        // Collect test function names from the combined HIR.
         let mut test_names = Vec::new();
         if let Hir::Root(root) = combined {
             for child in root.children {
@@ -525,15 +548,8 @@ bulloak error: contract name missing at tree root #2";
             }
         }
 
-        // With same function part ("function") and same action ("It same."),
-        // both roots produce "test_Function_Same". We should see it twice.
-        let expected = "test_Function_Same".to_string();
-        let count = test_names.iter().filter(|n| *n == &expected).count();
-        assert_eq!(
-            count, 2,
-            "expected to preserve both test functions; got: {:?}",
-            test_names
-        );
+        assert!(test_names.iter().any(|name| name == "test_Function1_Same"));
+        assert!(test_names.iter().any(|name| name == "test_Function2_Same"));
 
         Ok(())
     }

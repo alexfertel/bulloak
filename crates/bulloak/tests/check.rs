@@ -765,9 +765,7 @@ fn check_invalid_glob_warns_but_reports_success() {
     );
 }
 
-// ignored until we fix https://github.com/alexfertel/bulloak/issues/114
 #[test]
-#[ignore]
 fn checks_repeated_submodule_error_solidity() {
     let cwd = env::current_dir().unwrap();
     let binary_path = get_binary_path();

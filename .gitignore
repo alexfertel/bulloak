@@ -56,3 +56,6 @@ docs/.vercel
 # typescript
 docs/*.tsbuildinfo
 docs/next-env.d.ts
+
+# local planning artifacts
+tasks/
