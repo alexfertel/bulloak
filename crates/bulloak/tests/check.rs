@@ -765,29 +765,29 @@ fn check_invalid_glob_warns_but_reports_success() {
     );
 }
 
-// ignored until we fix https://github.com/alexfertel/bulloak/issues/114
 #[test]
-#[ignore]
-fn checks_repeated_submodule_error_solidity() {
+fn checks_repeated_function_definition_error_solidity() {
     let cwd = env::current_dir().unwrap();
     let binary_path = get_binary_path();
-    let tree_path =
-        cwd.join("tests").join("check").join("repeated_submodule.tree");
+    let tree_path = cwd
+        .join("tests")
+        .join("check")
+        .join("repeated_function_definition.tree");
 
     let output = cmd(&binary_path, "check", &tree_path, &[]);
     let stderr = String::from_utf8(output.stderr).unwrap();
 
-    assert!(stderr.contains(
-        r#"an error occurred while parsing the tree: submodule Function has more than one definition"#
-    ));
+    assert!(stderr.contains(r#"an error occurred while parsing the tree: function under test "Function" has more than one root definition"#));
 }
 
 #[test]
-fn checks_repeated_submodule_error_noir() {
+fn checks_repeated_function_definition_error_noir() {
     let cwd = env::current_dir().unwrap();
     let binary_path = get_binary_path();
-    let tree_path =
-        cwd.join("tests").join("check").join("repeated_submodule.tree");
+    let tree_path = cwd
+        .join("tests")
+        .join("check")
+        .join("repeated_function_definition.tree");
 
     let output = cmd(&binary_path, "check", &tree_path, &["-l", "noir"]);
     let stderr = String::from_utf8(output.stderr).unwrap();
