@@ -1,0 +1,7 @@
+repeated_function_definition::Function
+└── When thing exists
+    └── it should work
+
+repeated_function_definition::Function
+└── When thing exists
+    └── it should work

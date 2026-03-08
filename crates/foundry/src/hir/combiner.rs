@@ -76,6 +76,10 @@ pub enum ErrorKind {
     /// found in one of the tree roots.
     #[error("too many separators at tree root #{0}. Expected to find at most one `::` between the contract name and the function name")]
     TooManySeparators(Index),
+
+    /// A function under test was defined more than once across roots.
+    #[error("function under test \"{0}\" has more than one root definition")]
+    DuplicateFunctionDefinition(Identifier),
 }
 
 /// A high-level intermediate representation (HIR) combiner.
@@ -131,6 +135,7 @@ impl<'t> CombinerI<'t> {
         // For `.tree` files with a single root, we don't need to do any work.
         let acc_contract = &mut ContractDefinition::default();
         let mut unique_modifiers = HashSet::new();
+        let mut unique_functions = HashSet::new();
 
         for (idx, hir) in hirs.into_iter().enumerate() {
             let Hir::Root(r) = hir else {
@@ -168,6 +173,30 @@ impl<'t> CombinerI<'t> {
                     ));
                 }
 
+                // If the current contract name doesn't match, we error.
+                if !acc_contract.identifier.is_empty()
+                    && contract_name != acc_contract.identifier
+                {
+                    return Err(self.error(
+                        Span::default(),
+                        ErrorKind::ContractNameMismatch {
+                            actual: contract_name.to_owned(),
+                            expected: acc_contract.identifier.clone(),
+                        },
+                    ));
+                }
+
+                if !unique_functions
+                    .insert(normalize_function_name(function_name))
+                {
+                    return Err(self.error(
+                        Span::default(),
+                        ErrorKind::DuplicateFunctionDefinition(
+                            function_name.to_owned(),
+                        ),
+                    ));
+                }
+
                 // If the accumulated identifier is empty, we're on the first
                 // contract.
                 if acc_contract.identifier.is_empty() {
@@ -187,17 +216,6 @@ impl<'t> CombinerI<'t> {
                     };
                     *acc_contract = first_contract;
                     continue;
-                }
-
-                // If the current contract name doesn't match, we error.
-                if contract_name != acc_contract.identifier {
-                    return Err(self.error(
-                        Span::default(),
-                        ErrorKind::ContractNameMismatch {
-                            actual: contract_name.to_owned(),
-                            expected: acc_contract.identifier.clone(),
-                        },
-                    ));
                 }
 
                 let children = update_children(
@@ -228,6 +246,10 @@ fn prefix_test(child: Hir, prefix: &str) -> Hir {
     Hir::Function(test_or_modifier)
 }
 
+fn normalize_function_name(function_name: &str) -> String {
+    upper_first_letter(function_name)
+}
+
 /// Prefix function names and filter modifiers.
 fn update_children(
     children: Vec<Hir>,
@@ -243,7 +265,7 @@ fn update_children(
 
 /// Prefix the suffix of a test name.
 fn prefix_test_with(test_name: &str, prefix: &str) -> String {
-    let capitalized_fn_name = upper_first_letter(prefix);
+    let capitalized_fn_name = normalize_function_name(prefix);
     let test_suffix = test_name.trim_start_matches("test_");
     format!("test_{capitalized_fn_name}_{test_suffix}")
 }
@@ -496,10 +518,7 @@ bulloak error: contract name missing at tree root #2";
 
     #[test]
     fn does_not_deduplicate_tests_across_roots() -> Result<()> {
-        // Two separate roots with the same function identifier and same
-        // top‑level action. After combining, both test functions should
-        // remain, even though their identifiers are identical, i.e.,
-        // "test_Function_Same". Only modifiers should be deduplicated.
+        // Two roots cannot define the same function under test.
         let trees = vec![
             "Contract::function\n└── It same.",
             "Contract::function\n└── It same.",
@@ -507,9 +526,25 @@ bulloak error: contract name missing at tree root #2";
 
         let hirs = trees.iter().map(|tree| translate(tree).unwrap());
         let text = trees.join("\n\n");
+        let err = combine(&text, hirs).unwrap_err().to_string();
+        assert!(err.contains(
+            "function under test \"function\" has more than one root definition"
+        ));
+
+        Ok(())
+    }
+
+    #[test]
+    fn combines_unique_functions_across_roots() -> Result<()> {
+        let trees = vec![
+            "Contract::function1\n└── It same.",
+            "Contract::function2\n└── It same.",
+        ];
+
+        let hirs = trees.iter().map(|tree| translate(tree).unwrap());
+        let text = trees.join("\n\n");
         let combined = combine(&text, hirs)?;
 
-        // Collect test function names from the combined HIR.
         let mut test_names = Vec::new();
         if let Hir::Root(root) = combined {
             for child in root.children {
@@ -525,14 +560,49 @@ bulloak error: contract name missing at tree root #2";
             }
         }
 
-        // With same function part ("function") and same action ("It same."),
-        // both roots produce "test_Function_Same". We should see it twice.
-        let expected = "test_Function_Same".to_string();
-        let count = test_names.iter().filter(|n| *n == &expected).count();
-        assert_eq!(
-            count, 2,
-            "expected to preserve both test functions; got: {:?}",
-            test_names
+        assert!(test_names.iter().any(|name| name == "test_Function1_Same"));
+        assert!(test_names.iter().any(|name| name == "test_Function2_Same"));
+
+        Ok(())
+    }
+
+    #[test]
+    fn rejects_functions_that_only_differ_by_case_across_roots() -> Result<()> {
+        let trees = vec![
+            "Contract::function\n└── It same.",
+            "Contract::Function\n└── It same.",
+        ];
+
+        let hirs = trees.iter().map(|tree| translate(tree).unwrap());
+        let text = trees.join("\n\n");
+        let err = combine(&text, hirs).unwrap_err().to_string();
+        assert!(err.contains(
+            "function under test \"Function\" has more than one root definition"
+        ));
+
+        Ok(())
+    }
+
+    #[test]
+    fn contract_name_mismatch_takes_precedence_over_duplicate_function_definition(
+    ) -> Result<()> {
+        let trees = vec![
+            "ContractA::Function\n└── It same.",
+            "ContractB::Function\n└── It same.",
+        ];
+
+        let hirs = trees.iter().map(|tree| translate(tree).unwrap());
+        let text = trees.join("\n\n");
+        let err = combine(&text, hirs).unwrap_err().to_string();
+        assert!(
+            err.contains(
+                "contract name mismatch: expected 'ContractA', found 'ContractB'"
+            ),
+            "unexpected error: {err}"
+        );
+        assert!(
+            !err.contains("function under test"),
+            "unexpected duplicate-function error: {err}"
         );
 
         Ok(())

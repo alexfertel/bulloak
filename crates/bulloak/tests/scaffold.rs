@@ -262,6 +262,24 @@ fn errors_when_root_has_too_many_separators() {
 }
 
 #[test]
+fn errors_when_root_functions_collapse_to_same_solidity_identifier() {
+    let cwd = env::current_dir().unwrap();
+    let binary_path = get_binary_path();
+    let tree_path = cwd
+        .join("tests")
+        .join("scaffold")
+        .join("repeated_function_definition_case_collision.tree");
+
+    let output = cmd(&binary_path, "scaffold", &tree_path, &[]);
+    let actual = String::from_utf8(output.stderr).unwrap();
+
+    assert!(actual.contains(
+        r#"function under test "Function" has more than one root definition"#
+    ));
+    assert!(output.stdout.is_empty());
+}
+
+#[test]
 fn errors_when_only_one_file_errors_others_are_still_scaffolded() {
     let cwd = env::current_dir().unwrap();
     let tree_path = cwd
