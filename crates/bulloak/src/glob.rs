@@ -40,6 +40,12 @@ mod tests {
     }
 
     #[test]
+    fn recursive_glob_with_no_matches_yields_empty() {
+        let out = sorted_matches("no-such-dir/**/*.tree");
+        assert!(out.is_empty());
+    }
+
+    #[test]
     fn simple_star_glob() {
         // Match all .rs files in src/
         let out = sorted_matches("src/*.rs");
