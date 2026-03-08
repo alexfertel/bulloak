@@ -186,7 +186,9 @@ impl<'t> CombinerI<'t> {
                     ));
                 }
 
-                if !unique_functions.insert(function_name.to_owned()) {
+                if !unique_functions
+                    .insert(normalize_function_name(function_name))
+                {
                     return Err(self.error(
                         Span::default(),
                         ErrorKind::DuplicateFunctionDefinition(
@@ -244,6 +246,10 @@ fn prefix_test(child: Hir, prefix: &str) -> Hir {
     Hir::Function(test_or_modifier)
 }
 
+fn normalize_function_name(function_name: &str) -> String {
+    upper_first_letter(function_name)
+}
+
 /// Prefix function names and filter modifiers.
 fn update_children(
     children: Vec<Hir>,
@@ -259,7 +265,7 @@ fn update_children(
 
 /// Prefix the suffix of a test name.
 fn prefix_test_with(test_name: &str, prefix: &str) -> String {
-    let capitalized_fn_name = upper_first_letter(prefix);
+    let capitalized_fn_name = normalize_function_name(prefix);
     let test_suffix = test_name.trim_start_matches("test_");
     format!("test_{capitalized_fn_name}_{test_suffix}")
 }
@@ -556,6 +562,23 @@ bulloak error: contract name missing at tree root #2";
 
         assert!(test_names.iter().any(|name| name == "test_Function1_Same"));
         assert!(test_names.iter().any(|name| name == "test_Function2_Same"));
+
+        Ok(())
+    }
+
+    #[test]
+    fn rejects_functions_that_only_differ_by_case_across_roots() -> Result<()> {
+        let trees = vec![
+            "Contract::function\n└── It same.",
+            "Contract::Function\n└── It same.",
+        ];
+
+        let hirs = trees.iter().map(|tree| translate(tree).unwrap());
+        let text = trees.join("\n\n");
+        let err = combine(&text, hirs).unwrap_err().to_string();
+        assert!(err.contains(
+            "function under test \"Function\" has more than one root definition"
+        ));
 
         Ok(())
     }
