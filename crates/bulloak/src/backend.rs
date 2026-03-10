@@ -2,7 +2,7 @@
 //!
 //! This module defines the core trait that all bulloak backends must implement,
 //! along with their concrete implementations
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use anyhow::Result;
 use clap::ValueEnum;
@@ -19,10 +19,10 @@ use crate::cli::Cli;
 pub trait Backend: Send + Sync {
     /// Scaffolds test code from a tree specification.
     /// Must output it already formatted, as it won't be processed further
-    fn scaffold(&self, text: &str, treefile: &PathBuf) -> Result<String>;
+    fn scaffold(&self, text: &str, treefile: &Path) -> Result<String>;
 
     /// Returns the output test file path for a given tree file path.
-    fn test_filename(&self, tree_file: &PathBuf) -> Result<PathBuf>;
+    fn test_filename(&self, tree_file: &Path) -> Result<PathBuf>;
 }
 
 /// Available backend types for CLI argument parsing.
@@ -56,7 +56,7 @@ pub(crate) struct NoirBackend {
 impl NoirBackend {
     pub(crate) fn check(
         &self,
-        path: &PathBuf,
+        path: &Path,
     ) -> Vec<bulloak_noir::check::Violation> {
         bulloak_noir::check(path, &self.config)
     }
@@ -72,7 +72,7 @@ impl BackendKind {
     }
 }
 
-fn validate_extension(input: &PathBuf) -> Result<(), BackendError> {
+fn validate_extension(input: &Path) -> Result<(), BackendError> {
     let extension = input
         .extension()
         .ok_or(BackendError::InvalidFilename(input.to_owned()))?;
@@ -83,23 +83,23 @@ fn validate_extension(input: &PathBuf) -> Result<(), BackendError> {
 }
 
 impl Backend for SolidityBackend {
-    fn scaffold(&self, text: &str, _treefile: &PathBuf) -> Result<String> {
+    fn scaffold(&self, text: &str, _treefile: &Path) -> Result<String> {
         let emitted = bulloak_foundry::scaffold::scaffold(text, &self.config)?;
         Ok(emitted)
     }
 
-    fn test_filename(&self, tree_file: &PathBuf) -> Result<PathBuf> {
+    fn test_filename(&self, tree_file: &Path) -> Result<PathBuf> {
         validate_extension(tree_file)?;
         Ok(tree_file.with_extension("t.sol"))
     }
 }
 
 impl Backend for NoirBackend {
-    fn scaffold(&self, text: &str, treefile: &PathBuf) -> Result<String> {
-        bulloak_noir::scaffold(&text, treefile, &self.config)
+    fn scaffold(&self, text: &str, treefile: &Path) -> Result<String> {
+        bulloak_noir::scaffold(text, &treefile.to_path_buf(), &self.config)
     }
 
-    fn test_filename(&self, tree_file: &PathBuf) -> Result<PathBuf> {
+    fn test_filename(&self, tree_file: &Path) -> Result<PathBuf> {
         let regex = Regex::new(r"\.tree$").unwrap();
         validate_extension(tree_file)?;
         let input_filename = tree_file.to_str().ok_or(anyhow::anyhow!(

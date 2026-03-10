@@ -71,7 +71,7 @@ impl Check {
     pub(crate) fn run(&self, cfg: &Cli) {
         let mut specs = Vec::new();
         for pattern in &self.files {
-            match expand_glob(pattern.clone()) {
+            match expand_glob(pattern) {
                 Ok(iter) => specs.extend(iter),
                 Err(e) => eprintln!(
                     "{}: could not expand {}: {}",

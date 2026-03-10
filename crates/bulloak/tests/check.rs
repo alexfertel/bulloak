@@ -39,7 +39,7 @@ warn: incorrect position for function "test_WhenThereIsReentrancy""#
     assert!(stderr.contains(r#"Test function "test_when_the_sender_reverts" is in wrong position in"#));
     assert!(stderr.contains(r#"Test function "test_given_the_streams_status_is_canceled" is in wrong position in"#));
     assert!(stderr.contains(r#"Test function "test_given_the_streams_status_is_settled" is in wrong position in"#));
-    assert!(stderr.contains(r#"invalid_sol_structure_test.nr"#));
+    assert!(stderr.contains(r"invalid_sol_structure_test.nr"));
 }
 
 #[test]
@@ -215,17 +215,15 @@ fn checks_missing_contract_identifier() {
     let stderr = String::from_utf8(output.stderr).unwrap();
 
     let formatted_message = format!(
-        "{}: an error occurred while parsing the tree: contract name missing at tree root #2\n   {} {}",
-        "warn".yellow(),
-        "-->".blue(),
-        tree_path.display()
+        "{warn}: an error occurred while parsing the tree: contract name missing at tree root #2\n   {arrow} {path}",
+        warn = "warn".yellow(),
+        arrow = "-->".blue(),
+        path = tree_path.display(),
     );
 
     assert!(
         stderr.contains(&formatted_message),
-        "stderr: {}\nmessage: {}",
-        stderr,
-        formatted_message
+        "stderr: {stderr}\nmessage: {formatted_message}"
     );
 }
 
@@ -370,15 +368,15 @@ fn checks_invalid_tree() {
     let stderr = String::from_utf8(output.stderr).unwrap();
 
     assert!(stderr.contains(
-        r#"an error occurred while parsing the tree: unexpected token '├'"#
+        r"an error occurred while parsing the tree: unexpected token '├'"
     ));
 
     let output = cmd(&binary_path, "check", &tree_path, &["-l", "noir"]);
     let stderr = String::from_utf8(output.stderr).unwrap();
 
     // it's okay to be less specific with error messages for now
-    assert!(stderr.contains(r#"bulloak error: unexpected token '├'"#));
-    assert!(stderr.contains(r#"an error occurred while parsing the tree"#));
+    assert!(stderr.contains(r"bulloak error: unexpected token '├'"));
+    assert!(stderr.contains(r"an error occurred while parsing the tree"));
 }
 
 #[test]
@@ -478,6 +476,10 @@ contract Foo {
 }
 
 #[test]
+#[expect(
+    clippy::too_many_lines,
+    reason = "This regression test validates a large fixed-output scaffold."
+)]
 fn fixes_invalid_structural_match() {
     let binary_path = get_binary_path();
     let cwd = env::current_dir().unwrap();
@@ -723,22 +725,19 @@ fn check_invalid_glob_warns_but_reports_success() {
 
     assert!(
         out.status.success(),
-        "check should succeed even on invalid glob, got {:?}",
-        out
+        "check should succeed even on invalid glob, got {out:?}"
     );
 
     let stderr = String::from_utf8_lossy(&out.stderr);
     assert!(
         stderr.contains("could not expand"),
-        "did not see warn on stderr: {}",
-        stderr
+        "did not see warn on stderr: {stderr}"
     );
 
     let stdout = String::from_utf8_lossy(&out.stdout);
     assert!(
         stdout.contains("All checks completed successfully"),
-        "expected success message, got: {}",
-        stdout
+        "expected success message, got: {stdout}"
     );
 
     let bad_glob = cwd.join("tests").join("check").join("*[.tree");
@@ -746,22 +745,19 @@ fn check_invalid_glob_warns_but_reports_success() {
 
     assert!(
         out.status.success(),
-        "check should succeed even on invalid glob, got {:?}",
-        out
+        "check should succeed even on invalid glob, got {out:?}"
     );
 
     let stderr = String::from_utf8_lossy(&out.stderr);
     assert!(
         stderr.contains("could not expand"),
-        "did not see warn on stderr: {}",
-        stderr
+        "did not see warn on stderr: {stderr}"
     );
 
     let stdout = String::from_utf8_lossy(&out.stdout);
     assert!(
         stdout.contains("All checks completed successfully"),
-        "expected success message, got: {}",
-        stdout
+        "expected success message, got: {stdout}"
     );
 }
 
@@ -792,9 +788,7 @@ fn checks_repeated_function_definition_error_noir() {
     let output = cmd(&binary_path, "check", &tree_path, &["-l", "noir"]);
     let stderr = String::from_utf8(output.stderr).unwrap();
 
-    assert!(
-        stderr.contains(r#"submodule Function has more than one definition"#)
-    );
+    assert!(stderr.contains(r"submodule Function has more than one definition"));
 }
 
 #[test]
@@ -808,7 +802,7 @@ fn checks_no_submodule_multi_root_error() {
     let stderr = String::from_utf8(output.stderr).unwrap();
 
     assert!(stderr.contains(
-        r#"an error occurred while parsing the tree: separator missing at tree root #1. Expected to find `::` between the contract name and the function name when multiple roots exist"#
+        r"an error occurred while parsing the tree: separator missing at tree root #1. Expected to find `::` between the contract name and the function name when multiple roots exist"
     ));
 
     let output = cmd(&binary_path, "check", &tree_path, &["-l", "noir"]);
@@ -817,7 +811,7 @@ fn checks_no_submodule_multi_root_error() {
     assert!(stderr.contains(r#"an error occurred while parsing the tree: separator missing at tree root #1 "no_submodule_multi_root". Expected to find `::` between the contract name and the function name when multiple roots exist"#));
 }
 
-/// Regression test for https://github.com/defi-wonderland/bulloak/pull/9#issuecomment-3710452952
+/// Regression test for <https://github.com/defi-wonderland/bulloak/pull/9#issuecomment-3710452952>
 /// When multiple roots share the same condition, check should report the
 /// missing hoisted setup hook.
 #[test]
@@ -832,7 +826,6 @@ fn checks_missing_hoisted_setup_hook_for_shared_condition() {
 
     assert!(
         stderr.contains(r#"Missing setup hook "when_passing_valid_parameters""#),
-        "Expected check to report missing setup hook 'when_passing_valid_parameters', but it did not.\nStderr:\n{}",
-        stderr
+        "Expected check to report missing setup hook 'when_passing_valid_parameters', but it did not.\nStderr:\n{stderr}"
     );
 }

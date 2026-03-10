@@ -1,9 +1,9 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use glob::glob;
 
 pub(crate) fn expand_glob(
-    input: PathBuf,
+    input: &Path,
 ) -> anyhow::Result<impl Iterator<Item = PathBuf>> {
     let input = input.to_string_lossy();
     let paths = glob(&input)?.filter_map(Result::ok);
@@ -12,13 +12,13 @@ pub(crate) fn expand_glob(
 
 #[cfg(test)]
 mod tests {
-    use std::path::PathBuf;
+    use std::path::{Path, PathBuf};
 
     use super::expand_glob;
 
     /// Helper to collect and sort the output.
     fn sorted_matches(pattern: &str) -> Vec<String> {
-        let mut v: Vec<_> = expand_glob(PathBuf::from(pattern))
+        let mut v: Vec<_> = expand_glob(Path::new(pattern))
             .unwrap()
             .map(|p| p.to_string_lossy().into_owned())
             .collect();
@@ -82,7 +82,7 @@ mod tests {
     fn invalid_pattern_returns_error() {
         // Invalid glob syntax (unmatched '[') must return Err.
         let bad = PathBuf::from("tests/scaffold/*[.tree");
-        let res = expand_glob(bad);
+        let res = expand_glob(&bad);
         assert!(res.is_err(), "expected invalid glob to Err");
     }
 }

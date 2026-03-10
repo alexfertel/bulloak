@@ -1,11 +1,14 @@
 #![allow(missing_docs)]
-use std::{env, path::PathBuf};
+use std::{
+    env,
+    path::{Path, PathBuf},
+};
 
 use common::cmd;
 
 mod common;
 
-fn unmatched_recursive_glob(cwd: &PathBuf) -> PathBuf {
+fn unmatched_recursive_glob(cwd: &Path) -> PathBuf {
     cwd.join("tests").join("does-not-exist").join("**").join("*.tree")
 }
 

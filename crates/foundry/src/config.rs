@@ -41,6 +41,11 @@ impl Default for Config {
 }
 
 /// Parses and formats Solidity source code using the given formatter config.
+///
+/// # Errors
+///
+/// Returns a [`FormatterError`] if the Solidity source cannot be parsed or
+/// formatted by `solang_forge_fmt`.
 pub fn format_source(
     src: &str,
     config: FormatterConfig,
@@ -57,10 +62,7 @@ pub fn format_source(
 /// found or if parsing fails.
 pub fn resolve_fmt_config(start_dir: &Path) -> FormatterConfig {
     let mut dir = if start_dir.is_file() {
-        start_dir
-            .parent()
-            .map(Path::to_path_buf)
-            .unwrap_or_else(|| PathBuf::from("."))
+        start_dir.parent().map_or_else(|| PathBuf::from("."), Path::to_path_buf)
     } else {
         start_dir.to_path_buf()
     };
