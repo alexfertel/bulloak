@@ -8,7 +8,7 @@ use std::{
 };
 
 use solang_forge_fmt::{
-    format, parse,
+    parse,
     solang_ext::{CodeLocationExt, SafeUnwrap},
     Comments, FormatterError, Parsed,
 };
@@ -91,9 +91,9 @@ impl Context {
     }
 
     /// Updates the context with a formatted representation of the Solidity
-    /// file.
+    /// file, applying the formatter configuration from `foundry.toml`.
     pub fn fmt(self) -> anyhow::Result<String, FormatterError> {
-        format(&self.src)
+        crate::config::format_source(&self.src, self.cfg.fmt_config)
     }
 
     /// Inserts a function definition into the source string at a specified
@@ -597,6 +597,46 @@ mod tests {
         let output = ctx.clone().fmt().unwrap();
         assert!(output.contains("contract Foo"));
         assert!(output.starts_with("// SPDX-License-Identifier"));
+    }
+
+    fn make_ctx_with_cfg(tree: &str, sol: &str, cfg: Config) -> Context {
+        let td = tempdir().unwrap();
+        let tree_path = write_file(td.path(), "X.tree", tree);
+        let sol_path = td.path().join("X.t.sol");
+        fs::write(&sol_path, sol).unwrap();
+        let mut cfg = cfg;
+        cfg.files = vec![tree_path.clone()];
+        Context::new(tree_path, &cfg).unwrap()
+    }
+
+    #[test]
+    fn fmt_respects_bracket_spacing_config() {
+        let tree = "Foo\n└── It one.\n";
+        let sol = "\
+            // SPDX-License-Identifier: UNLICENSED\n\
+            pragma solidity 0.8.0;\n\
+            import {Test} from \"forge-std/Test.sol\";\n\
+            contract Foo is Test {\n\
+              function test_One() external {}\n\
+            }\n";
+
+        // Default config: bracket_spacing = false
+        let ctx_default = make_ctx(tree, sol);
+        let output_default = ctx_default.fmt().unwrap();
+        assert!(
+            output_default.contains("import {Test}"),
+            "default config should not add bracket spacing, got:\n{output_default}"
+        );
+
+        // Custom config: bracket_spacing = true
+        let mut cfg = Config::default();
+        cfg.fmt_config.bracket_spacing = true;
+        let ctx_spaced = make_ctx_with_cfg(tree, sol, cfg);
+        let output_spaced = ctx_spaced.fmt().unwrap();
+        assert!(
+            output_spaced.contains("import { Test }"),
+            "bracket_spacing=true should add spaces inside braces, got:\n{output_spaced}"
+        );
     }
 
     #[test]

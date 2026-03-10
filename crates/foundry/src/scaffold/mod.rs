@@ -2,8 +2,6 @@
 //!
 //! This command scaffolds a Solidity file from a spec `.tree` file.
 
-use solang_forge_fmt::format;
-
 use crate::{config::Config, hir::translate, sol};
 
 pub mod comment;
@@ -20,7 +18,8 @@ pub fn scaffold(text: &str, cfg: &Config) -> anyhow::Result<String> {
     let pt = sol::Translator::new(cfg).translate(&hir);
     let source = sol::Formatter::new().emit(pt);
     let formatted =
-        format(&source).expect("should format the emitted solidity code");
+        crate::config::format_source(&source, cfg.fmt_config.clone())
+            .expect("should format the emitted solidity code");
 
     Ok(formatted)
 }
