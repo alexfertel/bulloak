@@ -118,9 +118,11 @@ fn parse_foundry_toml(path: &Path) -> Result<FormatterConfig, String> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use std::fs;
+
     use tempfile::tempdir;
+
+    use super::*;
 
     #[test]
     fn resolve_reads_bracket_spacing_from_foundry_toml() {
