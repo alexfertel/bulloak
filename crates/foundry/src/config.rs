@@ -186,4 +186,21 @@ mod tests {
         assert_eq!(cfg.line_length, FormatterConfig::default().line_length);
         assert_eq!(cfg.tab_width, FormatterConfig::default().tab_width);
     }
+
+    #[test]
+    fn resolve_prefers_nearest_foundry_toml_for_file_paths() {
+        let td = tempdir().unwrap();
+        let nested = td.path().join("src").join("nested");
+        fs::create_dir_all(&nested).unwrap();
+        fs::write(td.path().join("foundry.toml"), "[fmt]\nline_length = 80\n")
+            .unwrap();
+        fs::write(nested.join("foundry.toml"), "[fmt]\nline_length = 120\n")
+            .unwrap();
+
+        let tree_path = nested.join("Spec.tree");
+        fs::write(&tree_path, "Foo\n└── It works.\n").unwrap();
+
+        let cfg = resolve_fmt_config(&tree_path);
+        assert_eq!(cfg.line_length, 120);
+    }
 }
