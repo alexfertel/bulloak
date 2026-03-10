@@ -45,7 +45,8 @@ pub fn format_source(
     src: &str,
     config: FormatterConfig,
 ) -> Result<String, FormatterError> {
-    let parsed = parse(src).map_err(|_| FormatterError::Fmt(std::fmt::Error))?;
+    let parsed =
+        parse(src).map_err(|_| FormatterError::Fmt(std::fmt::Error))?;
     let mut output = String::new();
     format_to(&mut output, parsed, config)?;
     Ok(output)
@@ -70,10 +71,7 @@ pub fn resolve_fmt_config(start_dir: &Path) -> FormatterConfig {
             return match parse_foundry_toml(&candidate) {
                 Ok(cfg) => cfg,
                 Err(e) => {
-                    eprintln!(
-                        "warning: ignoring {}: {e}",
-                        candidate.display()
-                    );
+                    eprintln!("warning: ignoring {}: {e}", candidate.display());
                     FormatterConfig::default()
                 }
             };
@@ -113,9 +111,9 @@ fn parse_foundry_toml(path: &Path) -> Result<FormatterConfig, String> {
         merged.insert(k.clone(), v.clone());
     }
 
-    toml::Value::Table(merged)
-        .try_into()
-        .map_err(|e: toml::de::Error| format!("failed to apply fmt config: {e}"))
+    toml::Value::Table(merged).try_into().map_err(|e: toml::de::Error| {
+        format!("failed to apply fmt config: {e}")
+    })
 }
 
 #[cfg(test)]
@@ -162,11 +160,8 @@ mod tests {
         let td = tempdir().unwrap();
         let sub = td.path().join("test").join("nested");
         fs::create_dir_all(&sub).unwrap();
-        fs::write(
-            td.path().join("foundry.toml"),
-            "[fmt]\nline_length = 80\n",
-        )
-        .unwrap();
+        fs::write(td.path().join("foundry.toml"), "[fmt]\nline_length = 80\n")
+            .unwrap();
 
         let cfg = resolve_fmt_config(&sub);
         assert_eq!(cfg.line_length, 80);
