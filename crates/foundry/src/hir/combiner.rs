@@ -105,6 +105,11 @@ impl Combiner {
     /// iterating over each HIR and merging their children into the contract
     /// definition of the first HIR, while verifying the contract identifiers
     /// match and filtering out duplicate modifiers.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when multi-root trees have inconsistent or invalid
+    /// contract/function identifiers.
     pub fn combine(
         self,
         text: &str,
@@ -278,10 +283,8 @@ fn collect_modifier(
         return Some(child);
     };
 
-    if f.is_modifier() {
-        if !unique_modifiers.insert(f.identifier.clone()) {
-            return None;
-        }
+    if f.is_modifier() && !unique_modifiers.insert(f.identifier.clone()) {
+        return None;
     }
 
     Some(child)
@@ -304,8 +307,7 @@ mod tests {
         let mut discoverer = modifiers::ModifierDiscoverer::new();
         let modifiers = discoverer.discover(&ast);
 
-        let mut cfg: Config = Config::default();
-        cfg.emit_vm_skip = true;
+        let cfg = Config { emit_vm_skip: true, ..Config::default() };
         Ok(hir::translator::Translator::new().translate(&ast, modifiers, &cfg))
     }
 
@@ -350,7 +352,7 @@ mod tests {
 
     #[test]
     fn errors_when_root_contract_identifier_is_missing() {
-        let trees = vec![
+        let trees = [
             "::orphanedFunction\n└── when something bad happens\n   └── it should revert",
             "Contract::function\n└── when something bad happens\n   └── it should revert",
         ];
@@ -363,7 +365,7 @@ mod tests {
 
     #[test]
     fn errors_when_contract_names_mismatch() {
-        let trees = vec![
+        let trees = [
             "Contract::function\n└── when something bad happens\n   └── it should revert",
             "::orphanedFunction\n└── when something bad happens\n   └── it should revert",
         ];
@@ -381,7 +383,7 @@ bulloak error: contract name missing at tree root #2";
 
     #[test]
     fn errors_when_root_has_too_many_separators() {
-        let trees = vec![
+        let trees = [
             "Contract::function::extra\n└── when something bad happens\n   └── it should revert",
             "Contract::function2\n└── when something bad happens\n   └── it should revert",
         ];
@@ -396,7 +398,7 @@ bulloak error: contract name missing at tree root #2";
 
     #[test]
     fn skips_non_function_children() {
-        let trees = vec![
+        let trees = [
             "Contract::function1\n└── when something bad happens\n    └── it should revert",
             "Contract::function2\n└── when something shit happens\n    └── it should revert",
         ];
@@ -452,7 +454,7 @@ bulloak error: contract name missing at tree root #2";
 
     #[test]
     fn dedups_cross_root_modifiers() {
-        let trees = vec![
+        let trees = [
             "Contract::function1\n└── when something bad happens\n    └── given something else happens\n        └── it should revert",
             "Contract::function2\n└── when something bad happens\n    └── given the caller is 0x1337\n        └── it should revert",
         ];
@@ -517,9 +519,9 @@ bulloak error: contract name missing at tree root #2";
     }
 
     #[test]
-    fn does_not_deduplicate_tests_across_roots() -> Result<()> {
+    fn does_not_deduplicate_tests_across_roots() {
         // Two roots cannot define the same function under test.
-        let trees = vec![
+        let trees = [
             "Contract::function\n└── It same.",
             "Contract::function\n└── It same.",
         ];
@@ -530,20 +532,18 @@ bulloak error: contract name missing at tree root #2";
         assert!(err.contains(
             "function under test \"function\" has more than one root definition"
         ));
-
-        Ok(())
     }
 
     #[test]
-    fn combines_unique_functions_across_roots() -> Result<()> {
-        let trees = vec![
+    fn combines_unique_functions_across_roots() {
+        let trees = [
             "Contract::function1\n└── It same.",
             "Contract::function2\n└── It same.",
         ];
 
         let hirs = trees.iter().map(|tree| translate(tree).unwrap());
         let text = trees.join("\n\n");
-        let combined = combine(&text, hirs)?;
+        let combined = combine(&text, hirs).unwrap();
 
         let mut test_names = Vec::new();
         if let Hir::Root(root) = combined {
@@ -562,13 +562,11 @@ bulloak error: contract name missing at tree root #2";
 
         assert!(test_names.iter().any(|name| name == "test_Function1_Same"));
         assert!(test_names.iter().any(|name| name == "test_Function2_Same"));
-
-        Ok(())
     }
 
     #[test]
-    fn rejects_functions_that_only_differ_by_case_across_roots() -> Result<()> {
-        let trees = vec![
+    fn rejects_functions_that_only_differ_by_case_across_roots() {
+        let trees = [
             "Contract::function\n└── It same.",
             "Contract::Function\n└── It same.",
         ];
@@ -579,14 +577,12 @@ bulloak error: contract name missing at tree root #2";
         assert!(err.contains(
             "function under test \"Function\" has more than one root definition"
         ));
-
-        Ok(())
     }
 
     #[test]
     fn contract_name_mismatch_takes_precedence_over_duplicate_function_definition(
-    ) -> Result<()> {
-        let trees = vec![
+    ) {
+        let trees = [
             "ContractA::Function\n└── It same.",
             "ContractB::Function\n└── It same.",
         ];
@@ -604,7 +600,5 @@ bulloak error: contract name missing at tree root #2";
             !err.contains("function under test"),
             "unexpected duplicate-function error: {err}"
         );
-
-        Ok(())
     }
 }

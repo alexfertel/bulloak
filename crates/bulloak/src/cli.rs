@@ -25,12 +25,15 @@ pub enum Commands {
 
 impl Default for Commands {
     fn default() -> Self {
-        Self::Scaffold(Default::default())
+        Self::Scaffold(crate::scaffold::Scaffold::default())
     }
 }
 
 impl From<&Cli> for bulloak_foundry::config::Config {
     fn from(cli: &Cli) -> Self {
+        let cwd = std::env::current_dir().unwrap_or_default();
+        let fmt_config = bulloak_foundry::config::resolve_fmt_config(&cwd);
+
         match &cli.command {
             Commands::Scaffold(cmd) => Self {
                 files: cmd.files.clone(),
@@ -38,13 +41,14 @@ impl From<&Cli> for bulloak_foundry::config::Config {
                 emit_vm_skip: cmd.with_vm_skip,
                 skip_modifiers: cmd.skip_modifiers,
                 format_descriptions: cmd.format_descriptions,
-                ..Self::default()
+                fmt_config,
             },
             Commands::Check(cmd) => Self {
                 files: cmd.files.clone(),
                 emit_vm_skip: cmd.with_vm_skip,
                 skip_modifiers: cmd.skip_modifiers,
                 format_descriptions: cmd.format_descriptions,
+                fmt_config,
                 ..Self::default()
             },
         }
@@ -70,13 +74,11 @@ impl From<&Cli> for bulloak_noir::Config {
                 files: cmd.files.clone(),
                 skip_setup_hooks: cmd.skip_modifiers,
                 format_descriptions: cmd.format_descriptions,
-                ..Self::default()
             },
             Commands::Check(cmd) => Self {
                 files: cmd.files.clone(),
                 skip_setup_hooks: cmd.skip_modifiers,
                 format_descriptions: cmd.format_descriptions,
-                ..Self::default()
             },
         }
     }
@@ -90,7 +92,7 @@ pub(crate) fn run() -> anyhow::Result<()> {
     match &config.command {
         Commands::Scaffold(command) => command.run(&config),
         Commands::Check(command) => command.run(&config),
-    };
+    }
 
     Ok(())
 }

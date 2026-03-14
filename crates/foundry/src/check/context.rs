@@ -8,7 +8,7 @@ use std::{
 };
 
 use solang_forge_fmt::{
-    format, parse,
+    parse,
     solang_ext::{CodeLocationExt, SafeUnwrap},
     Comments, FormatterError, Parsed,
 };
@@ -54,6 +54,15 @@ impl Context {
     ///
     /// This structure contains everything necessary to perform checks between
     /// trees and Solidity files.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`Violation`] when the tree or Solidity file cannot be read
+    /// or parsed into the structures required for checking.
+    #[expect(
+        clippy::result_large_err,
+        reason = "Changing the check pipeline error type would introduce broader API churn than this PR needs."
+    )]
     pub fn new(tree: PathBuf, cfg: &Config) -> Result<Self, Violation> {
         let tree_path_cow = tree.to_string_lossy();
         let tree_contents = try_read_to_string(&tree)?;
@@ -83,6 +92,7 @@ impl Context {
 
     /// Updates this `Context` with the result of parsing a Solidity file.
     #[inline]
+    #[must_use]
     pub fn update_from_parsed(mut self, parsed: Parsed) -> Self {
         parsed.src.clone_into(&mut self.src);
         self.pt = parsed.pt;
@@ -91,9 +101,14 @@ impl Context {
     }
 
     /// Updates the context with a formatted representation of the Solidity
-    /// file.
+    /// file, applying the formatter configuration from `foundry.toml`.
+    ///
+    /// # Errors
+    ///
+    /// Returns a formatter error if the current Solidity source cannot be
+    /// formatted with the resolved Foundry settings.
     pub fn fmt(self) -> anyhow::Result<String, FormatterError> {
-        format(&self.src)
+        crate::config::format_source(&self.src, self.cfg.fmt_config)
     }
 
     /// Inserts a function definition into the source string at a specified
@@ -125,6 +140,10 @@ impl Context {
     }
 }
 
+#[expect(
+    clippy::result_large_err,
+    reason = "This helper participates in the same violation-based check pipeline as `Context::new`."
+)]
 fn get_path_with_ext(
     path: impl AsRef<Path>,
     ext: impl AsRef<OsStr>,
@@ -144,6 +163,10 @@ fn get_path_with_ext(
     Ok(sol)
 }
 
+#[expect(
+    clippy::result_large_err,
+    reason = "This helper participates in the same violation-based check pipeline as `Context::new`."
+)]
 fn try_read_to_string(path: impl AsRef<Path>) -> Result<String, Violation> {
     fs::read_to_string(&path).map_err(|_| {
         let path = path.as_ref().to_string_lossy();
@@ -196,17 +219,19 @@ impl Context {
         fn_hir: &hir::FunctionDefinition,
         index: usize,
     ) -> anyhow::Result<Context> {
-        let contract_hir = match self.hir.find_contract() {
-            Some(c) => c,
-            None => return Ok(self),
+        let Some(contract_hir) = self.hir.find_contract() else {
+            return Ok(self);
         };
-        let contract_sol = match find_contract(&self.pt) {
-            Some(c) => c,
-            None => return Ok(self),
+        let Some(contract_sol) = find_contract(&self.pt) else {
+            return Ok(self);
         };
 
-        let offset =
-            get_insertion_offset(&contract_sol, contract_hir, index, &self.src);
+        let offset = get_insertion_offset(
+            contract_sol.as_ref(),
+            contract_hir,
+            index,
+            &self.src,
+        );
         self.insert_function_at(fn_hir, offset);
 
         let source = self.src.clone();
@@ -311,7 +336,7 @@ fn find_contract_body_start(
 #[must_use]
 pub fn fix_order(
     violations: &[Violation],
-    contract_sol: &Box<ContractDefinition>,
+    contract_sol: &ContractDefinition,
     contract_hir: &hir::ContractDefinition,
     ctx: Context,
 ) -> Context {
@@ -427,7 +452,7 @@ mod tests {
     ) -> std::path::PathBuf {
         let path = dir.join(name);
         let mut f = fs::File::create(&path).unwrap();
-        write!(f, "{}", contents).unwrap();
+        write!(f, "{contents}").unwrap();
         path
     }
 
@@ -436,8 +461,8 @@ mod tests {
         let tree_path = write_file(td.path(), "X.tree", tree);
         let sol_path = td.path().join("X.t.sol");
         fs::write(&sol_path, sol).unwrap();
-        let mut cfg = Config::default();
-        cfg.files = vec![tree_path.clone()];
+        let cfg =
+            Config { files: vec![tree_path.clone()], ..Config::default() };
         Context::new(tree_path, &cfg).unwrap()
     }
 
@@ -550,12 +575,11 @@ mod tests {
         let ctx0 = make_ctx(tree, sol);
         let contract_hir = ctx0.hir.find_contract().unwrap();
         if let Hir::Function(fn_hir) = &contract_hir.children[0] {
-            let ctx1 =
-                ctx0.clone().fix_matching_fn_missing(&fn_hir, 0).unwrap();
+            let ctx1 = ctx0.clone().fix_matching_fn_missing(fn_hir, 0).unwrap();
             assert_eq!(ctx0.src, ctx1.src);
         } else {
             unreachable!()
-        };
+        }
     }
 
     #[test]
@@ -597,6 +621,46 @@ mod tests {
         let output = ctx.clone().fmt().unwrap();
         assert!(output.contains("contract Foo"));
         assert!(output.starts_with("// SPDX-License-Identifier"));
+    }
+
+    fn make_ctx_with_cfg(tree: &str, sol: &str, cfg: Config) -> Context {
+        let td = tempdir().unwrap();
+        let tree_path = write_file(td.path(), "X.tree", tree);
+        let sol_path = td.path().join("X.t.sol");
+        fs::write(&sol_path, sol).unwrap();
+        let mut cfg = cfg;
+        cfg.files = vec![tree_path.clone()];
+        Context::new(tree_path, &cfg).unwrap()
+    }
+
+    #[test]
+    fn fmt_respects_bracket_spacing_config() {
+        let tree = "Foo\n└── It one.\n";
+        let sol = "\
+            // SPDX-License-Identifier: UNLICENSED\n\
+            pragma solidity 0.8.0;\n\
+            import {Test} from \"forge-std/Test.sol\";\n\
+            contract Foo is Test {\n\
+              function test_One() external {}\n\
+            }\n";
+
+        // Default config: bracket_spacing = false
+        let ctx_default = make_ctx(tree, sol);
+        let output_default = ctx_default.fmt().unwrap();
+        assert!(
+            output_default.contains("import {Test}"),
+            "default config should not add bracket spacing, got:\n{output_default}"
+        );
+
+        // Custom config: bracket_spacing = true
+        let mut cfg = Config::default();
+        cfg.fmt_config.bracket_spacing = true;
+        let ctx_spaced = make_ctx_with_cfg(tree, sol, cfg);
+        let output_spaced = ctx_spaced.fmt().unwrap();
+        assert!(
+            output_spaced.contains("import { Test }"),
+            "bracket_spacing=true should add spaces inside braces, got:\n{output_spaced}"
+        );
     }
 
     #[test]

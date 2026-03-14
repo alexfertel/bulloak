@@ -73,7 +73,7 @@ impl Scaffold {
     pub(crate) fn run(&self, cfg: &Cli) {
         let mut files = Vec::with_capacity(self.files.len());
         for pattern in &self.files {
-            match expand_glob(pattern.clone()) {
+            match expand_glob(pattern) {
                 Ok(iter) => files.extend(iter),
                 Err(e) => {
                     eprintln!(
